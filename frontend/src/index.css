@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #08090b;
+  --color-surface: #0f1216;
+  --color-surface-2: #141922;
+  --color-line: rgba(255, 255, 255, 0.085);
+  --color-dim: #93a0b1;
+  --color-faint: #5d6875;
+  --color-accent: #ffb454;
+  --color-accent-2: #ff8a3d;
+  --color-ok: #57d9a3;
+  --color-err: #ff6b6b;
+
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", ui-sans-serif, system-ui,
+    -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Cascadia Mono", ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-ink);
+  color: #eef2f7;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* reading text: a touch larger than the utility default */
+.transcript-text {
+  font-size: clamp(20px, 2.35vw, 27px);
+  line-height: 1.68;
+  letter-spacing: -0.004em;
+}
+
+.caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.02em;
+  margin-left: 2px;
+  vertical-align: -0.16em;
+  border-radius: 2px;
+  background: var(--color-accent);
+  animation: blink 1.05s steps(2, start) infinite;
+}
+
+.paused .caret {
+  animation: none;
+  opacity: 0.25;
+}
+
+@keyframes blink {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0.08;
+  }
+}
+
+/* thin scrollbars, matching the dark surface */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}
+.scroll-thin::-webkit-scrollbar {
+  width: 10px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+/* range inputs pick up the accent colour */
+input[type="range"] {
+  accent-color: var(--color-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caret {
+    animation: none;
+  }
+}

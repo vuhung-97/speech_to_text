@@ -1,0 +1,11 @@
+# Normalise text files, keep binaries untouched (GitHub-friendly)
+* text=auto
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.wav binary
+*.mp3 binary
+*.onnx binary
+*.model binary

@@ -1,102 +1,108 @@
 # STT Trực Tiếp
 
-> Nhận dạng tiếng Việt **offline, realtime trên CPU** — không cần GPU, không cần internet
-> sau khi cài. Lõi là **zipformer 30M int8 (sherpa-onnx)**, backend **FastAPI**,
-> giao diện **React + Tailwind**, kèm cơ chế **plugin để cắm model AI khác**.
+[![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![Tailwind](https://img.shields.io/badge/Tailwind-4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Node](https://img.shields.io/badge/node-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Offline](https://img.shields.io/badge/100%25-offline-success)](#)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)](#)
 
-Đo trên file bản tin đọc liên tục 168 giây (CPU 8 luồng, 2 thread cho model):
+**Nhận dạng tiếng Việt offline, realtime trên CPU** — không cần GPU, không cần internet
+sau khi cài. Lõi là **zipformer 30M int8 (sherpa-onnx)**, backend **FastAPI**, giao diện
+**React + Tailwind**, kèm cơ chế **plugin để cắm model AI khác**.
 
-| | Kết quả |
-| --- | --- |
-| Tốc độ | decode 168s audio trong **8.3s** (RTF 0.049 — nhanh hơn realtime ~20 lần) |
-| Độ chính xác | **99% khớp** với bản đối chiếu (chỉ 6/604 từ lệch) |
-| Hallucination | không có (transducer không tự sinh văn bản trên nhiễu) |
-| Thu âm | 99–100% audio thực, 0 frame bị rơi |
+<p align="center">
+  <img src="docs/ui.png" alt="Giao diện nhận dạng trực tiếp" width="820">
+</p>
+
+<p align="center">
+  <em>168 giây audio bản tin → text trong 8.3 giây (RTF 0.049) · khớp 99% bản đối chiếu · không hallucination</em>
+</p>
 
 ---
 
+## Mục lục
+
+- [Tính năng](#tính-năng)
+- [Yêu cầu](#yêu-cầu)
+- [Cài đặt nhanh](#cài-đặt-nhanh)
+- [Sử dụng](#sử-dụng)
+- [Giao diện](#giao-diện)
+- [Kiến trúc](#kiến-trúc)
+- [Cấu hình](#cấu-hình)
+- [API](#api)
+- [Thêm model AI mới](#thêm-model-ai-mới)
+- [Hiệu năng](#hiệu-năng)
+- [Kiểm thử](#kiểm-thử)
+- [Khắc phục sự cố](#khắc-phục-sự-cố)
+- [Đóng góp](#đóng-góp)
+- [Giấy phép](#giấy-phép)
+
 ## Tính năng
 
-- **Hai chế độ**: `accurate` (chốt từng câu, chất lượng cao) và `realtime` (chữ chạy theo từng từ).
-- **Thu âm bằng callback** (PortAudio) + tự fallback sang burst; hiển thị `fr/s`, `coverage`, `dropped` để biết audio có bị rơi không.
-- **VAD chống khoá**: noise-floor chỉ học từ frame yên tĩnh, ngưỡng ≤ 30% đỉnh gần đây, hysteresis, giữ trạng thái khi tạm dừng.
-- **Bảng cài đặt 11 thông số** ngay trên web (schema động theo engine đang chọn).
-- **Replay file audio** (wav/mp3/m4a…) với đúng cấu hình đang dùng → A/B thông số trên cùng một file.
-- **Preset** lưu/nạp bộ thông số (localStorage).
+- **Hai chế độ nhận dạng**
+  - `accurate` — chốt từng câu khi bạn ngừng nói ~0.6s (chất lượng cao nhất).
+  - `realtime` — chữ chạy dần theo từng từ, phần chưa chắc chắn hiển thị mờ.
+- **Thu âm không rơi frame** — PortAudio callback + tự fallback sang burst; UI hiển thị
+  `fr/s`, `coverage`, `dropped` để kiểm chứng (đo được 99–100%, trước đây chỉ 67%).
+- **VAD chống khoá** — noise-floor chỉ học từ frame yên tĩnh, ngưỡng bị chặn bởi 30% đỉnh
+  gần đây, hysteresis khi đang nói, giữ trạng thái qua pause/resume.
+- **Bảng cài đặt trên web** — schema sinh động theo engine đang chọn, có preset và
+  cảnh báo cấu hình rủi ro.
+- **Replay file audio** — kéo–thả `wav/mp3/m4a/…` rồi decode bằng đúng cấu hình đang dùng
+  để A/B thông số trên cùng một file.
 - **API + docs tự động** tại `/api/docs`, sự kiện realtime qua **SSE**.
-- **Plugin model**: thêm model mới bằng 1 file, không sửa code lõi.
+- **Plugin model** — thêm model mới bằng một file, không sửa code lõi.
 
-## Kiến trúc
+## Yêu cầu
 
-```
-backend/                          # FastAPI
-  main.py                         # entry: uvicorn + lifespan
-  config/                         # paths, constants, schema settings (động)
-  controllers/                    # HTTP mỏng: health, state/SSE, settings, devices, samples, session
-  routes/                         # bảng route duy nhất
-  middleware/                     # mọi lỗi → JSON {ok, error}
-  models/                         # DTO: CaptureStats, ReplayResult…
-  services/
-    capture_service.py            # InputProber · Resampler · MicStream
-    segmentation_service.py       # EnergyGate · UtteranceSegmenter · LocalAgreement
-    transcription_service.py      # pipeline (2 mode, reload nền, hàng đợi câu)
-    replay_service.py · event_service.py · device_service.py
-    engines/                      # ASREngine (contract) + registry + plugins
-      base.py
-      zipformer_engine.py
-  utils/                          # priority (ưu tiên thread), errors
+| Thành phần | Phiên bản | Ghi chú |
+| --- | --- | --- |
+| Python | 3.11+ | đã test 3.13.5 trên Windows 11 |
+| Node.js | 18+ | chỉ cần khi sửa giao diện (`npm run dev/build`) |
+| Micro | bất kỳ | cần quyền micro của desktop app |
+| GPU | không cần | model chạy CPU int8 |
 
-frontend/                         # React 19 + Tailwind 4 (Vite)
-  public/
-  src/
-    pages/ components/ services/ context/ utils/
-  dist/                           # bản build sẵn (backend phục vụ thư mục này)
-```
+Repo đã kèm sẵn **model zipformer** (`models/sherpa/`) và **bản build frontend**
+(`frontend/dist/`), nên chỉ cần cài Python là chạy được.
 
-Luồng xử lý:
+Linux/macOS cần PortAudio (`sudo apt install libportaudio2` hoặc `brew install portaudio`).
 
-```
-mic → callback capture → resample 16kHz mono → VAD/segmenter → decode worker (zipformer)
-                                                     ↓
-                                    EventBus → SSE → React UI
-```
-
-## Bắt đầu nhanh
-
-Yêu cầu: **Python 3.11+**, micro. (Node 18+ chỉ cần nếu bạn sửa giao diện.)
+## Cài đặt nhanh
 
 ```powershell
 git clone https://github.com/vuhung-97/speech_to_text.git
 cd speech_to_text
 
 python -m venv .venv
-.venv\Scripts\activate
+.venv\Scripts\activate          # Linux/macOS: source .venv/bin/activate
 pip install -r requirements.txt
 
 python run.py
 ```
 
-Trình duyệt tự mở `http://127.0.0.1:8765/` (cổng bận thì tự nhảy cổng kế tiếp).
+Trình duyệt tự mở `http://127.0.0.1:8765/` (cổng bận sẽ tự nhảy sang cổng kế tiếp).
 `Ctrl+C` ở terminal để dừng.
 
-> Repo đã kèm model zipformer trong `models/sherpa/` và bản build frontend trong
-> `frontend/dist/`, nên chỉ cần cài Python là chạy được.
-> Nếu sửa giao diện: `cd frontend && npm install && npm run build`.
+### Phát triển giao diện
 
-### Chế độ phát triển giao diện
-
-```powershell
-python run.py --no-browser          # terminal 1
+```bash
+python run.py --no-browser        # terminal 1
 cd frontend
 npm install
-npm run dev                         # terminal 2 → http://127.0.0.1:5173
+npm run dev                       # terminal 2 → http://127.0.0.1:5173
 ```
 
-Vite proxy `/api` và `/events` về backend.
+Vite proxy `/api` và `/events` về backend. Khi sửa UI xong, build lại để backend phục vụ:
 
-### Tham số dòng lệnh hữu ích
+```bash
+cd frontend && npm run build
+```
 
-```powershell
+### Tham số dòng lệnh
+
+```bash
 python run.py --list-devices
 python run.py --mode accurate --cpu-threads 2
 python run.py --device 1 --silence-hang 0.5 --threshold 0.008
@@ -105,26 +111,97 @@ python run.py --port 9000 --no-browser
 
 ## Sử dụng
 
-1. Nói tiếng Việt; ở chế độ `realtime` chữ hiện dần (chữ mờ = bản nháp đang chờ xác nhận).
-2. Nghỉ ~0.6s để chốt câu.
-3. **Esc** tạm dừng / tiếp tục · **Ctrl+,** mở cài đặt · **Sao chép** lấy toàn bộ nội dung.
-4. Tab **Thử nghiệm trên file**: kéo–thả file audio vào `samples/` rồi chạy thử để so thông số.
+1. Nói tiếng Việt; nghỉ ~0.6s để chốt câu.
+2. Ở chế độ `realtime`, chữ mờ là bản nháp đang chờ xác nhận (LocalAgreement).
+3. Mở cài đặt bằng nút ⚙ hoặc `Ctrl+,`; đổi `mode`/`threshold` áp dụng ngay, đổi
+   `model`/`cpu_threads`/micro sẽ nạp lại nền (UI không bị chặn).
+4. Tab **Thử nghiệm trên file**: thả file audio vào `samples/` rồi **Chạy thử** để so
+   cấu hình trên cùng một file.
 
-## Cài đặt (⚙)
+| Phím | Tác dụng |
+| --- | --- |
+| `Esc` | Tạm dừng / tiếp tục (đóng drawer nếu đang mở) |
+| `Ctrl` + `,` | Mở / đóng cài đặt |
 
-| Nhóm | Thông số | Ghi chú |
-| --- | --- | --- |
-| Chế độ | `mode` | `accurate` / `realtime` |
-| Model & micro | `model`, `cpu_threads`, `device` + field riêng của engine | đổi model hoặc thread → nạp lại nền, không chặn UI |
-| Câu & micro | `silence_hang`, `threshold`, `noise_floor_ratio`, `min_speech`, `preroll`, `max_utterance` | áp dụng ngay |
-| Luồng | `decode_interval` (realtime), `queue_size` | |
+## Giao diện
 
-Giá trị được lưu vào `settings.json` (file này **không** commit — mỗi máy tự sinh).
-Ưu tiên: mặc định ← `settings.json` ← tham số CLI (chỉ hiệu lực phiên chạy).
+| Nhận dạng trực tiếp | Bảng cài đặt |
+| --- | --- |
+| ![Giao diện chính](docs/ui.png) | ![Bảng cài đặt](docs/settings.png) |
 
-## Cắm thêm model AI
+Bảng cài đặt được sinh từ schema của engine đang chọn: model zipformer hiện thêm
+`Max active paths` và `Blank penalty` bên cạnh các thông số chung.
 
-Hợp đồng nằm ở `backend/services/engines/base.py`:
+## Kiến trúc
+
+```text
+speech_to_text/
+├── backend/                        # FastAPI (Python)
+│   ├── main.py                     # entry: uvicorn + lifespan + engine fallback
+│   ├── config/                     # paths · constants · fields · settings (schema động)
+│   ├── controllers/                # health · state/SSE · settings · devices · samples · session
+│   ├── routes/                     # bảng route duy nhất
+│   ├── middleware/                 # lỗi → JSON {ok, error}
+│   ├── models/                     # DTO: CaptureStats, ReplayResult…
+│   ├── services/
+│   │   ├── capture_service.py      # InputProber · Resampler · MicStream
+│   │   ├── segmentation_service.py # EnergyGate · UtteranceSegmenter · LocalAgreement
+│   │   ├── transcription_service.py# pipeline: 2 mode, reload nền, hàng đợi câu
+│   │   ├── replay_service.py · event_service.py · device_service.py
+│   │   └── engines/                # ASREngine contract + registry + plugins
+│   └── utils/                      # priority thread, errors
+├── frontend/                       # React 19 + Tailwind 4 (Vite)
+│   ├── public/
+│   ├── src/{pages,components,services,context,utils}
+│   └── dist/                       # bản build sẵn
+├── models/sherpa/                  # zipformer-vi-30M int8
+├── samples/                        # file audio để replay (không commit)
+├── tests/                          # test_settings · test_streaming
+├── smoke_test.py · run.py · requirements.txt
+```
+
+Luồng xử lý:
+
+```text
+micro → callback capture → 16kHz mono → VAD/segmenter → decode worker (zipformer)
+                                                 │
+                                     EventBus → SSE → React UI
+```
+
+## Cấu hình
+
+`settings.json` được tạo tự động (không commit). Ưu tiên: **mặc định** ← `settings.json`
+← **tham số CLI** (chỉ hiệu lực phiên chạy).
+
+| Nhóm | Thông số |
+| --- | --- |
+| Chế độ | `mode` (`accurate`/`realtime`) |
+| Model & micro | `model`, `cpu_threads`, `device` + field riêng của engine (vd `max_active_paths`, `blank_penalty`) |
+| Câu & micro | `silence_hang`, `threshold`, `noise_floor_ratio`, `min_speech`, `preroll`, `max_utterance` |
+| Luồng | `decode_interval` (realtime), `queue_size` |
+
+## API
+
+Swagger UI: `http://127.0.0.1:8765/api/docs`
+
+| Endpoint | Mô tả |
+| --- | --- |
+| `GET /api/health` | Engine đang dùng |
+| `GET /api/state` | Snapshot: status, engine, capture, queue, settings, warnings |
+| `GET /events` | SSE: `status` · `level` · `partial` · `final` · `queue` · `engine` · `warning` |
+| `GET /api/settings` | Schema + values |
+| `POST /api/settings` | Cập nhật một phần (`{key: value}`), trả lại `fields`, `engines` |
+| `POST /api/settings/reset` | Khôi phục mặc định |
+| `GET /api/devices` | Danh sách micro |
+| `GET /api/samples` | Danh sách file trong `samples/` |
+| `POST /api/samples` | Upload (`multipart/form-data`, field `file`) |
+| `POST /api/replay` | `{name, segment}` → decode file bằng cấu hình hiện tại |
+| `POST /api/pause` | `{paused: bool}` |
+| `POST /api/clear` | Xoá transcript |
+
+## Thêm model AI mới
+
+Mọi engine kế thừa `ASREngine` (`backend/services/engines/base.py`):
 
 ```python
 class ASREngine(ABC):
@@ -132,25 +209,27 @@ class ASREngine(ABC):
     label: str      # tên hiển thị trong UI
 
     def __init__(self, values: dict): ...
-    def transcribe(self, audio) -> tuple[str, float]: ...   # (text, RTF)
+    def transcribe(self, audio) -> tuple[str, float]: ...   # (text, real_time_factor)
     def describe(self) -> dict: ...
 
     @classmethod
     def fields(cls) -> tuple[Field, ...]: ...               # thông số riêng (UI tự render)
     @classmethod
-    def is_available(cls) -> tuple[bool, str]: ...          # (ready, lý do)
+    def is_available(cls) -> tuple[bool, str]: ...          # (ready, lý do nếu thiếu)
 ```
 
-Thêm model = **3 bước**:
+**3 bước** để cắm model mới:
 
-1. Tạo `backend/services/engines/<ten>_engine.py` (sherpa-onnx có sẵn loader cho
-   Zipformer, SenseVoice, Moonshine, Paraformer, FireRedASR, Whisper…).
-2. Khai báo `key`, `label`, viết `transcribe()`; khai báo `fields()` nếu model có
-   tham số riêng; kiểm tra package/file trong `is_available()`.
-3. Khởi động lại → model xuất hiện trong **⚙ → Model**.
+1. Tạo `backend/services/engines/<ten>_engine.py`. sherpa-onnx có loader sẵn cho
+   Zipformer, SenseVoice, Moonshine, Paraformer, FireRedASR, Whisper…
+2. Khai báo `key`, `label`, viết `transcribe()`; thêm `fields()` nếu model có tham số
+   riêng; kiểm tra package/model trong `is_available()`.
+3. Khởi động lại — model xuất hiện trong **⚙ → Model**, schema tự đổi theo.
 
-Plugin thiếu package/model sẽ hiện cảnh báo kèm lý do, app vẫn chạy engine cũ.
-Ví dụ tối thiểu:
+Plugin thiếu package/model sẽ báo lý do rõ ràng, app vẫn chạy engine cũ.
+
+<details>
+<summary>Ví dụ tối thiểu</summary>
 
 ```python
 from ...config.fields import Field
@@ -168,35 +247,21 @@ class EchoEngine(ASREngine):
         return "xin chào", 0.01
 ```
 
-## API
+</details>
 
-Swagger UI: `http://127.0.0.1:8765/api/docs`
+## Hiệu năng
 
-| Endpoint | Ý nghĩa |
-| --- | --- |
-| `GET /api/health` | engine đang dùng |
-| `GET /api/state` | snapshot (status, engine, capture, queue, settings, warnings) |
-| `GET /events` | SSE: `status` · `level` · `partial` · `final` · `queue` · `engine` · `warning` |
-| `GET/POST /api/settings` | schema + values / partial update |
-| `POST /api/settings/reset` | khôi phục mặc định |
-| `GET /api/devices` | danh sách micro |
-| `GET/POST /api/samples` | liệt kê / upload (multipart `file`) |
-| `POST /api/replay` | decode file trong `samples/` bằng cấu hình hiện tại |
-| `POST /api/pause`, `POST /api/clear` | tạm dừng/tiếp tục, xoá transcript |
+Thiết bị test: CPU 8 luồng, model 2 thread, int8. File thử: bản tin đọc liên tục 168s.
 
-## Hiệu năng (tham khảo)
-
-Máy test: CPU 8 luồng, model chạy 2 thread, int8.
-
-| Cấu hình | Decode 168s audio | RTF | Ghi chú |
+| Cấu hình | Decode | RTF | Ghi chú |
 | --- | --- | --- | --- |
-| **zipformer-vi-30M** | **8.3s** | **0.049** | mặc định, khớp 99% |
-| whisper small (CT2) | ~53s | 0.31 | sai tên riêng, hay lặp |
-| PhoWhisper small (CT2) | 48–85s | 0.29–0.50 | khớp 98%, không dấu câu |
+| **zipformer-vi-30M (mặc định)** | **8.3s** | **0.049** | khớp 99%, không hallucination |
+| whisper-small (CT2) | ~53s | 0.31 | sai tên riêng, dễ lặp |
+| PhoWhisper-small (CT2) | 48–85s | 0.29–0.50 | khớp 98%, không dấu câu |
 
-## Test
+## Kiểm thử
 
-```powershell
+```bash
 python tests/test_settings.py     # schema động, clamp, effects, persistence
 python tests/test_streaming.py    # pipeline, engine registry, replay, FastAPI + SSE
 python smoke_test.py              # zipformer + micro thật
@@ -206,15 +271,28 @@ python smoke_test.py              # zipformer + micro thật
 
 | Hiện tượng | Cách xử lý |
 | --- | --- |
-| Không mở được micro | Windows → Settings → Privacy → Microphone: bật "Let desktop apps access"; hoặc `python run.py --list-devices` rồi `--device <index>` |
+| Không mở được micro | Windows → Settings → Privacy → Microphone → bật *Let desktop apps access*; hoặc `python run.py --list-devices` rồi `--device <index>` |
 | UI trắng / báo "frontend chưa build" | `cd frontend && npm install && npm run build` |
-| Cổng bận | app tự nhảy cổng; hoặc `--port 9000` |
-| Chữ bị rơi, coverage thấp | tăng `threshold` nếu phòng ồn; xem `dropped` trong ⚙; thử đổi `--device` |
+| Cổng bận | app tự nhảy cổng, hoặc `python run.py --port 9000` |
+| Mất chữ, `coverage` thấp | tăng `threshold`; kiểm tra `dropped` trong ⚙; thử `--device` khác |
 | Nạp model lỗi | kiểm tra `models/sherpa/sherpa-onnx-zipformer-vi-30M-int8-2026-02-09/` có `encoder.int8.onnx` |
+| Giọng nhỏ bị bỏ | giảm `threshold` (~0.006–0.008) |
 
-## Ghi chú
+## Đóng góp
 
-- Model zipformer: [k2-fsa/sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) release
-  `sherpa-onnx-zipformer-vi-30M-int8-2026-02-09`.
-- Repo chưa kèm file license — thêm `LICENSE` nếu bạn muốn công bố theo giấy phép cụ thể.
-- File audio trong `samples/` không được commit (mỗi người tự thêm file của mình).
+1. Fork repo và tạo nhánh: `git checkout -b feat/ten-tinh-nang`.
+2. Chạy test trước khi gửi PR: `python tests/test_settings.py`, `python tests/test_streaming.py`.
+3. Mở Pull Request, mô tả thay đổi + cách kiểm chứng.
+
+Thêm engine mới thì chỉ cần một file trong `backend/services/engines/` — rất khuyến khích
+gửi PR kèm model/benchmark của bạn.
+
+## Giấy phép
+
+Repo chưa kèm file `LICENSE`. Nếu bạn muốn công bố theo giấy phép cụ thể (MIT, Apache-2.0…),
+thêm `LICENSE` ở thư mục gốc — nội dung README không cần sửa gì thêm.
+
+## Tham chiếu
+
+- [k2-fsa/sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) — runtime + model zipformer Việt.
+- [PortAudio](https://www.portaudio.com/) / [python-sounddevice](https://python-sounddevice.readthedocs.io/) — thu âm thanh.

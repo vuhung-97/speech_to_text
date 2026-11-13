@@ -21,13 +21,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from .config.paths import DIST_DIR, SAMPLES_DIR, SETTINGS_PATH, TTS_TEMP_DIR
+from .adapters.retrieval.null import NullFaqMatcher
+from .adapters.storage.sqlite import (Database, SqliteQueryLog,
+                                      SqliteSessionRepository)
+from .config.paths import DB_PATH, DIST_DIR, SAMPLES_DIR, SETTINGS_PATH, TTS_TEMP_DIR
 from .config.settings import Settings
 from .middleware import errors
 from .routes import build_router
 from .services.audio.temp_store import cleanup_stale_sessions
 from .services.engines import available_engines, create_engine
 from .services.event_service import EventBus
+from .services.qa_service import QaService
 from .services.replay_service import ReplayService
 from .services.transcription_service import LivePipeline
 from .services.tts_service import TtsService
@@ -59,7 +63,9 @@ def _mount_spa(app: FastAPI, dist_dir: Path, index: Path) -> None:
 
 def create_app(settings: Settings, pipeline: LivePipeline, replay: ReplayService,
                bus: EventBus, dist_dir=DIST_DIR, *,
-               tts: TtsService | None = None) -> FastAPI:
+               tts: TtsService | None = None,
+               db_path: str | Path | None = None,
+               qa: QaService | None = None) -> FastAPI:
     """Composition root for the HTTP layer (also used by the tests)."""
 
     @asynccontextmanager
@@ -82,6 +88,15 @@ def create_app(settings: Settings, pipeline: LivePipeline, replay: ReplayService
     app.state.replay = replay
     app.state.bus = bus
     app.state.tts = tts or TtsService()
+
+    database = Database(db_path or DB_PATH)
+    sessions_repo = SqliteSessionRepository(database)
+    query_log = SqliteQueryLog(database)
+    app.state.db = database
+    app.state.sessions = sessions_repo
+    app.state.query_log = query_log
+    app.state.faq_matcher = NullFaqMatcher()
+    app.state.qa = qa or QaService(app.state.faq_matcher, sessions_repo, query_log)
 
     errors.register(app)
     app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"],

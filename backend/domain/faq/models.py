@@ -43,7 +43,13 @@ class FaqMatch:
 
 @dataclass(frozen=True)
 class FaqResult:
-    """Outcome of one lookup, threshold included so the caller never guesses."""
+    """Outcome of one lookup.
+
+    ``matched`` is the best entry when it clears ``near_threshold``: the caller
+    answers it, and marks the turn NEAR_MISS when it is still below the stricter
+    ``threshold`` so the UI can show a warning chip. Below ``near_threshold``
+    the question is unanswered and only suggestions are returned.
+    """
 
     matched: FaqMatch | None
     candidates: tuple[FaqMatch, ...] = ()
@@ -51,11 +57,21 @@ class FaqResult:
     near_threshold: float = 0.78
 
     @property
+    def accepted(self) -> bool:
+        """True when the best score clears the strict threshold."""
+        return bool(self.matched and self.matched.score >= self.threshold)
+
+    @property
     def near_miss(self) -> bool:
-        """True when the best score is close enough that the UI should warn."""
-        best = self.matched.score if self.matched else (
-            self.candidates[0].score if self.candidates else 0.0)
-        return best >= self.near_threshold and best < self.threshold
+        return bool(self.matched and not self.accepted)
+
+    @property
+    def best_score(self) -> float:
+        if self.matched:
+            return self.matched.score
+        if self.candidates:
+            return self.candidates[0].score
+        return 0.0
 
 
 __all__ = ["FaqEntry", "FaqMatch", "FaqResult"]

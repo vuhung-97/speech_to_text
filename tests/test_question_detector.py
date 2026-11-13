@@ -29,6 +29,13 @@ def test_leading_markers() -> None:
         assert is_question(text), text
 
 
+def test_markers_inside_the_sentence() -> None:
+    assert is_question("Quy trình gồm mấy bước nào")
+    assert is_question("Thủ đô Việt Nam là gì")
+    assert is_question("Hồ sơ cần những giấy tờ gì")
+    assert is_question("Làm thủ tục ở đâu")
+
+
 def test_trailing_particles() -> None:
     assert is_question("Bạn khỏe không")
     assert is_question("Bạn ăn cơm chưa")

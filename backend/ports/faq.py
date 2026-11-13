@@ -1,4 +1,10 @@
-"""Catalogue lookup and storage contracts."""
+"""Catalogue lookup contracts.
+
+``FaqMatcher`` answers one question; ``FaqRepository`` owns curated entries;
+``QueryLog`` records every lookup so the operator can see what users actually
+ask and which questions have no answer yet. Splitting the log from the
+catalogue keeps the matcher free of write concerns.
+"""
 
 from __future__ import annotations
 
@@ -17,7 +23,7 @@ class FaqMatcher(Protocol):
 
 
 class FaqRepository(Protocol):
-    """Tenant-scoped persistence for curated entries and query logs."""
+    """Tenant-scoped storage for curated question/answer entries."""
 
     def get(self, entry_id: str, tenant: str) -> FaqEntry | None: ...
 
@@ -36,7 +42,11 @@ class FaqRepository(Protocol):
 
     def delete(self, entry_id: str, tenant: str) -> None: ...
 
-    def log_query(
+
+class QueryLog(Protocol):
+    """Every question asked, with the outcome, for tuning and follow-up."""
+
+    def record(
         self,
         *,
         tenant: str,
@@ -44,6 +54,7 @@ class FaqRepository(Protocol):
         question: str,
         matched_entry_id: str | None,
         score: float | None,
+        answered: bool,
     ) -> None: ...
 
     def unanswered(self, tenant: str, limit: int = 50) -> Sequence[dict[str, object]]:
@@ -51,4 +62,4 @@ class FaqRepository(Protocol):
         ...
 
 
-__all__ = ["FaqMatcher", "FaqRepository"]
+__all__ = ["FaqMatcher", "FaqRepository", "QueryLog"]

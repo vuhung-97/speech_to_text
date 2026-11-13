@@ -129,9 +129,9 @@ Tổng ~23,5 ngày công.
 | P0 Nền kiến trúc | ✅ xong | `domain/`, `ports/`, `adapters/`, `/api/v1`, catch-all SPA, `react-router-dom`, tách Live/Settings/Toast provider, `http.js`, `tokens.css` |
 | P1 Lõi audio | ✅ xong | `pcm.py`, `TempAudioStore`, `synthesize_stream`, 5 endpoint, quota 512 MB, dọn temp khi khởi động/thoát |
 | P2 Player | ✅ xong | `pcmStream.js`, `pcmPlayer.js` (prebuffer 2,5 s), `useSpeechPlayer`, TtsDrawer 2 chế độ |
-| P3 Q&A + sessions | ⏳ tiếp theo | `QuestionDetector` đã có (P0), cần `QaService`, SQLite, endpoint |
-| P4 Giao diện SaaS | ⏳ | PageShell tạm đã có route cho 5 màn hình |
-| P5 FAQ embedding | ⏳ | |
+| P3 Q&A + sessions | ✅ xong | `QaService.ask`, SQLite (sessions/turns/answers/faq_queries, WAL, tenant scope), `/api/v1/qa/ask`, `/qa/detect`, `/qa/unanswered`, `/sessions` CRUD; `NullFaqMatcher` trả fallback + log |
+| P4 Giao diện SaaS | ⏳ tiếp theo | PageShell tạm đã có route cho 5 màn hình |
+| P5 FAQ embedding | ⏳ | `OnnxE5Embedder` + `SqliteFaqMatcher` + import/reindex; khi đó thêm `POST /qa/answers/{id}/speech` và cache `faq_audio` (P3 dùng thẳng `/tts/stream` với text đã lưu) |
 | P6 Gia cố | ⏳ | |
 
 Đo thực tế trên máy phát triển (VieNeu v3 Turbo, ONNX CPU):
@@ -144,3 +144,8 @@ Tổng ~23,5 ngày công.
 | Block đầu tiên | 6,6 s (gồm nạp model lần đầu) |
 | RAM tăng thêm khi stream | dưới 12 MB cho 200 s audio (test `tracemalloc`) |
 | Đĩa | 96 KB/s → ~345 MB/giờ; quota mặc định 512 MB |
+
+Kiểm thử P3 (109 test): `test_sessions_repo` (vòng đời, cách ly tenant, log),
+`test_qa_service` (fallback, matched, near-miss, giới hạn, dùng lại phiên),
+`test_qa_http` (envelope, detect, sessions CRUD, tenant header, worklist),
+`test_question_detector` (marker giữa câu).

@@ -18,6 +18,13 @@ _LEADING_MARKERS = (
     "what", "why", "how", "where", "when", "which", "who",
 )
 
+# Strong signals that may sit anywhere in the sentence ("... gồm mấy bước nào").
+_ANYWHERE_MARKERS = (
+    "bao nhiêu", "bao lâu", "bao giờ", "ở đâu", "khi nào", "lúc nào",
+    "tại sao", "vì sao", "thế nào", "như thế nào", "ra sao", "làm sao",
+    "là gì", "là ai", "gì", "nào",
+)
+
 # Sentence-final particles that turn a statement into a question.
 _TRAILING_PARTICLES = frozenset({"không", "chưa", "hả", "à", "ạ", "nhỉ", "chứ", "sao"})
 
@@ -44,6 +51,10 @@ def is_question(text: str) -> bool:
 
     for marker in _LEADING_MARKERS:
         if body == marker or body.startswith(marker + " "):
+            return True
+
+    for marker in _ANYWHERE_MARKERS:
+        if re.search(rf"(?:^|\s){re.escape(marker)}(?:\s|$)", body):
             return True
 
     last = body.rsplit(" ", 1)[-1]

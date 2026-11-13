@@ -7,8 +7,11 @@ from typing import Annotated
 
 from fastapi import Depends, Header, Request
 
+from ..adapters.storage.sqlite import SqliteSessionRepository
 from ..config.settings import Settings
+from ..ports.faq import QueryLog
 from ..services.event_service import EventBus
+from ..services.qa_service import QaService
 from ..services.replay_service import ReplayService
 from ..services.transcription_service import LivePipeline
 from ..services.tts_service import TtsService
@@ -38,6 +41,18 @@ def get_tts(request: Request) -> TtsService:
     return request.app.state.tts
 
 
+def get_qa(request: Request) -> QaService:
+    return request.app.state.qa
+
+
+def get_sessions(request: Request) -> SqliteSessionRepository:
+    return request.app.state.sessions
+
+
+def get_query_log(request: Request) -> QueryLog:
+    return request.app.state.query_log
+
+
 def current_tenant(
     x_workspace: str | None = Header(default=None, alias="X-Workspace"),
 ) -> str:
@@ -59,3 +74,6 @@ ReplayDep = Annotated[ReplayService, Depends(get_replay)]
 BusDep = Annotated[EventBus, Depends(get_bus)]
 TtsDep = Annotated[TtsService, Depends(get_tts)]
 TenantDep = Annotated[str, Depends(current_tenant)]
+QaDep = Annotated[QaService, Depends(get_qa)]
+SessionsRepoDep = Annotated[SqliteSessionRepository, Depends(get_sessions)]
+QueryLogDep = Annotated[QueryLog, Depends(get_query_log)]

@@ -18,6 +18,17 @@ class AnswerStatus(StrEnum):
     UNANSWERED = "unanswered"
 
 
+MAX_QUESTION_CHARS = 1_000
+
+
+class SessionNotFound(ValueError):
+    """The requested conversation session does not exist for this tenant."""
+
+
+class TurnNotFound(ValueError):
+    """The requested turn does not exist for this tenant."""
+
+
 @dataclass(frozen=True)
 class Question:
     """A single question as heard (or typed)."""
@@ -39,6 +50,7 @@ class Answer:
     candidates: tuple[FaqMatch, ...] = ()
     entry_id: str | None = None
     score: float | None = None
+    session_id: str | None = None
     audio_url: str | None = None
     seconds: float | None = None
     meta: dict[str, object] = field(default_factory=dict)
@@ -54,4 +66,12 @@ FALLBACK_TEXT = (
 )
 
 
-__all__ = ["Answer", "AnswerStatus", "FALLBACK_TEXT", "Question"]
+__all__ = [
+    "Answer",
+    "AnswerStatus",
+    "FALLBACK_TEXT",
+    "MAX_QUESTION_CHARS",
+    "Question",
+    "SessionNotFound",
+    "TurnNotFound",
+]

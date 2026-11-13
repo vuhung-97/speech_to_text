@@ -54,6 +54,7 @@ def answer_json(outcome: QaOutcome) -> dict[str, Any]:
         "answer": {
             "id": answer.id,
             "turn_id": answer.turn_id,
+            "session_id": outcome.session_id,
             "text": answer.text,
             "status": str(answer.status),
             "answered": answer.answered,

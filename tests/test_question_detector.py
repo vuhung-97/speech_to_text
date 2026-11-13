@@ -36,6 +36,15 @@ def test_markers_inside_the_sentence() -> None:
     assert is_question("Làm thủ tục ở đâu")
 
 
+def test_noisy_dictation_is_not_a_question() -> None:
+    noise = (
+        "trước nay xếp hàng da sổ thông qua vâng đấy là đóng cái sau là đóng sau "
+        "tôi mới mang lại nhà vất vả bên kia nó mai được phép mai một ngày đó nó "
+        "mới xong rồi không khí lạnh hôm qua sáng chắc anh mới đi tìm gian khó"
+    )
+    assert not is_question(noise)
+
+
 def test_trailing_particles() -> None:
     assert is_question("Bạn khỏe không")
     assert is_question("Bạn ăn cơm chưa")

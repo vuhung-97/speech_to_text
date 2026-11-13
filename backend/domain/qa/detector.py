@@ -19,14 +19,19 @@ _LEADING_MARKERS = (
 )
 
 # Strong signals that may sit anywhere in the sentence ("... gồm mấy bước nào").
+# Bare "gì"/"nào"/"ai" are excluded on purpose: noisy dictation contains them
+# inside ordinary statements often enough to make the hint annoying.
 _ANYWHERE_MARKERS = (
     "bao nhiêu", "bao lâu", "bao giờ", "ở đâu", "khi nào", "lúc nào",
     "tại sao", "vì sao", "thế nào", "như thế nào", "ra sao", "làm sao",
-    "là gì", "là ai", "gì", "nào",
+    "là gì", "là ai", "mấy",
 )
 
 # Sentence-final particles that turn a statement into a question.
-_TRAILING_PARTICLES = frozenset({"không", "chưa", "hả", "à", "ạ", "nhỉ", "chứ", "sao"})
+_TRAILING_PARTICLES = frozenset({
+    "không", "chưa", "hả", "à", "ạ", "nhỉ", "chứ", "sao",
+    "gì", "nào", "ai", "đâu", "bao nhiêu",
+})
 
 _PUNCT = re.compile(r"[\.\,\;\:\!\?…]+$")
 _SPACES = re.compile(r"\s+")

@@ -1,22 +1,27 @@
 import { Link } from "react-router-dom";
 
-import PageShell from "../components/PageShell";
+import AppShell from "../app/AppShell";
+import EmptyState from "../components/ui/EmptyState";
 
 export default function NotFoundPage() {
   return (
-    <PageShell title="Không tìm thấy trang" subtitle="Đường dẫn không tồn tại trong ứng dụng">
-      <div className="rounded-2xl border border-line bg-surface p-8 text-center">
-        <p className="m-0 text-[14px] font-semibold">404</p>
-        <p className="mx-auto mt-2 mb-4 max-w-[420px] text-[12.5px] leading-relaxed text-faint">
-          Có thể liên kết đã cũ hoặc bạn gõ nhầm địa chỉ.
-        </p>
-        <Link
-          to="/"
-          className="inline-flex rounded-lg bg-gradient-to-br from-accent to-accent-2 px-4 py-2 text-[12.5px] font-semibold text-[#201505] transition hover:brightness-110"
-        >
-          Về trang hỏi đáp
-        </Link>
+    <AppShell title="Không tìm thấy trang" subtitle="Đường dẫn không tồn tại">
+      <div className="scroll-thin min-h-0 flex-1 overflow-y-auto px-5 py-10">
+        <div className="mx-auto max-w-[620px]">
+          <EmptyState
+            title="404"
+            hint="Có thể liên kết đã cũ hoặc bạn gõ nhầm địa chỉ."
+            action={
+              <Link
+                to="/"
+                className="inline-flex rounded-control bg-gradient-to-br from-accent to-accent-2 px-4 py-2 text-[12.5px] font-semibold text-[#201505]"
+              >
+                Về trang hỏi đáp
+              </Link>
+            }
+          />
+        </div>
       </div>
-    </PageShell>
+    </AppShell>
   );
 }

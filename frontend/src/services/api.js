@@ -22,3 +22,26 @@ export const uploadSample = (file) => {
   form.append("file", file);
   return http.requestForm("/api/samples", { form });
 };
+
+// ---------------------------------------------------------------- Q&A (P3)
+export const askQuestion = (question, { sessionId = null, source = "voice" } = {}) =>
+  http.post("/api/v1/qa/ask", {
+    question,
+    session_id: sessionId || null,
+    source,
+  });
+
+export const detectQuestion = (text, parts = null) =>
+  http.post("/api/v1/qa/detect", parts ? { parts } : { text });
+
+export const getUnanswered = (limit = 50) =>
+  http.get(`/api/v1/qa/unanswered?limit=${limit}`);
+
+export const getSessions = (limit = 50, offset = 0) =>
+  http.get(`/api/v1/sessions?limit=${limit}&offset=${offset}`);
+
+export const getSession = (sessionId) =>
+  http.get(`/api/v1/sessions/${encodeURIComponent(sessionId)}`);
+
+export const deleteSession = (sessionId) =>
+  http.del(`/api/v1/sessions/${encodeURIComponent(sessionId)}`);

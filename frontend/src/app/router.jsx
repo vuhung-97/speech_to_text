@@ -1,18 +1,21 @@
 // Client router: one URL per screen so deep links, refresh and back/forward all
-// work. Screens that do not exist yet answer with an honest placeholder.
+// work. `/sessions/:id` reopens a persisted conversation.
 
 import { createBrowserRouter } from "react-router-dom";
 
+import FaqAdminPage from "../features/faq/FaqAdminPage";
+import QaPage from "../features/qa/QaPage";
+import SessionListPage from "../features/sessions/SessionListPage";
 import DictationPage from "../pages/DictationPage";
-import FaqPage from "../pages/FaqPage";
 import NotFoundPage from "../pages/NotFoundPage";
-import SessionsPage from "../pages/SessionsPage";
 import SettingsPage from "../pages/SettingsPage";
 
 export const router = createBrowserRouter([
-  { path: "/", element: <DictationPage /> },
-  { path: "/sessions", element: <SessionsPage /> },
-  { path: "/faq", element: <FaqPage /> },
+  { path: "/", element: <QaPage /> },
+  { path: "/sessions", element: <SessionListPage /> },
+  { path: "/sessions/:id", element: <QaPage /> },
+  { path: "/faq", element: <FaqAdminPage /> },
+  { path: "/dictation", element: <DictationPage /> },
   { path: "/settings", element: <SettingsPage /> },
   { path: "*", element: <NotFoundPage /> },
 ]);

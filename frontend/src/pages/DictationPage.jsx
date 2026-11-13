@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 import LevelMeter from "../components/LevelMeter";
 import ControlsBar from "../components/ControlsBar";
@@ -67,7 +68,28 @@ export default function DictationPage() {
       />
       <div className="relative mx-auto flex h-dvh max-w-[940px] flex-col gap-4 px-6 pt-6 pb-4 max-sm:px-3.5 max-sm:pt-4">
         <header className="flex items-center justify-between gap-4">
-          <Brand />
+          <div className="flex items-center gap-3">
+            <Link
+              to="/"
+              aria-label="Về trang hỏi đáp"
+              title="Về trang hỏi đáp"
+              className="grid h-9 w-9 place-items-center rounded-xl border border-line bg-white/[0.03] text-dim transition hover:bg-white/[0.075] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-[18px] w-[18px]"
+                aria-hidden="true"
+              >
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+            </Link>
+            <Brand />
+          </div>
           <div className="flex items-center gap-2.5">
             <StatusPill />
             <button

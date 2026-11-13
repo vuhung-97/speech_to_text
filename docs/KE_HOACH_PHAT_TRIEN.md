@@ -130,8 +130,8 @@ Tổng ~23,5 ngày công.
 | P1 Lõi audio | ✅ xong | `pcm.py`, `TempAudioStore`, `synthesize_stream`, 5 endpoint, quota 512 MB, dọn temp khi khởi động/thoát |
 | P2 Player | ✅ xong | `pcmStream.js`, `pcmPlayer.js` (prebuffer 2,5 s), `useSpeechPlayer`, TtsDrawer 2 chế độ |
 | P3 Q&A + sessions | ✅ xong | `QaService.ask`, SQLite (sessions/turns/answers/faq_queries, WAL, tenant scope), `/api/v1/qa/ask`, `/qa/detect`, `/qa/unanswered`, `/sessions` CRUD; `NullFaqMatcher` trả fallback + log |
-| P4 Giao diện SaaS | ⏳ tiếp theo | PageShell tạm đã có route cho 5 màn hình |
-| P5 FAQ embedding | ⏳ | `OnnxE5Embedder` + `SqliteFaqMatcher` + import/reindex; khi đó thêm `POST /qa/answers/{id}/speech` và cache `faq_audio` (P3 dùng thẳng `/tts/stream` với text đã lưu) |
+| P4 Giao diện SaaS | ✅ xong | App shell rail+topbar+panel, `/` hỏi đáp, `/sessions(/:id)`, `/faq` (worklist), `/dictation`, `/settings`; command palette Ctrl+K; player đọc trong AnswerCard; `docs/qa-ui.md` |
+| P5 FAQ embedding | ⏳ tiếp theo | `OnnxE5Embedder` + `SqliteFaqMatcher` + import/reindex; khi đó thêm `POST /qa/answers/{id}/speech` và cache `faq_audio` (P3 dùng thẳng `/tts/stream` với text đã lưu) |
 | P6 Gia cố | ⏳ | |
 
 Đo thực tế trên máy phát triển (VieNeu v3 Turbo, ONNX CPU):

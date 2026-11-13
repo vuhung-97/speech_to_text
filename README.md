@@ -10,7 +10,8 @@
 
 **Nhận dạng tiếng Việt offline, realtime trên CPU** — không cần GPU, không cần internet
 sau khi cài. Lõi là **zipformer 30M int8 (sherpa-onnx)**, backend **FastAPI**, giao diện
-**React + Tailwind**, kèm cơ chế **plugin để cắm model AI khác**.
+**React + Tailwind**, kèm cơ chế **plugin để cắm model AI khác**. Tính năng **đọc văn bản
+(TTS)** dùng **VieNeu-TTS v3 Turbo** chạy offline, xuất WAV 48 kHz.
 
 <p align="center">
   <img src="docs/ui.png" alt="Giao diện nhận dạng trực tiếp" width="820">
@@ -52,6 +53,9 @@ sau khi cài. Lõi là **zipformer 30M int8 (sherpa-onnx)**, backend **FastAPI**
   cảnh báo cấu hình rủi ro.
 - **Replay file audio** — kéo–thả `wav/mp3/m4a/…` rồi decode bằng đúng cấu hình đang dùng
   để A/B thông số trên cùng một file.
+- **Đọc văn bản (TTS)** — drawer **Đọc** dùng VieNeu-TTS v3 Turbo: 25 giọng preset,
+  gộp cả giọng clone của app VieNeu, nghe trực tiếp hoặc tải WAV 48 kHz; chạy offline
+  trên CPU (ONNX), model nạp lần đầu khi dùng.
 - **API + docs tự động** tại `/api/docs`, sự kiện realtime qua **SSE**.
 - **Plugin model** — thêm model mới bằng một file, không sửa code lõi.
 
@@ -66,6 +70,10 @@ sau khi cài. Lõi là **zipformer 30M int8 (sherpa-onnx)**, backend **FastAPI**
 
 Repo đã kèm sẵn **model zipformer** (`models/sherpa/`) và **bản build frontend**
 (`frontend/dist/`), nên chỉ cần cài Python là chạy được.
+
+TTS dùng package `vieneu` (đã nằm trong `requirements.txt`) và model **VieNeu-TTS v3 Turbo**
+trong `models/vieneu/`. Nếu thư mục này chưa có, lần đọc đầu tiên backend sẽ tải model từ
+Hugging Face (cần mạng); các lần sau chạy offline.
 
 Linux/macOS cần PortAudio (`sudo apt install libportaudio2` hoặc `brew install portaudio`).
 
@@ -117,6 +125,8 @@ python run.py --port 9000 --no-browser
    `model`/`cpu_threads`/micro sẽ nạp lại nền (UI không bị chặn).
 4. Tab **Thử nghiệm trên file**: thả file audio vào `samples/` rồi **Chạy thử** để so
    cấu hình trên cùng một file.
+5. Nút **Đọc** cạnh “Sao chép” mở drawer TTS: chọn giọng, dùng transcript hoặc nhập
+   văn bản, bấm **Tạo giọng đọc** rồi nghe/tải WAV. Lần đầu nạp model ~10–20 giây.
 
 | Phím | Tác dụng |
 | --- | --- |
@@ -139,7 +149,7 @@ speech_to_text/
 ├── backend/                        # FastAPI (Python)
 │   ├── main.py                     # entry: uvicorn + lifespan + engine fallback
 │   ├── config/                     # paths · constants · fields · settings (schema động)
-│   ├── controllers/                # health · state/SSE · settings · devices · samples · session
+│   ├── controllers/                # health · state/SSE · settings · devices · samples · tts · session
 │   ├── routes/                     # bảng route duy nhất
 │   ├── middleware/                 # lỗi → JSON {ok, error}
 │   ├── models/                     # DTO: CaptureStats, ReplayResult…
@@ -147,6 +157,7 @@ speech_to_text/
 │   │   ├── capture_service.py      # InputProber · Resampler · MicStream
 │   │   ├── segmentation_service.py # EnergyGate · UtteranceSegmenter · LocalAgreement
 │   │   ├── transcription_service.py# pipeline: 2 mode, reload nền, hàng đợi câu
+│   │   ├── tts_service.py          # VieNeu TTS: lazy load, voices, WAV
 │   │   ├── replay_service.py · event_service.py · device_service.py
 │   │   └── engines/                # ASREngine contract + registry + plugins
 │   └── utils/                      # priority thread, errors
@@ -155,6 +166,7 @@ speech_to_text/
 │   ├── src/{pages,components,services,context,utils}
 │   └── dist/                       # bản build sẵn
 ├── models/sherpa/                  # zipformer-vi-30M int8
+├── models/vieneu/                  # VieNeu-TTS v3 Turbo (cache HF + giọng clone)
 ├── samples/                        # file audio để replay (không commit)
 ├── tests/                          # test_settings · test_streaming
 ├── smoke_test.py · run.py · requirements.txt
@@ -196,6 +208,8 @@ Swagger UI: `http://127.0.0.1:8765/api/docs`
 | `GET /api/samples` | Danh sách file trong `samples/` |
 | `POST /api/samples` | Upload (`multipart/form-data`, field `file`) |
 | `POST /api/replay` | `{name, segment}` → decode file bằng cấu hình hiện tại |
+| `GET /api/tts/voices` | Danh sách giọng đọc + trạng thái model TTS |
+| `POST /api/tts` | `{text, voice?}` → `audio/wav` 48 kHz (tối đa 1000 ký tự) |
 | `POST /api/pause` | `{paused: bool}` |
 | `POST /api/clear` | Xoá transcript |
 
@@ -264,6 +278,8 @@ Thiết bị test: CPU 8 luồng, model 2 thread, int8. File thử: bản tin đ
 ```bash
 python tests/test_settings.py     # schema động, clamp, effects, persistence
 python tests/test_streaming.py    # pipeline, engine registry, replay, FastAPI + SSE
+python tests/test_tts.py          # WAV, voice catalog, API (fake engine)
+VIENEU_SMOKE=1 python tests/test_tts.py   # synth thật (chậm, cần model TTS)
 python smoke_test.py              # zipformer + micro thật
 ```
 
@@ -276,6 +292,9 @@ python smoke_test.py              # zipformer + micro thật
 | Cổng bận | app tự nhảy cổng, hoặc `python run.py --port 9000` |
 | Mất chữ, `coverage` thấp | tăng `threshold`; kiểm tra `dropped` trong ⚙; thử `--device` khác |
 | Nạp model lỗi | kiểm tra `models/sherpa/sherpa-onnx-zipformer-vi-30M-int8-2026-02-09/` có `encoder.int8.onnx` |
+| TTS báo “chưa cài package vieneu” | `.venv\Scripts\pip install -r requirements.txt` (hoặc `pip install vieneu`) |
+| TTS không thấy model | cần `models/vieneu/vieneu/hf_cache/` (từ app VieNeu) hoặc mạng cho lần tải đầu |
+| TTS chậm/lần đầu lâu | model nạp ~10–20 s; đặt `VIENEU_PRECISION=int8` (CPU có VNNI) để nhanh hơn |
 | Giọng nhỏ bị bỏ | giảm `threshold` (~0.006–0.008) |
 
 ## Đóng góp

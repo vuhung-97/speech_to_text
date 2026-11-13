@@ -5,6 +5,7 @@ import ControlsBar from "../components/ControlsBar";
 import SettingsDrawer from "../components/SettingsDrawer";
 import StatusPill from "../components/StatusPill";
 import TranscriptView from "../components/TranscriptView";
+import TtsDrawer from "../components/TtsDrawer";
 import { useApp } from "../context/AppContext";
 
 function Brand() {
@@ -37,6 +38,7 @@ function Brand() {
 export default function DictationPage() {
   const { status, togglePause } = useApp();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [ttsOpen, setTtsOpen] = useState(false);
 
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -49,12 +51,13 @@ export default function DictationPage() {
         return;
       }
       event.preventDefault();
-      if (drawerOpen) setDrawerOpen(false);
+      if (ttsOpen) setTtsOpen(false);
+      else if (drawerOpen) setDrawerOpen(false);
       else togglePause();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [drawerOpen, togglePause]);
+  }, [drawerOpen, ttsOpen, togglePause]);
 
   return (
     <div className={status.paused ? "paused" : ""}>
@@ -94,7 +97,7 @@ export default function DictationPage() {
 
         <main className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[20px] border border-line bg-surface shadow-[0_40px_90px_-50px_#000]">
           <TranscriptView />
-          <ControlsBar />
+          <ControlsBar onOpenTts={() => setTtsOpen(true)} />
         </main>
 
         <p className="m-0 hidden text-center text-[12px] text-faint sm:block">
@@ -115,6 +118,7 @@ export default function DictationPage() {
       </div>
 
       <SettingsDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <TtsDrawer open={ttsOpen} onClose={() => setTtsOpen(false)} />
     </div>
   );
 }

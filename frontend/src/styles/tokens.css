@@ -1,0 +1,35 @@
+/* Design tokens: the single source of truth for colour, type and shape.
+   Components never hardcode hex values; they use Tailwind classes backed by
+   these tokens (bg-surface, text-dim, rounded-card, …). */
+
+@theme {
+  /* surfaces */
+  --color-ink: #08090b;
+  --color-surface: #0f1216;
+  --color-surface-2: #141922;
+  --color-surface-3: #1b2230;
+  --color-line: rgba(255, 255, 255, 0.085);
+  --color-line-strong: rgba(255, 255, 255, 0.16);
+
+  /* text */
+  --color-dim: #93a0b1;
+  --color-faint: #5d6875;
+
+  /* brand + feedback */
+  --color-accent: #ffb454;
+  --color-accent-2: #ff8a3d;
+  --color-accent-soft: rgba(255, 180, 84, 0.14);
+  --color-ok: #57d9a3;
+  --color-err: #ff6b6b;
+
+  /* type */
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", ui-sans-serif, system-ui,
+    -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Cascadia Mono", ui-monospace, "SF Mono", Consolas, monospace;
+
+  /* shape */
+  --radius-card: 1.25rem;
+  --radius-control: 0.75rem;
+  --shadow-card: 0 40px 90px -50px #000;
+  --shadow-accent: 0 10px 24px -12px rgba(255, 138, 61, 0.9);
+}

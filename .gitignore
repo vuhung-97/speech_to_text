@@ -13,6 +13,9 @@ npm-debug.log*
 settings.json
 samples/*
 !samples/.gitkeep
+models/vieneu/
+models/embed/
+data/
 
 # OS / editor
 .DS_Store

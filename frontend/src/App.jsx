@@ -1,12 +1,14 @@
-import DictationPage from "./pages/DictationPage";
+import { RouterProvider } from "react-router-dom";
+
+import { AppProviders } from "./app/providers";
+import { router } from "./app/router";
 import Toast from "./components/Toast";
-import { AppProvider } from "./context/AppContext";
 
 export default function App() {
   return (
-    <AppProvider>
-      <DictationPage />
+    <AppProviders>
+      <RouterProvider router={router} />
       <Toast />
-    </AppProvider>
+    </AppProviders>
   );
 }

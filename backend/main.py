@@ -11,35 +11,69 @@ import socket
 import sys
 import webbrowser
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 import sounddevice as sd
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from .config.paths import DIST_DIR, SAMPLES_DIR, SETTINGS_PATH
+from .config.paths import DIST_DIR, SAMPLES_DIR, SETTINGS_PATH, TTS_TEMP_DIR
 from .config.settings import Settings
 from .middleware import errors
 from .routes import build_router
+from .services.audio.temp_store import cleanup_stale_sessions
 from .services.engines import available_engines, create_engine
 from .services.event_service import EventBus
 from .services.replay_service import ReplayService
 from .services.transcription_service import LivePipeline
+from .services.tts_service import TtsService
+from .utils.errors import ApiError
+
+
+def _mount_spa(app: FastAPI, dist_dir: Path, index: Path) -> None:
+    """Serve the built SPA with working deep links.
+
+    ``StaticFiles(html=True)`` answers 404 for ``/sessions/abc`` because no such
+    file exists. A single-page app must return ``index.html`` for every non-API
+    path and let the client router resolve it.
+    """
+    assets = dist_dir / "assets"
+    if assets.is_dir():
+        app.mount("/assets", StaticFiles(directory=str(assets)), name="assets")
+
+    root = dist_dir.resolve()
+
+    @app.get("/{path:path}", include_in_schema=False)
+    def spa(path: str) -> Response:
+        if path == "api" or path.startswith(("api/", "events")):
+            raise ApiError("không tìm thấy", status_code=404)
+        candidate = (root / path).resolve()
+        if path and candidate.is_file() and root in candidate.parents:
+            return FileResponse(candidate)
+        return FileResponse(root / "index.html")
 
 
 def create_app(settings: Settings, pipeline: LivePipeline, replay: ReplayService,
-               bus: EventBus, dist_dir=DIST_DIR) -> FastAPI:
+               bus: EventBus, dist_dir=DIST_DIR, *,
+               tts: TtsService | None = None) -> FastAPI:
     """Composition root for the HTTP layer (also used by the tests)."""
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
+        cleanup_stale_sessions(TTS_TEMP_DIR)
         pipeline.start()
         try:
             yield
         finally:
             pipeline.stop()
+            speech = getattr(_app.state, "tts", None)
+            shutdown = getattr(speech, "shutdown", None)
+            if callable(shutdown):
+                shutdown()
 
     app = FastAPI(title="STT Trực Tiếp", version="2.0", docs_url="/api/docs",
                   redoc_url=None, lifespan=lifespan)
@@ -47,6 +81,7 @@ def create_app(settings: Settings, pipeline: LivePipeline, replay: ReplayService
     app.state.pipeline = pipeline
     app.state.replay = replay
     app.state.bus = bus
+    app.state.tts = tts or TtsService()
 
     errors.register(app)
     app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"],
@@ -55,7 +90,7 @@ def create_app(settings: Settings, pipeline: LivePipeline, replay: ReplayService
 
     index = dist_dir / "index.html"
     if index.is_file():
-        app.mount("/", StaticFiles(directory=str(dist_dir), html=True), name="web")
+        _mount_spa(app, dist_dir, index)
     else:
         @app.get("/", include_in_schema=False)
         def missing_build() -> dict[str, str]:

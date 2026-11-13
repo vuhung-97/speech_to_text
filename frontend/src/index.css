@@ -1,21 +1,5 @@
 @import "tailwindcss";
-
-@theme {
-  --color-ink: #08090b;
-  --color-surface: #0f1216;
-  --color-surface-2: #141922;
-  --color-line: rgba(255, 255, 255, 0.085);
-  --color-dim: #93a0b1;
-  --color-faint: #5d6875;
-  --color-accent: #ffb454;
-  --color-accent-2: #ff8a3d;
-  --color-ok: #57d9a3;
-  --color-err: #ff6b6b;
-
-  --font-sans: "Segoe UI Variable Text", "Segoe UI", ui-sans-serif, system-ui,
-    -apple-system, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "Cascadia Mono", ui-monospace, "SF Mono", Consolas, monospace;
-}
+@import "./styles/tokens.css";
 
 html,
 body,

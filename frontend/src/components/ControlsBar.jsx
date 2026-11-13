@@ -11,7 +11,7 @@ function Button({ active = false, ghost = false, ...props }) {
   return <button type="button" {...props} className={`${base} ${tone}`} />;
 }
 
-export default function ControlsBar() {
+export default function ControlsBar({ onOpenTts }) {
   const {
     status,
     engine,
@@ -52,6 +52,9 @@ export default function ControlsBar() {
         {status.paused ? "Tiếp tục" : "Tạm dừng"}
       </Button>
       <Button onClick={copy}>Sao chép</Button>
+      <Button onClick={onOpenTts} title="Chuyển văn bản thành giọng nói">
+        Đọc
+      </Button>
       <Button ghost onClick={clearAll}>
         Xoá
       </Button>

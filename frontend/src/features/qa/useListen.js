@@ -125,9 +125,11 @@ export function useListen({ onText } = {}) {
   return {
     active,
     error: stream.error,
+    notice: stream.notice,
     micState: stream.state,
     live: stream.live,
     level: stream.level,
+    packets: stream.packets,
     start,
     stop: finish,
   };

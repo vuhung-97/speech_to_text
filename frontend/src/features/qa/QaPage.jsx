@@ -160,6 +160,10 @@ export default function QaPage() {
   const lastAnswer = lastTurn?.answer || null;
   const liveText = `${listen.live.stable || ""} ${listen.live.tentative || ""}`.trim();
   const liveWords = liveText ? liveText.split(/\s+/).length : 0;
+  const insecure =
+    typeof window !== "undefined" &&
+    !window.isSecureContext &&
+    !["localhost", "127.0.0.1"].includes(window.location.hostname);
   const micLabel = listen.active
     ? "Đang nghe"
     : listen.micState === "connecting"
@@ -186,9 +190,22 @@ export default function QaPage() {
             ? listen.error
             : liveText ||
               (listen.active
-                ? "Đang chờ bạn nói…"
+                ? listen.packets
+                  ? `Đang nghe… (đã gửi ${listen.packets} gói audio)`
+                  : "Đang chờ audio từ micro… nếu mãi không đổi, kiểm tra quyền mic."
                 : "Mic tắt — bấm Nghe khi muốn nói câu hỏi.")}
         </p>
+        {insecure && (
+          <p className="mt-2 mb-0 rounded-lg border border-err/35 bg-err/10 px-2 py-1.5 text-[11px] leading-relaxed text-err">
+            Trang không chạy HTTPS nên trình duyệt chặn micro. Dùng localhost hoặc
+            cấu hình HTTPS cho LAN (xem docs/TRIEN_KHAI_LAN.md).
+          </p>
+        )}
+        {listen.notice && (
+          <p className="mt-2 mb-0 rounded-lg border border-accent/30 bg-accent/[0.08] px-2 py-1.5 text-[11px] leading-relaxed text-accent">
+            {listen.notice}
+          </p>
+        )}
         {listen.micState !== "live" && (
           <label className="mt-2 block">
             <span className="sr-only">Thiết bị mic</span>

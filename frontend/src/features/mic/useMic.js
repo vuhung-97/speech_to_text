@@ -15,8 +15,10 @@ function socketUrl() {
 export function useMic({ onEvent } = {}) {
   const [state, setState] = useState("idle"); // idle | connecting | live | error
   const [level, setLevel] = useState(0);
+  const [packets, setPackets] = useState(0);
   const [error, setError] = useState("");
   const refs = useRef({});
+  const packetsRef = useRef(0);
   const onEventRef = useRef(onEvent);
 
   useEffect(() => {
@@ -58,6 +60,8 @@ export function useMic({ onEvent } = {}) {
 
   const stop = useCallback(async () => {
     await teardown();
+    packetsRef.current = 0;
+    setPackets(0);
     setLevel(0);
     setState("idle");
   }, [teardown]);
@@ -67,6 +71,8 @@ export function useMic({ onEvent } = {}) {
       if (refs.current.ws) return false;
       setError("");
       setState("connecting");
+      packetsRef.current = 0;
+      setPackets(0);
 
       const ws = new WebSocket(socketUrl());
       ws.binaryType = "arraybuffer";
@@ -96,7 +102,11 @@ export function useMic({ onEvent } = {}) {
         });
 
         if (!navigator.mediaDevices?.getUserMedia) {
-          throw new Error("trình duyệt không hỗ trợ micro");
+          throw new Error(
+            window.isSecureContext
+              ? "trình duyệt không hỗ trợ micro"
+              : "trang chưa chạy HTTPS — micro bị chặn (xem docs/TRIEN_KHAI_LAN.md)",
+          );
         }
         const constraints = {
           audio: {
@@ -108,8 +118,16 @@ export function useMic({ onEvent } = {}) {
           },
         };
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        stream.getAudioTracks().forEach((track) => {
+          track.enabled = true;
+        });
         const context = new AudioContext({ sampleRate: TARGET_RATE });
         await context.audioWorklet.addModule(WORKLET_URL);
+        // Chrome/Firefox may hand back a suspended context when the permission
+        // prompt took a while; without resume() the worklet never runs.
+        if (context.state !== "running") {
+          await context.resume().catch(() => {});
+        }
         const source = context.createMediaStreamSource(stream);
         const node = new AudioWorkletNode(context, "pcm-processor", {
           processorOptions: { targetRate: TARGET_RATE },
@@ -123,7 +141,13 @@ export function useMic({ onEvent } = {}) {
         node.port.onmessage = (event) => {
           const payload = event.data;
           if (payload.type === "audio") {
-            if (ws.readyState === WebSocket.OPEN) ws.send(payload.buffer);
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(payload.buffer);
+              packetsRef.current += 1;
+              if (packetsRef.current % 25 === 0) {
+                setPackets(packetsRef.current);
+              }
+            }
           } else if (payload.type === "level") {
             setLevel(payload.value);
           }
@@ -148,7 +172,7 @@ export function useMic({ onEvent } = {}) {
 
   useEffect(() => () => { teardown(); }, [teardown]);
 
-  return { state, level, error, start, stop };
+  return { state, level, packets, error, start, stop };
 }
 
 export default useMic;

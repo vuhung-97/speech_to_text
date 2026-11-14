@@ -9,6 +9,7 @@ export function useSpeechStream() {
   const [live, setLive] = useState({ stable: "", tentative: "" });
   const [lastFinal, setLastFinal] = useState({ seq: 0, text: "" });
   const [remoteError, setRemoteError] = useState("");
+  const [notice, setNotice] = useState("");
 
   const mic = useMic({
     onEvent: (event) => {
@@ -25,6 +26,8 @@ export function useSpeechStream() {
         setLive({ stable: "", tentative: "" });
       } else if (event.type === "error") {
         setRemoteError(event.detail || "lỗi nhận dạng");
+      } else if (event.type === "warning") {
+        setNotice(event.detail || "");
       }
     },
   });
@@ -32,12 +35,14 @@ export function useSpeechStream() {
   const clear = useCallback(() => {
     setLive({ stable: "", tentative: "" });
     setRemoteError("");
+    setNotice("");
   }, []);
 
   return {
     ...mic,
     live,
     lastFinal,
+    notice,
     error: mic.error || remoteError,
     clear,
   };

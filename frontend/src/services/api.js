@@ -45,3 +45,30 @@ export const getSession = (sessionId) =>
 
 export const deleteSession = (sessionId) =>
   http.del(`/api/v1/sessions/${encodeURIComponent(sessionId)}`);
+
+// ------------------------------------------------------------ FAQ catalogue
+export const getFaqEntries = ({ q = "", category = "", active = "", limit = 100, offset = 0 } = {}) => {
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  if (q) params.set("q", q);
+  if (category) params.set("category", category);
+  if (active !== "") params.set("active", String(active));
+  return http.get(`/api/v1/faq/entries?${params.toString()}`);
+};
+
+export const createFaqEntry = (entry) => http.post("/api/v1/faq/entries", entry);
+
+export const updateFaqEntry = (entryId, patch) =>
+  http.patch(`/api/v1/faq/entries/${encodeURIComponent(entryId)}`, patch);
+
+export const deleteFaqEntry = (entryId) =>
+  http.del(`/api/v1/faq/entries/${encodeURIComponent(entryId)}`);
+
+export const importFaqCsv = (file) => {
+  const form = new FormData();
+  form.append("file", file);
+  return http.requestForm("/api/v1/faq/import", { form });
+};
+
+export const reindexFaq = () => http.post("/api/v1/faq/reindex");
+
+export const getFaqStats = () => http.get("/api/v1/faq/stats");

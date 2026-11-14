@@ -184,6 +184,7 @@ export default function SettingsDrawer({ open, onClose }) {
         aria-modal="true"
         aria-label="Cài đặt"
         aria-hidden={!open}
+        inert={open ? undefined : ""}
         className={`fixed top-0 right-0 z-50 flex h-dvh w-[min(430px,100vw)] flex-col border-l border-line bg-gradient-to-b from-surface-2 to-[#0d1014] shadow-[-40px_0_90px_-40px_#000] transition-transform duration-200 ${
           open ? "translate-x-0" : "translate-x-full"
         }`}

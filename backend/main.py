@@ -21,16 +21,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from .adapters.retrieval.null import NullFaqMatcher
+from .adapters.embedding.onnx_e5 import build_embedder
+from .adapters.retrieval.sqlite_faq import (SqliteFaqMatcher,
+                                            SqliteFaqRepository)
 from .adapters.storage.sqlite import (Database, SqliteQueryLog,
                                       SqliteSessionRepository)
 from .config.paths import DB_PATH, DIST_DIR, SAMPLES_DIR, SETTINGS_PATH, TTS_TEMP_DIR
 from .config.settings import Settings
 from .middleware import errors
+from .ports.embedding import Embedder
 from .routes import build_router
 from .services.audio.temp_store import cleanup_stale_sessions
 from .services.engines import available_engines, create_engine
 from .services.event_service import EventBus
+from .services.faq_service import FaqService
 from .services.qa_service import QaService
 from .services.replay_service import ReplayService
 from .services.transcription_service import LivePipeline
@@ -65,7 +69,8 @@ def create_app(settings: Settings, pipeline: LivePipeline, replay: ReplayService
                bus: EventBus, dist_dir=DIST_DIR, *,
                tts: TtsService | None = None,
                db_path: str | Path | None = None,
-               qa: QaService | None = None) -> FastAPI:
+               qa: QaService | None = None,
+               embedder: Embedder | None = None) -> FastAPI:
     """Composition root for the HTTP layer (also used by the tests)."""
 
     @asynccontextmanager
@@ -95,8 +100,20 @@ def create_app(settings: Settings, pipeline: LivePipeline, replay: ReplayService
     app.state.db = database
     app.state.sessions = sessions_repo
     app.state.query_log = query_log
-    app.state.faq_matcher = NullFaqMatcher()
-    app.state.qa = qa or QaService(app.state.faq_matcher, sessions_repo, query_log)
+
+    if embedder is None:
+        embedder, embed_note = build_embedder()
+    else:
+        embed_note = ""
+    faq_repo = SqliteFaqRepository(database)
+    faq_matcher = SqliteFaqMatcher(faq_repo, embedder)
+    faq_service = FaqService(faq_repo, faq_matcher, embedder)
+    app.state.embedder = embedder
+    app.state.embed_note = embed_note
+    app.state.faq_repo = faq_repo
+    app.state.faq_matcher = faq_matcher
+    app.state.faq_service = faq_service
+    app.state.qa = qa or QaService(faq_matcher, sessions_repo, query_log)
 
     errors.register(app)
     app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"],

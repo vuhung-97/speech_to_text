@@ -38,9 +38,16 @@ Mục nào lỗi thì ghi lại màn hình + bước tái hiện.
 
 ## 4. Kho câu hỏi (`/faq`)
 
-- [ ] Hiện banner giải thích P5 và danh sách câu chưa trả lời (nếu có).
-- [ ] Câu đã hỏi nhiều lần gộp thành một dòng, số lần hỏi đúng.
-- [ ] Empty state đúng khi chưa có câu nào.
+- [ ] Thêm câu hỏi (question + answer + category) → xuất hiện ngay trong danh sách.
+- [ ] Sửa câu trả lời → hỏi lại đúng câu đó, giọng đọc trả về nội dung mới.
+- [ ] Tắt/Bật một câu: câu tắt không còn được khớp.
+- [ ] Xoá hỏi xác nhận; xoá xong hỏi lại → fallback.
+- [ ] Tìm theo từ khoá trong câu hỏi/câu trả lời.
+- [ ] Nhập CSV 3 cột `question,answer,category` → báo thêm/trùng/lỗi đúng số dòng.
+- [ ] Panel phải hiện số câu, đã embedding, ngưỡng khớp, tên model.
+- [ ] `Embedding lại` không lỗi; stats cập nhật.
+- [ ] Danh sách "Chưa có đáp án" hiện câu đã hỏi nhưng kho chưa có.
+- [ ] Empty state đúng khi kho trống.
 
 ## 5. Đọc chính tả (`/dictation`)
 

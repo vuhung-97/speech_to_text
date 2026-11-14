@@ -1,15 +1,17 @@
 """Catalogue lookup contracts.
 
-``FaqMatcher`` answers one question; ``FaqRepository`` owns curated entries;
-``QueryLog`` records every lookup so the operator can see what users actually
-ask and which questions have no answer yet. Splitting the log from the
-catalogue keeps the matcher free of write concerns.
+``FaqMatcher`` answers one question; ``FaqRepository`` owns curated entries and
+their embeddings; ``QueryLog`` records every lookup so the operator can see what
+users actually ask and which questions have no answer yet. Splitting the log
+from the catalogue keeps the matcher free of write concerns.
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
 from typing import Protocol
+
+import numpy as np
 
 from ..domain.faq.models import FaqEntry, FaqResult
 
@@ -23,7 +25,7 @@ class FaqMatcher(Protocol):
 
 
 class FaqRepository(Protocol):
-    """Tenant-scoped storage for curated question/answer entries."""
+    """Tenant-scoped storage for curated entries and their vectors."""
 
     def get(self, entry_id: str, tenant: str) -> FaqEntry | None: ...
 
@@ -41,6 +43,20 @@ class FaqRepository(Protocol):
     def upsert(self, entry: FaqEntry) -> FaqEntry: ...
 
     def delete(self, entry_id: str, tenant: str) -> None: ...
+
+    def all_active(self, tenant: str) -> Sequence[FaqEntry]: ...
+
+    def pending_embeddings(self, tenant: str, model: str,
+                           version: int) -> Sequence[FaqEntry]: ...
+
+    def set_embedding(self, entry_id: str, tenant: str, embedding: np.ndarray,
+                      model: str, version: int) -> None: ...
+
+    def embeddings(self, tenant: str) -> Sequence[tuple[FaqEntry, np.ndarray]]: ...
+
+    def index_signature(self, tenant: str) -> tuple[int, float, int]: ...
+
+    def stats(self, tenant: str) -> dict[str, object]: ...
 
 
 class QueryLog(Protocol):

@@ -23,7 +23,7 @@ from ...domain.faq.normalize import normalize_question
 from ...domain.qa.models import (Answer, Question, SessionNotFound,
                                  TurnNotFound)
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 _SCHEMA_V1 = """
 CREATE TABLE IF NOT EXISTS sessions (
@@ -78,6 +78,37 @@ CREATE INDEX IF NOT EXISTS idx_faq_queries_tenant
     ON faq_queries(tenant_id, created_at DESC);
 """
 
+_SCHEMA_V2 = """
+CREATE TABLE IF NOT EXISTS faq_entries (
+    id            TEXT PRIMARY KEY,
+    tenant_id     TEXT NOT NULL,
+    question      TEXT NOT NULL,
+    answer        TEXT NOT NULL,
+    category      TEXT NOT NULL DEFAULT '',
+    active        INTEGER NOT NULL DEFAULT 1,
+    embedding     BLOB,
+    embed_model   TEXT,
+    embed_version INTEGER NOT NULL DEFAULT 0,
+    created_at    REAL NOT NULL,
+    updated_at    REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_faq_entries_tenant
+    ON faq_entries(tenant_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_faq_entries_active
+    ON faq_entries(tenant_id, active);
+
+CREATE TABLE IF NOT EXISTS faq_audio (
+    entry_id    TEXT NOT NULL,
+    voice       TEXT NOT NULL,
+    sample_rate INTEGER NOT NULL,
+    path        TEXT NOT NULL,
+    seconds     REAL NOT NULL,
+    bytes       INTEGER NOT NULL,
+    created_at  REAL NOT NULL,
+    PRIMARY KEY (entry_id, voice)
+);
+"""
+
 
 def _new_id() -> str:
     return uuid.uuid4().hex[:16]
@@ -124,8 +155,12 @@ class Database:
                 version = connection.execute("PRAGMA user_version").fetchone()[0]
                 if version < 1:
                     connection.executescript(_SCHEMA_V1)
-                    connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
-                    connection.commit()
+                    connection.execute("PRAGMA user_version = 1")
+                    version = 1
+                if version < 2:
+                    connection.executescript(_SCHEMA_V2)
+                    connection.execute("PRAGMA user_version = 2")
+                connection.commit()
             finally:
                 connection.close()
             self._ready = True

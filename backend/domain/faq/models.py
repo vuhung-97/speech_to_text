@@ -6,6 +6,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
+DEFAULT_THRESHOLD = 0.88   # tuned on multilingual-e5-small: in-domain ≥0.89,
+DEFAULT_NEAR = 0.88        # off-topic ≤0.87, so no "answer with warning" band
+
+
 @dataclass(frozen=True)
 class FaqEntry:
     """One curated question/answer pair owned by a tenant."""
@@ -53,8 +57,8 @@ class FaqResult:
 
     matched: FaqMatch | None
     candidates: tuple[FaqMatch, ...] = ()
-    threshold: float = 0.84
-    near_threshold: float = 0.78
+    threshold: float = DEFAULT_THRESHOLD
+    near_threshold: float = DEFAULT_NEAR
 
     @property
     def accepted(self) -> bool:
@@ -74,4 +78,4 @@ class FaqResult:
         return 0.0
 
 
-__all__ = ["FaqEntry", "FaqMatch", "FaqResult"]
+__all__ = ["DEFAULT_NEAR", "DEFAULT_THRESHOLD", "FaqEntry", "FaqMatch", "FaqResult"]

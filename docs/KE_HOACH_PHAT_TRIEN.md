@@ -20,7 +20,7 @@ nguyên văn và không có ảo giác.
 | Nguồn tri thức | Kho câu hỏi–câu trả lời soạn sẵn (FAQ) |
 | Embedding | ONNX + `multilingual-e5-small` (384 chiều), vendor tại `models/embed/` |
 | Runtime embedding | `onnxruntime` + `tokenizers` (đã có sẵn) — không thêm package |
-| Ngưỡng khớp | cosine ≥ 0.84; dải "gần đúng" 0.78–0.84; dưới đó fallback + top-3 |
+| Ngưỡng khớp | cosine ≥ **0.88** (đo trên e5-small: nội bộ ≥0.89, ngoài phạm vi ≤0.87); dưới ngưỡng → fallback + top-3 gợi ý |
 | Giới hạn đọc | 2000 từ/lượt; chốt an toàn 20 000 ký tự |
 | Lưu audio | PCM16 spill-to-disk, quota 512 MB, dọn session cũ khi khởi động |
 | Tự động đọc | TẮT mặc định (bấm nút mới đọc), có công tắc trong Cài đặt |
@@ -76,16 +76,14 @@ Index: `(tenant_id, created_at)`, `(tenant_id, category)`. Audio nằm ở
 | Method | Path | Việc |
 |---|---|---|
 | POST | `/api/v1/qa/ask` | `{question, session_id?}` → `{answer_id, text, matched, candidates, status}` |
-| POST | `/api/v1/qa/answers/{id}/speech` | bắt đầu tổng hợp (idempotent) |
-| GET | `/api/v1/qa/answers/{id}/audio` | PCM16 chunked, `?offset=` |
-| GET | `/api/v1/qa/answers/{id}.wav` | FileResponse + Range 206 |
-| DELETE | `/api/v1/qa/answers/{id}/audio` | huỷ + xoá temp |
+| POST | `/api/v1/qa/detect` | nhận diện câu hỏi từ transcript / gộp mảnh câu |
 | CRUD | `/api/v1/faq/entries[/{id}]` | quản trị kho câu hỏi |
-| POST | `/api/v1/faq/import` | CSV `question,answer,category` |
+| POST | `/api/v1/faq/import` | CSV `question,answer,category` → báo cáo thêm/trùng/lỗi |
 | POST | `/api/v1/faq/reindex` | embed lại entry thiếu/đổi version |
 | GET | `/api/v1/faq/unanswered` | worklist câu hỏi chưa trả lời |
-| GET | `/api/v1/faq/stats` | số liệu vận hành |
-| POST | `/api/v1/faq/{id}/prerender` | tổng hợp trước, ghi `faq_audio` |
+| GET | `/api/v1/faq/stats` | số entry, model, dim, ngưỡng, embed_note |
+| GET | `/api/v1/sessions[/{id}]` | lịch sử hội thoại |
+| POST | `/api/v1/qa/answers/{id}/speech` | (P6) prerender + cache `faq_audio` |
 | giữ | `/api/tts/stream`, `/api/state`, `/events` | tương thích ngược |
 
 ## 6. Giai đoạn
@@ -131,8 +129,8 @@ Tổng ~23,5 ngày công.
 | P2 Player | ✅ xong | `pcmStream.js`, `pcmPlayer.js` (prebuffer 2,5 s), `useSpeechPlayer`, TtsDrawer 2 chế độ |
 | P3 Q&A + sessions | ✅ xong | `QaService.ask`, SQLite (sessions/turns/answers/faq_queries, WAL, tenant scope), `/api/v1/qa/ask`, `/qa/detect`, `/qa/unanswered`, `/sessions` CRUD; `NullFaqMatcher` trả fallback + log |
 | P4 Giao diện SaaS | ✅ xong | App shell rail+topbar+panel, `/` hỏi đáp, `/sessions(/:id)`, `/faq` (worklist), `/dictation`, `/settings`; command palette Ctrl+K; player đọc trong AnswerCard; `docs/qa-ui.md` |
-| P5 FAQ embedding | ⏳ tiếp theo | `OnnxE5Embedder` + `SqliteFaqMatcher` + import/reindex; khi đó thêm `POST /qa/answers/{id}/speech` và cache `faq_audio` (P3 dùng thẳng `/tts/stream` với text đã lưu) |
-| P6 Gia cố | ⏳ | |
+| P5 FAQ embedding | ✅ xong | `OnnxE5Embedder` (multilingual-e5-small, 384d, quantized 118 MB tại `models/embed/`), `HashingEmbedder` fallback, `SqliteFaqRepository` + `SqliteFaqMatcher` (ma trận RAM, lazy embed, cache theo signature), CRUD + import CSV + chống trùng 0.97 + reindex + stats, `/faq` admin UI |
+| P6 Gia cố | ⏳ tiếp theo | prerender `faq_audio` + LRU, audit/quota, structured log, README, checklist cuối |
 
 Đo thực tế trên máy phát triển (VieNeu v3 Turbo, ONNX CPU):
 
@@ -149,3 +147,20 @@ Kiểm thử P3 (109 test): `test_sessions_repo` (vòng đời, cách ly tenant,
 `test_qa_service` (fallback, matched, near-miss, giới hạn, dùng lại phiên),
 `test_qa_http` (envelope, detect, sessions CRUD, tenant header, worklist),
 `test_question_detector` (marker giữa câu).
+
+Kiểm thử P5 (148 test): `test_faq_repo` (schema v2, CRUD, embedding, signature),
+`test_faq_matcher` (lazy embed, ngưỡng, xếp hạng, cache invalidation, tenant),
+`test_faq_service` (validate, trùng, update, CSV, reindex/stats),
+`test_faq_http` (CRUD, import multipart, ask khớp, tenant), `test_hashing_embedder`,
+và `test_faq_onnx` (chỉ chạy khi đã tải model) chốt chất lượng thật.
+
+### Hiệu chỉnh ngưỡng P5 (đo thật, e5-small quantized)
+
+| Nhóm | Điểm cosine cao nhất |
+|---|---|
+| Trong phạm vi (10 câu diễn đạt lại) | 0,894 – 0,943 |
+| Ngoài phạm vi (12 câu lạc đề) | 0,790 – 0,872 ("Mấy giờ rồi" cao nhất) |
+
+→ Chọn **0,88**: ưu tiên không trả lời sai; câu diễn đạt quá xa sẽ rơi vào
+fallback + gợi ý thay vì trả lời nhầm. `near_threshold = 0,88` (tắt dải "trả lời
+kèm cảnh báo") vì e5-small có điểm nền cao với câu hỏi ngắn.

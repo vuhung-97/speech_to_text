@@ -83,7 +83,8 @@ Index: `(tenant_id, created_at)`, `(tenant_id, category)`. Audio nằm ở
 | GET | `/api/v1/faq/unanswered` | worklist câu hỏi chưa trả lời |
 | GET | `/api/v1/faq/stats` | số entry, model, dim, ngưỡng, embed_note |
 | GET | `/api/v1/sessions[/{id}]` | lịch sử hội thoại |
-| POST | `/api/v1/qa/answers/{id}/speech` | (P6) prerender + cache `faq_audio` |
+| POST | `/api/v1/qa/answers/{id}/speech` | trả `cached` (URL) hoặc `stream` (text) |
+| GET | `/api/v1/audit` | nhật ký thao tác nhạy cảm |
 | giữ | `/api/tts/stream`, `/api/state`, `/events` | tương thích ngược |
 
 ## 6. Giai đoạn
@@ -130,7 +131,7 @@ Tổng ~23,5 ngày công.
 | P3 Q&A + sessions | ✅ xong | `QaService.ask`, SQLite (sessions/turns/answers/faq_queries, WAL, tenant scope), `/api/v1/qa/ask`, `/qa/detect`, `/qa/unanswered`, `/sessions` CRUD; `NullFaqMatcher` trả fallback + log |
 | P4 Giao diện SaaS | ✅ xong | App shell rail+topbar+panel, `/` hỏi đáp, `/sessions(/:id)`, `/faq` (worklist), `/dictation`, `/settings`; command palette Ctrl+K; player đọc trong AnswerCard; `docs/qa-ui.md` |
 | P5 FAQ embedding | ✅ xong | `OnnxE5Embedder` (multilingual-e5-small, 384d, quantized 118 MB tại `models/embed/`), `HashingEmbedder` fallback, `SqliteFaqRepository` + `SqliteFaqMatcher` (ma trận RAM, lazy embed, cache theo signature), CRUD + import CSV + chống trùng 0.97 + reindex + stats, `/faq` admin UI |
-| P6 Gia cố | ⏳ tiếp theo | prerender `faq_audio` + LRU, audit/quota, structured log, README, checklist cuối |
+| P6 Gia cố | ✅ xong | `X-Request-ID` + log structured, audit log (schema v3) + `/audit`, prerender + cache bản đọc (`faq_audio`, LRU 512 MB) + `/qa/answers/{id}/speech`, panel hoạt động gần đây, `docs/API.md` |
 
 Đo thực tế trên máy phát triển (VieNeu v3 Turbo, ONNX CPU):
 

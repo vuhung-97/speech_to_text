@@ -46,6 +46,9 @@ Mục nào lỗi thì ghi lại màn hình + bước tái hiện.
 - [ ] Nhập CSV 3 cột `question,answer,category` → báo thêm/trùng/lỗi đúng số dòng.
 - [ ] Panel phải hiện số câu, đã embedding, ngưỡng khớp, tên model.
 - [ ] `Embedding lại` không lỗi; stats cập nhật.
+- [ ] `Tổng hợp sẵn` → nút chuyển “Đang tạo…” rồi “Đã lưu bản đọc”; hỏi lại câu đó
+      và bấm Đọc: phát ngay (không chờ tổng hợp), vẫn có nút Dừng.
+- [ ] Panel “Hoạt động gần đây” hiện các thao tác vừa làm (thêm/sửa/xoá/nhập/reindex).
 - [ ] Danh sách "Chưa có đáp án" hiện câu đã hỏi nhưng kho chưa có.
 - [ ] Empty state đúng khi kho trống.
 

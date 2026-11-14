@@ -12,7 +12,7 @@ import { messageFor } from "../../services/errors";
 const EMPTY_FORM = { question: "", answer: "", category: "" };
 const SAMPLE_CSV = "question,answer,category\nThủ đô Việt Nam là gì?,Hà Nội.,địa lý\n";
 
-function StatsPanel({ stats, unanswered, onReindex, busy }) {
+function StatsPanel({ stats, unanswered, audit, onReindex, busy }) {
   return (
     <>
       <section className="mb-4 rounded-xl border border-line bg-white/[0.02] p-3">
@@ -51,7 +51,7 @@ function StatsPanel({ stats, unanswered, onReindex, busy }) {
         </Button>
       </section>
 
-      <section className="rounded-xl border border-line bg-white/[0.02] p-3">
+      <section className="mb-4 rounded-xl border border-line bg-white/[0.02] p-3">
         <h2 className="m-0 mb-2 text-[11px] font-semibold tracking-[0.08em] text-faint uppercase">
           Chưa có đáp án
         </h2>
@@ -65,6 +65,24 @@ function StatsPanel({ stats, unanswered, onReindex, busy }) {
                 <span className="ml-1 font-mono text-[10.5px] text-faint">
                   ×{item.asks}
                 </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-line bg-white/[0.02] p-3">
+        <h2 className="m-0 mb-2 text-[11px] font-semibold tracking-[0.08em] text-faint uppercase">
+          Hoạt động gần đây
+        </h2>
+        {audit.length === 0 ? (
+          <p className="m-0 text-[12px] text-faint">Chưa có thao tác nào.</p>
+        ) : (
+          <ul className="m-0 flex list-none flex-col gap-1 p-0">
+            {audit.slice(0, 6).map((item) => (
+              <li key={item.id} className="flex items-baseline gap-1.5 text-[11.5px]">
+                <span className="font-mono text-faint">{item.action}</span>
+                <span className="truncate text-dim">{item.target || item.detail}</span>
               </li>
             ))}
           </ul>
@@ -85,19 +103,32 @@ export default function FaqAdminPage() {
   const [error, setError] = useState("");
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [audit, setAudit] = useState([]);
+  const [jobs, setJobs] = useState({});
+  const timers = useRef({});
   const fileRef = useRef(null);
+
+  useEffect(
+    () => () => {
+      Object.values(timers.current).forEach((timer) => window.clearInterval(timer));
+      timers.current = {};
+    },
+    [],
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [list, summary, open] = await Promise.all([
+      const [list, summary, open, recent] = await Promise.all([
         api.getFaqEntries({ q: query }),
         api.getFaqStats(),
         api.getUnanswered(20),
+        api.getAudit(10),
       ]);
       setEntries(list.items || []);
       setStats(summary);
       setUnanswered(open.items || []);
+      setAudit(recent.items || []);
       setError("");
     } catch (loadError) {
       setError(messageFor(loadError));
@@ -200,12 +231,40 @@ export default function FaqAdminPage() {
     }
   };
 
+  const prerender = async (entry) => {
+    const voice = window.localStorage.getItem("tts.voice") || "";
+    setError("");
+    try {
+      const { job } = await api.prerenderFaq(entry.id, voice);
+      setJobs((previous) => ({ ...previous, [entry.id]: job }));
+      if (job.status !== "done") {
+        const poll = window.setInterval(async () => {
+          try {
+            const status = await api.getPrerender(job.id);
+            setJobs((previous) => ({ ...previous, [entry.id]: status }));
+            if (status.status !== "running") {
+              window.clearInterval(poll);
+              delete timers.current[entry.id];
+              load();
+            }
+          } catch {
+            window.clearInterval(poll);
+            delete timers.current[entry.id];
+          }
+        }, 1500);
+        timers.current[entry.id] = poll;
+      }
+    } catch (prerenderError) {
+      setError(messageFor(prerenderError));
+    }
+  };
+
   return (
     <AppShell
       title="Kho câu hỏi"
       subtitle="Cặp câu hỏi – câu trả lời soạn sẵn, khớp bằng embedding"
       right={
-        <StatsPanel stats={stats} unanswered={unanswered}
+        <StatsPanel stats={stats} unanswered={unanswered} audit={audit}
                     onReindex={reindex} busy={busy} />
       }
       actions={
@@ -353,6 +412,18 @@ export default function FaqAdminPage() {
                   <Button variant="ghost" size="sm" onClick={() => toggleActive(entry)}
                           disabled={busy}>
                     {entry.active ? "Tắt" : "Bật"}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => prerender(entry)}
+                    disabled={busy || jobs[entry.id]?.status === "running"}
+                  >
+                    {jobs[entry.id]?.status === "running"
+                      ? "Đang tạo…"
+                      : jobs[entry.id]?.status === "done"
+                        ? "Đã lưu bản đọc"
+                        : "Tổng hợp sẵn"}
                   </Button>
                   <Button variant="danger" size="sm" onClick={() => remove(entry)}
                           disabled={busy}>

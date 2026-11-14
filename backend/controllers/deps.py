@@ -7,10 +7,11 @@ from typing import Annotated
 
 from fastapi import Depends, Header, Request
 
-from ..adapters.storage.sqlite import SqliteSessionRepository
+from ..adapters.storage.sqlite import SqliteAuditLog, SqliteSessionRepository
 from ..config.settings import Settings
 from ..ports.faq import QueryLog
 from ..services.event_service import EventBus
+from ..services.faq_audio_service import FaqAudioService
 from ..services.faq_service import FaqService
 from ..services.qa_service import QaService
 from ..services.replay_service import ReplayService
@@ -58,6 +59,14 @@ def get_faq_service(request: Request) -> FaqService:
     return request.app.state.faq_service
 
 
+def get_faq_audio(request: Request) -> FaqAudioService:
+    return request.app.state.faq_audio
+
+
+def get_audit(request: Request) -> SqliteAuditLog:
+    return request.app.state.audit
+
+
 def current_tenant(
     x_workspace: str | None = Header(default=None, alias="X-Workspace"),
 ) -> str:
@@ -83,3 +92,5 @@ QaDep = Annotated[QaService, Depends(get_qa)]
 SessionsRepoDep = Annotated[SqliteSessionRepository, Depends(get_sessions)]
 QueryLogDep = Annotated[QueryLog, Depends(get_query_log)]
 FaqServiceDep = Annotated[FaqService, Depends(get_faq_service)]
+FaqAudioDep = Annotated[FaqAudioService, Depends(get_faq_audio)]
+AuditDep = Annotated[SqliteAuditLog, Depends(get_audit)]

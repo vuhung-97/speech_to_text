@@ -72,3 +72,18 @@ export const importFaqCsv = (file) => {
 export const reindexFaq = () => http.post("/api/v1/faq/reindex");
 
 export const getFaqStats = () => http.get("/api/v1/faq/stats");
+
+export const prerenderFaq = (entryId, voice) =>
+  http.post(`/api/v1/faq/entries/${encodeURIComponent(entryId)}/prerender`, {
+    voice: voice || null,
+  });
+
+export const getPrerender = (jobId) =>
+  http.get(`/api/v1/faq/prerender/${encodeURIComponent(jobId)}`);
+
+export const getAnswerSpeech = (answerId, voice) =>
+  http.post(`/api/v1/qa/answers/${encodeURIComponent(answerId)}/speech`, {
+    voice: voice || null,
+  });
+
+export const getAudit = (limit = 30) => http.get(`/api/v1/audit?limit=${limit}`);

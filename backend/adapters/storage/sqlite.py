@@ -23,7 +23,7 @@ from ...domain.faq.normalize import normalize_question
 from ...domain.qa.models import (Answer, Question, SessionNotFound,
                                  TurnNotFound)
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 _SCHEMA_V1 = """
 CREATE TABLE IF NOT EXISTS sessions (
@@ -109,6 +109,19 @@ CREATE TABLE IF NOT EXISTS faq_audio (
 );
 """
 
+_SCHEMA_V3 = """
+CREATE TABLE IF NOT EXISTS audit_log (
+    id         TEXT PRIMARY KEY,
+    tenant_id  TEXT NOT NULL,
+    action     TEXT NOT NULL,
+    target     TEXT NOT NULL DEFAULT '',
+    detail     TEXT NOT NULL DEFAULT '',
+    created_at REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_audit_tenant
+    ON audit_log(tenant_id, created_at DESC);
+"""
+
 
 def _new_id() -> str:
     return uuid.uuid4().hex[:16]
@@ -160,6 +173,10 @@ class Database:
                 if version < 2:
                     connection.executescript(_SCHEMA_V2)
                     connection.execute("PRAGMA user_version = 2")
+                    version = 2
+                if version < 3:
+                    connection.executescript(_SCHEMA_V3)
+                    connection.execute("PRAGMA user_version = 3")
                 connection.commit()
             finally:
                 connection.close()
@@ -323,6 +340,46 @@ class SqliteSessionRepository:
                 (voice, audio_path, seconds, answer_id, tenant),
             )
 
+    def get_answer(self, answer_id: str, tenant: str) -> dict[str, Any] | None:
+        with self._db.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT a.id, a.turn_id, a.text, a.entry_id, a.score, a.voice,
+                       a.audio_path, a.seconds, a.status, a.created_at,
+                       t.session_id, t.question
+                FROM answers a
+                JOIN turns t ON t.id = a.turn_id
+                WHERE a.id = ? AND a.tenant_id = ?
+                """,
+                (answer_id, tenant),
+            ).fetchone()
+        return dict(row) if row else None
+
+
+class SqliteAuditLog:
+    """Sensitive actions (delete, import, reindex) with tenant context."""
+
+    def __init__(self, database: Database) -> None:
+        self._db = database
+
+    def record(self, *, tenant: str, action: str, target: str = "",
+               detail: str = "") -> None:
+        with self._db.connect() as connection:
+            connection.execute(
+                "INSERT INTO audit_log (id, tenant_id, action, target, detail,"
+                " created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                (_new_id(), tenant, action, target or "", detail or "", time.time()),
+            )
+
+    def list(self, tenant: str, limit: int = 50) -> Sequence[dict[str, Any]]:
+        with self._db.connect() as connection:
+            rows = connection.execute(
+                "SELECT id, action, target, detail, created_at FROM audit_log"
+                " WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?",
+                (tenant, max(1, min(int(limit), 200))),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
 
 class SqliteQueryLog:
     """Lookup history: tuning input today, unanswered worklist for the operator."""
@@ -362,6 +419,7 @@ class SqliteQueryLog:
 __all__ = [
     "Database",
     "SCHEMA_VERSION",
+    "SqliteAuditLog",
     "SqliteQueryLog",
     "SqliteSessionRepository",
 ]

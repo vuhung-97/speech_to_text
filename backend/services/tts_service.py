@@ -341,6 +341,10 @@ class TtsService:
             raise ValueError(f"giọng '{voice}' không có trong danh sách")
         return voice or default or None
 
+    def resolve_voice(self, voice: str | None = None) -> str | None:
+        """Public wrapper used by callers that need the cache key (P6)."""
+        return self._resolve_voice(voice)
+
     def synthesize(self, text: str, voice: str | None = None) -> tuple[bytes, float]:
         """Short path: synthesize ``text`` into ``(wav_bytes, audio_seconds)``.
 

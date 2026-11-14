@@ -22,6 +22,7 @@ TTS_DISK_QUOTA_MB = 512
 EMBED_DIR = MODELS_DIR / "embed"
 DATA_DIR = BASE_DIR / "data"
 DB_PATH = DATA_DIR / "app.db"
+AUDIO_CACHE_DIR = DATA_DIR / "audio"
 
 # VieNeu-TTS (optional TTS feature): the installed app keeps its Hugging Face
 # cache and cloned voices here, so the backend can run fully offline.

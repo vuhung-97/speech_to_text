@@ -7,6 +7,7 @@ Run:  python run.py                (or: python -m backend.main)
 from __future__ import annotations
 
 import argparse
+import logging
 import socket
 import sys
 import webbrowser
@@ -24,16 +25,17 @@ from fastapi.staticfiles import StaticFiles
 from .adapters.embedding.onnx_e5 import build_embedder
 from .adapters.retrieval.sqlite_faq import (SqliteFaqMatcher,
                                             SqliteFaqRepository)
-from .adapters.storage.sqlite import (Database, SqliteQueryLog,
+from .adapters.storage.sqlite import (Database, SqliteAuditLog, SqliteQueryLog,
                                       SqliteSessionRepository)
 from .config.paths import DB_PATH, DIST_DIR, SAMPLES_DIR, SETTINGS_PATH, TTS_TEMP_DIR
 from .config.settings import Settings
-from .middleware import errors
+from .middleware import errors, request_log
 from .ports.embedding import Embedder
 from .routes import build_router
 from .services.audio.temp_store import cleanup_stale_sessions
 from .services.engines import available_engines, create_engine
 from .services.event_service import EventBus
+from .services.faq_audio_service import FaqAudioService
 from .services.faq_service import FaqService
 from .services.qa_service import QaService
 from .services.replay_service import ReplayService
@@ -70,7 +72,8 @@ def create_app(settings: Settings, pipeline: LivePipeline, replay: ReplayService
                tts: TtsService | None = None,
                db_path: str | Path | None = None,
                qa: QaService | None = None,
-               embedder: Embedder | None = None) -> FastAPI:
+               embedder: Embedder | None = None,
+               audio_cache_dir: str | Path | None = None) -> FastAPI:
     """Composition root for the HTTP layer (also used by the tests)."""
 
     @asynccontextmanager
@@ -113,9 +116,13 @@ def create_app(settings: Settings, pipeline: LivePipeline, replay: ReplayService
     app.state.faq_repo = faq_repo
     app.state.faq_matcher = faq_matcher
     app.state.faq_service = faq_service
+    app.state.audit = SqliteAuditLog(database)
+    app.state.faq_audio = FaqAudioService(faq_repo, app.state.tts,
+                                         cache_dir=audio_cache_dir)
     app.state.qa = qa or QaService(faq_matcher, sessions_repo, query_log)
 
     errors.register(app)
+    request_log.register(app)
     app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"],
                        allow_headers=["*"])  # dev server on :5173 proxies anyway
     app.include_router(build_router())
@@ -182,6 +189,11 @@ def _load_engine(settings: Settings) -> Any:
 
 def main() -> int:
     args = parse_args()
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+        datefmt="%H:%M:%S",
+    )
     if args.list_devices:
         print(sd.query_devices())
         return 0

@@ -1,6 +1,6 @@
 // Q&A screen: conversation on the left, evidence + mic status on the right.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 
 import AppShell from "../../app/AppShell";
@@ -33,6 +33,8 @@ export default function QaPage() {
   const sessionId = routeId || params.get("session") || "";
   const { turns, busy, error, ask, load } = useAsk(sessionId);
   const [readingId, setReadingId] = useState("");
+  const [audioPlaying, setAudioPlaying] = useState(false);
+  const audioRef = useRef(null);
   const speech = useSpeechPlayer();
 
   const lastFinal = transcript.paragraphs.at(-1)?.text || "";
@@ -64,10 +66,23 @@ export default function QaPage() {
   );
 
   const read = useCallback(
-    (answer) => {
+    async (answer) => {
       if (!answer?.text) return;
-      setReadingId(answer.id);
       const voice = window.localStorage.getItem(VOICE_KEY) || "";
+      setReadingId(answer.id);
+      try {
+        const info = await api.getAnswerSpeech(answer.id, voice);
+        if (info.mode === "cached" && audioRef.current) {
+          speech.stop();
+          const element = audioRef.current;
+          element.src = info.url;
+          element.currentTime = 0;
+          await element.play();
+          return;
+        }
+      } catch {
+        /* no cache or endpoint unavailable → stream as before */
+      }
       speech.start(answer.text, voice);
     },
     [speech],
@@ -75,6 +90,12 @@ export default function QaPage() {
 
   const stopReading = useCallback(() => {
     speech.stop();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.removeAttribute("src");
+      audioRef.current.load();
+    }
+    setAudioPlaying(false);
     setReadingId("");
   }, [speech]);
 
@@ -143,7 +164,7 @@ export default function QaPage() {
       </PanelSection>
 
       <PanelSection title="Đang đọc">
-        {speech.busy ? (
+        {speech.busy || audioPlaying ? (
           <div className="space-y-1.5">
             <p className="m-0 text-[12px] text-white">
               {speech.status === "loading" ? "Đang tổng hợp…" : "Đang đọc câu trả lời"}
@@ -179,12 +200,23 @@ export default function QaPage() {
       }
       right={right}
     >
+      <audio
+        ref={audioRef}
+        className="hidden"
+        onPlay={() => setAudioPlaying(true)}
+        onPause={() => setAudioPlaying(false)}
+        onEnded={() => {
+          setAudioPlaying(false);
+          setReadingId("");
+        }}
+      />
+
       <Thread
         turns={turns}
         onExample={(example) => handleAsk(example, "typed")}
         renderAnswerProps={(turn) => ({
-          active: readingId === turn.answer?.id,
-          playing: speech.busy && readingId === turn.answer?.id,
+          active: readingId === turn.answer?.id && (speech.busy || audioPlaying),
+          playing: readingId === turn.answer?.id && (speech.busy || audioPlaying),
           progress: speech.progress,
           seconds: speech.seconds,
           estimated: speech.estimated,

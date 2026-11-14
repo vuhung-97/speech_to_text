@@ -246,8 +246,11 @@ def should_use_disk(text: str, mode: str = "auto") -> bool:
 
 
 def free_bytes(path: str | Path) -> int:
+    target = Path(path)
+    while not target.exists() and target != target.parent:
+        target = target.parent
     try:
-        return shutil.disk_usage(str(path)).free
+        return shutil.disk_usage(str(target)).free
     except OSError:
         return 0
 

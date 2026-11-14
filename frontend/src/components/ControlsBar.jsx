@@ -1,4 +1,5 @@
-import { useApp } from "../context/AppContext";
+// Dictation controls. All state is supplied by the caller so this stays a
+// presentation component (browser mic lives in useSpeechStream).
 
 function Button({ active = false, ghost = false, ...props }) {
   const base =
@@ -11,57 +12,46 @@ function Button({ active = false, ghost = false, ...props }) {
   return <button type="button" {...props} className={`${base} ${tone}`} />;
 }
 
-export default function ControlsBar({ onOpenTts }) {
-  const {
-    status,
-    engine,
-    pending,
-    words,
-    togglePause,
-    clearAll,
-    fullText,
-    notify,
-  } = useApp();
-
-  const copy = async () => {
-    if (!fullText) {
-      notify("Chưa có nội dung để sao chép");
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(fullText);
-      notify("Đã sao chép");
-    } catch {
-      notify("Trình duyệt không cho phép sao chép");
-    }
-  };
-
+export default function ControlsBar({
+  listening,
+  onToggle,
+  engine,
+  pending = 0,
+  words = 0,
+  fullText = "",
+  onOpenTts,
+  onClear,
+  onCopy,
+  mode = "accurate",
+  rtf = null,
+}) {
   const meta = [
-    `${engine.model || "?"}·${engine.cpu_threads ?? "?"}t`,
-    status.mode === "realtime" ? "realtime" : "accurate",
+    `${engine?.model || "?"}·${engine?.cpu_threads ?? "?"}t`,
+    mode,
     pending ? `chờ ${pending}` : null,
     `${words} từ`,
-    status.rtf != null ? `RTF ${status.rtf.toFixed(2)}` : null,
+    rtf != null ? `RTF ${rtf.toFixed(2)}` : null,
   ]
     .filter(Boolean)
     .join(" · ");
 
   return (
     <div className="flex flex-wrap items-center gap-2.5 border-t border-line bg-white/[0.018] px-4 py-3">
-      <Button active={status.paused} onClick={togglePause}>
-        {status.paused ? "Bắt đầu nghe" : "Tạm dừng"}
+      <Button active={!listening} onClick={onToggle}>
+        {listening ? "Tạm dừng" : "Bắt đầu nghe"}
       </Button>
-      <Button onClick={copy}>Sao chép</Button>
+      <Button onClick={onCopy}>Sao chép</Button>
       <Button onClick={onOpenTts} title="Chuyển văn bản thành giọng nói">
         Đọc
       </Button>
-      <Button ghost onClick={clearAll}>
+      <Button ghost onClick={onClear}>
         Xoá
       </Button>
       <span className="flex-1" />
       <span className="font-mono text-[11.5px] tabular-nums text-faint max-sm:hidden">
         {meta}
       </span>
+      {!fullText && <span className="sr-only">Chưa có nội dung</span>}
     </div>
   );
 }

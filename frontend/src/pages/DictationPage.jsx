@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import LevelMeter from "../components/LevelMeter";
@@ -8,6 +8,9 @@ import StatusPill from "../components/StatusPill";
 import TranscriptView from "../components/TranscriptView";
 import TtsDrawer from "../components/TtsDrawer";
 import { useApp } from "../context/AppContext";
+import { useSpeechStream } from "../features/qa/useSpeechStream";
+
+const MIC_KEY = "mic.device";
 
 function Brand() {
   return (
@@ -27,9 +30,9 @@ function Brand() {
         </svg>
       </span>
       <div>
-        <h1 className="m-0 text-base font-semibold tracking-tight">STT Trực Tiếp</h1>
+        <h1 className="m-0 text-base font-semibold tracking-tight">Đọc chính tả</h1>
         <p className="m-0 mt-px text-[11.5px] tracking-[0.04em] text-faint uppercase max-sm:hidden">
-          zipformer · offline · realtime
+          mic trình duyệt · offline · realtime
         </p>
       </div>
     </div>
@@ -37,9 +40,60 @@ function Brand() {
 }
 
 export default function DictationPage() {
-  const { status, togglePause } = useApp();
+  const { engine, notify, status: serverStatus } = useApp();
+  const stream = useSpeechStream();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [ttsOpen, setTtsOpen] = useState(false);
+  const [transcript, setTranscript] = useState({ paragraphs: [], openId: null });
+  const lastSeq = useRef(0);
+
+  const listening = stream.state === "live";
+  const connecting = stream.state === "connecting";
+
+  useEffect(() => {
+    if (stream.lastFinal.seq <= lastSeq.current) return;
+    lastSeq.current = stream.lastFinal.seq;
+    const text = stream.lastFinal.text;
+    if (!text) return;
+    setTranscript((previous) => ({
+      paragraphs: [
+        ...previous.paragraphs,
+        { id: previous.paragraphs.length + 1, text },
+      ],
+      openId: null,
+    }));
+  }, [stream.lastFinal.seq, stream.lastFinal.text]);
+
+  const toggle = useCallback(async () => {
+    if (listening || connecting) {
+      await stream.stop();
+      return;
+    }
+    const deviceId = window.localStorage.getItem(MIC_KEY) || "";
+    await stream.start(deviceId);
+  }, [connecting, listening, stream]);
+
+  const clearAll = () => {
+    setTranscript({ paragraphs: [], openId: null });
+    stream.clear();
+  };
+
+  const fullText = transcript.paragraphs.map((item) => item.text).join(" ").trim();
+  const words = fullText ? fullText.split(/\s+/).length : 0;
+  const live = stream.live;
+
+  const copy = async () => {
+    if (!fullText) {
+      notify("Chưa có nội dung để sao chép");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(fullText);
+      notify("Đã sao chép");
+    } catch {
+      notify("Trình duyệt không cho phép sao chép");
+    }
+  };
 
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -54,14 +108,17 @@ export default function DictationPage() {
       event.preventDefault();
       if (ttsOpen) setTtsOpen(false);
       else if (drawerOpen) setDrawerOpen(false);
-      else togglePause();
+      else toggle();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [drawerOpen, ttsOpen, togglePause]);
+  }, [drawerOpen, ttsOpen, toggle]);
+
+  const pillState = listening ? "listening" : connecting ? "starting" : "paused";
+  const pillLabel = listening ? "Đang nghe" : connecting ? "Đang kết nối…" : "Mic tắt";
 
   return (
-    <div className={status.paused ? "paused" : ""}>
+    <div className={listening ? "" : "paused"}>
       <div
         className="pointer-events-none fixed inset-x-0 -top-[30%] h-[60vh] bg-[radial-gradient(60%_100%_at_50%_100%,rgba(255,180,84,0.10),transparent_70%)]"
         aria-hidden="true"
@@ -91,7 +148,7 @@ export default function DictationPage() {
             <Brand />
           </div>
           <div className="flex items-center gap-2.5">
-            <StatusPill />
+            <StatusPill state={pillState} label={pillLabel} />
             <button
               type="button"
               onClick={() => setDrawerOpen(true)}
@@ -107,6 +164,7 @@ export default function DictationPage() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 className="h-[18px] w-[18px]"
+                aria-hidden="true"
               >
                 <circle cx="12" cy="12" r="3" />
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
@@ -115,19 +173,42 @@ export default function DictationPage() {
           </div>
         </header>
 
-        <LevelMeter />
+        {stream.error && (
+          <p className="m-0 rounded-lg border border-err/35 bg-err/10 px-3 py-2 text-[12px] text-err">
+            {stream.error}
+          </p>
+        )}
+
+        <LevelMeter level={stream.level} speaking={listening && Boolean(live.stable || live.tentative)} />
 
         <main className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[20px] border border-line bg-surface shadow-[0_40px_90px_-50px_#000]">
-          <TranscriptView />
-          <ControlsBar onOpenTts={() => setTtsOpen(true)} />
+          <TranscriptView
+            transcript={transcript}
+            live={live}
+            speaking={listening}
+            paused={!listening}
+          />
+          <ControlsBar
+            listening={listening}
+            onToggle={toggle}
+            engine={engine}
+            pending={0}
+            words={words}
+            fullText={fullText}
+            onOpenTts={() => setTtsOpen(true)}
+            onClear={clearAll}
+            onCopy={copy}
+            mode={serverStatus?.mode || "accurate"}
+            rtf={serverStatus?.rtf ?? null}
+          />
         </main>
 
         <p className="m-0 hidden text-center text-[12px] text-faint sm:block">
-          Nghỉ ~0.6 giây để chốt câu · chữ mờ là bản nháp ·{" "}
+          Mic chạy trong trình duyệt · nghỉ ~0.6 giây để chốt câu ·{" "}
           <kbd className="rounded border border-line bg-white/[0.04] px-1.5 py-px font-mono text-[10.5px] text-dim">
             Esc
           </kbd>{" "}
-          tạm dừng / tiếp tục ·{" "}
+          bật / tắt mic ·{" "}
           <kbd className="rounded border border-line bg-white/[0.04] px-1.5 py-px font-mono text-[10.5px] text-dim">
             Ctrl
           </kbd>
@@ -140,7 +221,7 @@ export default function DictationPage() {
       </div>
 
       <SettingsDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-      <TtsDrawer open={ttsOpen} onClose={() => setTtsOpen(false)} />
+      <TtsDrawer open={ttsOpen} onClose={() => setTtsOpen(false)} text={fullText} />
     </div>
   );
 }

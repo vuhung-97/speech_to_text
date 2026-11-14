@@ -10,6 +10,7 @@ import argparse
 import logging
 import socket
 import sys
+import threading
 import webbrowser
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -125,6 +126,26 @@ def create_app(settings: Settings, pipeline: LivePipeline, replay: ReplayService
     app.state.faq_audio = FaqAudioService(faq_repo, app.state.tts,
                                          cache_dir=audio_cache_dir)
     app.state.qa = qa or QaService(faq_matcher, sessions_repo, query_log)
+
+    # One ONNX engine, one lock: browser sessions share it and take turns.
+    app.state.transcribe_lock = threading.Lock()
+
+    def make_audio_session(mic):
+        base = app.state.pipeline
+        engine = getattr(base, "_engine", None)
+        settings_store = getattr(base, "_settings", None)
+        if engine is None or settings_store is None:
+            raise RuntimeError("engine chưa nạp xong")
+        return LivePipeline(
+            engine,
+            EventBus(),
+            settings_store,
+            mic_factory=lambda _device: mic,
+            engine_factory=lambda _values: engine,
+            transcribe_lock=app.state.transcribe_lock,
+        )
+
+    app.state.make_audio_session = make_audio_session
 
     errors.register(app)
     request_log.register(app)

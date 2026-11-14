@@ -35,8 +35,9 @@ function countWords(value) {
   return text ? text.split(/\s+/).length : 0;
 }
 
-export default function TtsDrawer({ open, onClose }) {
+export default function TtsDrawer({ open, onClose, text: presetText = "" }) {
   const { fullText, notify } = useApp();
+  const sourceText = presetText || fullText;
   const [voices, setVoices] = useState([]);
   const [voice, setVoice] = useState("");
   const [defaultVoice, setDefaultVoice] = useState("");
@@ -128,25 +129,25 @@ export default function TtsDrawer({ open, onClose }) {
   const charCount = text.length;
 
   const useTranscript = () => {
-    if (!fullText) {
+    if (!sourceText) {
       notify("Chưa có nội dung nhận dạng để đọc");
       return;
     }
     if (mode === "stream") {
-      const parts = fullText.trim().split(/\s+/);
+      const parts = sourceText.trim().split(/\s+/);
       if (parts.length > maxWords) {
         setText(parts.slice(0, maxWords).join(" "));
         notify(`Transcript dài hơn ${maxWords} từ — đã cắt bớt`);
       } else {
-        setText(fullText);
+        setText(sourceText);
       }
       return;
     }
-    if (fullText.length > maxChars) {
-      setText(fullText.slice(0, maxChars));
+    if (sourceText.length > maxChars) {
+      setText(sourceText.slice(0, maxChars));
       notify(`Transcript dài hơn ${maxChars} ký tự — đã cắt bớt`);
     } else {
-      setText(fullText);
+      setText(sourceText);
     }
   };
 

@@ -25,6 +25,19 @@ Mọi bảng đều có `tenant_id`, mọi query đều lọc theo tenant.
 | GET | `/qa/unanswered` | `limit` | `{items:[{question_norm, asks, last_asked, sample}]}` |
 | POST | `/qa/answers/{id}/speech` | `{voice?}` | `{mode:"cached", url, seconds}` hoặc `{mode:"stream", text, voice}` |
 
+## Mic (WebSocket)
+
+| Hướng | Nội dung |
+|---|---|
+| Kết nối | `ws(s)://<host>/ws/audio?sample_rate=16000` |
+| Client → Server | binary PCM16LE mono, 16 000 Hz, gói ~20 ms |
+| Server → Client | `{type:"ready",sample_rate,mode}` · `partial` · `final` · `level` · `queue` · `warning` · `error` |
+| Đóng | gửi `{"type":"stop"}` hoặc đóng socket |
+
+Mỗi kết nối là một phiên nhận dạng độc lập (segmenter + event bus riêng), dùng
+chung một engine ONNX. Sample rate khác 16 000 → `error` và đóng.
+Không có endpoint `/capture` trong luồng web; mic thuộc về trình duyệt client.
+
 `status`: `matched` (≥ ngưỡng), `near_miss` (cấu hình), `unanswered` (fallback +
 `candidates` top-3).
 

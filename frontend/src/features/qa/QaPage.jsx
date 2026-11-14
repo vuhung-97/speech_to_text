@@ -5,7 +5,6 @@ import { useParams, useSearchParams } from "react-router-dom";
 
 import AppShell from "../../app/AppShell";
 import Badge from "../../components/ui/Badge";
-import { useApp } from "../../context/AppContext";
 import * as api from "../../services/api";
 import { useSpeechPlayer } from "../tts/useSpeechPlayer";
 import Composer from "./Composer";
@@ -14,6 +13,7 @@ import { useAsk } from "./useAsk";
 import { useListen } from "./useListen";
 
 const VOICE_KEY = "tts.voice";
+const MIC_KEY = "mic.device";
 
 function PanelSection({ title, children }) {
   return (
@@ -29,13 +29,16 @@ function PanelSection({ title, children }) {
 export default function QaPage() {
   const { id: routeId } = useParams();
   const [params, setParams] = useSearchParams();
-  const { live } = useApp();
   const [draft, setDraft] = useState("");
 
   const sessionId = routeId || params.get("session") || "";
   const { turns, busy, error, ask, load } = useAsk(sessionId);
   const [readingId, setReadingId] = useState("");
   const [audioPlaying, setAudioPlaying] = useState(false);
+  const [micDevices, setMicDevices] = useState([]);
+  const [micDevice, setMicDevice] = useState(
+    () => window.localStorage.getItem(MIC_KEY) || "",
+  );
   const audioRef = useRef(null);
   const speech = useSpeechPlayer();
 
@@ -47,6 +50,25 @@ export default function QaPage() {
           : heard,
       ),
   });
+
+  const refreshMicDevices = useCallback(async () => {
+    try {
+      const devices = await navigator.mediaDevices?.enumerateDevices?.();
+      setMicDevices((devices || []).filter((item) => item.kind === "audioinput"));
+    } catch {
+      setMicDevices([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshMicDevices();
+  }, [refreshMicDevices]);
+
+  const chooseMic = (event) => {
+    const value = event.target.value;
+    setMicDevice(value);
+    window.localStorage.setItem(MIC_KEY, value);
+  };
 
   useEffect(() => {
     if (sessionId) load(sessionId);
@@ -130,18 +152,23 @@ export default function QaPage() {
       return;
     }
     stopReading();          // reading and listening are mutually exclusive
-    await listen.start();
-  }, [listen, stopReading]);
+    await listen.start(micDevice);
+    refreshMicDevices();
+  }, [listen, micDevice, refreshMicDevices, stopReading]);
 
   const lastTurn = turns[turns.length - 1] || null;
   const lastAnswer = lastTurn?.answer || null;
-  const liveText = `${live.stable || ""} ${live.tentative || ""}`.trim();
+  const liveText = `${listen.live.stable || ""} ${listen.live.tentative || ""}`.trim();
   const liveWords = liveText ? liveText.split(/\s+/).length : 0;
   const micLabel = listen.active
     ? "Đang nghe"
-    : speech.busy || audioPlaying
-      ? "Đang đọc"
-      : "Mic tắt";
+    : listen.micState === "connecting"
+      ? "Đang kết nối mic…"
+      : listen.micState === "error"
+        ? "Lỗi mic"
+        : speech.busy || audioPlaying
+          ? "Đang đọc"
+          : "Mic tắt";
 
   const right = (
     <>
@@ -155,11 +182,31 @@ export default function QaPage() {
           </Badge>
         </div>
         <p className="mt-2 mb-0 line-clamp-4 text-[12px] leading-relaxed text-faint">
-          {liveText ||
-            (listen.active
-              ? "Đang chờ bạn nói…"
-              : "Mic tắt — bấm Nghe khi muốn nói câu hỏi.")}
+          {listen.error
+            ? listen.error
+            : liveText ||
+              (listen.active
+                ? "Đang chờ bạn nói…"
+                : "Mic tắt — bấm Nghe khi muốn nói câu hỏi.")}
         </p>
+        {listen.micState !== "live" && (
+          <label className="mt-2 block">
+            <span className="sr-only">Thiết bị mic</span>
+            <select
+              value={micDevice}
+              onChange={chooseMic}
+              disabled={listen.active}
+              className="w-full rounded-lg border border-line bg-white/[0.04] px-2 py-1 text-[11.5px] text-dim outline-none focus:border-accent/60"
+            >
+              <option value="">Mic mặc định</option>
+              {micDevices.map((device, index) => (
+                <option key={device.deviceId || index} value={device.deviceId}>
+                  {device.label || `Micro ${index + 1}`}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </PanelSection>
 
       <PanelSection title="Câu hỏi khớp">

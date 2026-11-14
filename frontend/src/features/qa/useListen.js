@@ -1,24 +1,21 @@
 // "Nghe" is one deliberate press, not a background microphone.
 //
-// start(): stop nothing here (the screen does that), clear the previous STT
-// buffer, open the device. Every finalized sentence is collected; after two
-// seconds without new speech the device closes and the text is handed over.
-// The timer restarts on new finals and on live partial updates, so continuing
-// to speak extends the session.
+// start(): open the browser mic + WebSocket session. Every finalized sentence is
+// collected; after two seconds without new speech the mic closes and the text is
+// handed over. The timer restarts on new finals and on live partial updates, so
+// continuing to speak extends the session. A 30 s hard limit protects against a
+// microphone left open by mistake.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import * as api from "../../services/api";
-import { messageFor } from "../../services/errors";
-import { useLive } from "../dictation/LiveProvider";
+import { useSpeechStream } from "./useSpeechStream";
 
-const GRACE_MS = 2_000;      // silence after a sentence before closing the mic
-const IDLE_LIMIT_MS = 30_000; // never hold the device open forever with no speech
+const GRACE_MS = 2_000;
+const IDLE_LIMIT_MS = 30_000;
 
 export function useListen({ onText } = {}) {
-  const { lastFinal, live } = useLive();
+  const stream = useSpeechStream();
   const [active, setActive] = useState(false);
-  const [error, setError] = useState("");
 
   const activeRef = useRef(false);
   const baselineRef = useRef(0);
@@ -26,16 +23,24 @@ export function useListen({ onText } = {}) {
   const graceRef = useRef(0);
   const idleRef = useRef(0);
   const onTextRef = useRef(onText);
-  const liveRef = useRef(live);
+  const liveRef = useRef(stream.live);
   const finishRef = useRef(() => Promise.resolve(""));
 
-  useEffect(() => {
-    onTextRef.current = onText;
-  }, [onText]);
+  // The stream object is rebuilt every render; keep the stable pieces in refs so
+  // effects never tear down a live microphone just because React re-rendered.
+  const startMicRef = useRef(stream.start);
+  const stopMicRef = useRef(stream.stop);
+  const clearStreamRef = useRef(stream.clear);
+  const lastFinalRef = useRef(stream.lastFinal);
 
   useEffect(() => {
-    liveRef.current = live;
-  }, [live]);
+    startMicRef.current = stream.start;
+    stopMicRef.current = stream.stop;
+    clearStreamRef.current = stream.clear;
+    lastFinalRef.current = stream.lastFinal;
+    liveRef.current = stream.live;
+    onTextRef.current = onText;
+  }, [stream.start, stream.stop, stream.clear, stream.lastFinal, stream.live, onText]);
 
   const clearTimers = useCallback(() => {
     if (graceRef.current) window.clearTimeout(graceRef.current);
@@ -49,15 +54,13 @@ export function useListen({ onText } = {}) {
     activeRef.current = false;
     clearTimers();
     setActive(false);
-    try {
-      await api.setListening(false);
-    } catch (stopError) {
-      setError(messageFor(stopError));
-    }
 
     const heard = chunksRef.current.join(" ").trim();
     chunksRef.current = [];
-    const text = heard || `${liveRef.current.stable || ""} ${liveRef.current.tentative || ""}`.trim();
+    const live = liveRef.current;
+    const text = heard || `${live.stable || ""} ${live.tentative || ""}`.trim();
+
+    await stopMicRef.current();
     if (text) onTextRef.current?.(text);
     return text;
   }, [clearTimers]);
@@ -77,51 +80,55 @@ export function useListen({ onText } = {}) {
     }
   }, []);
 
-  const start = useCallback(async () => {
+  const start = useCallback(async (deviceId) => {
     if (activeRef.current) return;
-    setError("");
+    clearStreamRef.current();
     chunksRef.current = [];
-    baselineRef.current = lastFinal.seq;
-    try {
-      await api.clearTranscript();
-      await api.setListening(true);
-      activeRef.current = true;
-      setActive(true);
-      idleRef.current = window.setTimeout(() => {
-        finishRef.current();
-      }, IDLE_LIMIT_MS);
-    } catch (startError) {
-      setError(messageFor(startError));
-    }
-  }, [lastFinal.seq]);
+    baselineRef.current = lastFinalRef.current.seq;
+    const opened = await startMicRef.current(deviceId);
+    if (!opened) return;
+    activeRef.current = true;
+    setActive(true);
+    idleRef.current = window.setTimeout(() => {
+      finishRef.current();
+    }, IDLE_LIMIT_MS);
+  }, []);
 
   // A finalized sentence belongs to this session only if it arrived after start.
   useEffect(() => {
     if (!active) return;
-    if (lastFinal.seq <= baselineRef.current) return;
-    baselineRef.current = lastFinal.seq;
-    if (lastFinal.text) chunksRef.current.push(lastFinal.text);
+    if (stream.lastFinal.seq <= baselineRef.current) return;
+    baselineRef.current = stream.lastFinal.seq;
+    if (stream.lastFinal.text) chunksRef.current.push(stream.lastFinal.text);
     armGrace();
-  }, [active, lastFinal.seq, lastFinal.text, armGrace]);
+  }, [active, stream.lastFinal.seq, stream.lastFinal.text, armGrace]);
 
   // Live partial text means the speaker is still going: keep the mic open.
   useEffect(() => {
     if (!active) return;
-    if (!live.stable && !live.tentative) return;
+    if (!stream.live.stable && !stream.live.tentative) return;
     armGrace();
-  }, [active, live.stable, live.tentative, armGrace]);
+  }, [active, stream.live.stable, stream.live.tentative, armGrace]);
 
-  // Closing the screen must never leave the device open.
+  // Leaving the screen must never leave the microphone open.
   useEffect(
     () => () => {
       clearTimers();
       if (activeRef.current) {
         activeRef.current = false;
-        api.setListening(false).catch(() => {});
+        stopMicRef.current();
       }
     },
     [clearTimers],
   );
 
-  return { active, error, start, stop: finish };
+  return {
+    active,
+    error: stream.error,
+    micState: stream.state,
+    live: stream.live,
+    level: stream.level,
+    start,
+    stop: finish,
+  };
 }

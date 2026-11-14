@@ -63,6 +63,33 @@ export function LiveProvider({ children }) {
     });
   }, []);
 
+  // ------------------------------------------------------------------ sync
+  const setIfChanged = (setter, value) => {
+    setter((previous) =>
+      JSON.stringify(previous) === JSON.stringify(value) ? previous : value,
+    );
+  };
+
+  const syncState = useCallback(async () => {
+    try {
+      const data = await api.getState();
+      setIfChanged(setEngine, data.engine || {});
+      setIfChanged(setCapture, data.capture || {});
+      setPending((previous) => {
+        const next = data.queue ?? 0;
+        return previous === next ? previous : next;
+      });
+      if (data.settings) {
+        setIfChanged(setSnapshot, {
+          values: data.settings,
+          warnings: data.warnings ?? [],
+        });
+      }
+    } catch {
+      /* backend restarting; the watchdog retries */
+    }
+  }, []);
+
   // ------------------------------------------------------------------ SSE
   const handleEvent = useCallback(
     (event) => {
@@ -95,6 +122,15 @@ export function LiveProvider({ children }) {
         case "queue":
           setPending(Number(event.pending) || 0);
           break;
+        case "capture":
+          setIfChanged(setCapture, event.capture || {});
+          break;
+        case "settings":
+          setIfChanged(setSnapshot, {
+            values: event.values || {},
+            warnings: event.warnings || [],
+          });
+          break;
         case "engine":
           setEngine((previous) => ({ ...previous, ...event }));
           if (event.state === "loading") notify(`Đang nạp ${event.model || "model"}…`);
@@ -122,46 +158,39 @@ export function LiveProvider({ children }) {
     () =>
       connectEvents({
         onEvent: handleEvent,
-        onOpen: () =>
+        onOpen: () => {
           setStatus((current) =>
             current.state === "disconnected" ? { ...current, state: "connecting" } : current,
-          ),
+          );
+          syncState(); // a reconnect may have missed settings/engine changes
+        },
         onError: () =>
           setStatus((current) =>
             current.state === "disconnected" ? current : { ...current, state: "disconnected" },
           ),
       }),
-    [handleEvent],
+    [handleEvent, syncState],
   );
 
-  // -------------------------------------------------------------- polling
+  // -------------------------------------------------------------- watchdog
+  // No periodic polling: state arrives over SSE. One slow sync on mount, when
+  // the stream reconnects, and every 60 s while the tab is visible catches a
+  // silently dead SSE connection.
   useEffect(() => {
-    let alive = true;
-    let timer = 0;
-    const tick = async () => {
-      try {
-        const data = await api.getState();
-        if (!alive) return;
-        setEngine(data.engine || {});
-        setCapture(data.capture || {});
-        setPending(data.queue ?? 0);
-        if (data.settings) {
-          setSnapshot({
-            values: data.settings,
-            warnings: data.warnings ?? [],
-          });
-        }
-      } catch {
-        /* backend restarting */
-      }
-      if (alive) timer = window.setTimeout(tick, 2000);
+    syncState();
+    const tick = () => {
+      if (document.visibilityState === "visible") syncState();
     };
-    timer = window.setTimeout(tick, 2000);
+    const timer = window.setInterval(tick, 60_000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") syncState();
+    };
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
-      alive = false;
-      window.clearTimeout(timer);
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
     };
-  }, []);
+  }, [syncState]);
 
   // ------------------------------------------------------------ commands
   const togglePause = useCallback(async () => {

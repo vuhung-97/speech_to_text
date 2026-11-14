@@ -16,11 +16,13 @@ Mục nào lỗi thì ghi lại màn hình + bước tái hiện.
 ## 2. Hỏi đáp (`/`)
 
 - [ ] Trạng thái rỗng: 3 câu hỏi mẫu; bấm một câu → tạo lượt hỏi và câu trả lời.
-- [ ] Mở app: `StatusPill` hiện **"Mic tắt"**; nói vào mic → không có chữ nào xuất hiện.
+- [ ] Mở app: `StatusPill` hiện **"Sẵn sàng"**; chưa có thiết bị mic nào bị mở.
 - [ ] Ô nhập tự focus; gõ câu hỏi + `Enter` → gửi; `Shift+Enter` → xuống dòng
       (không gửi); nút `Hỏi` cũng gửi.
-- [ ] Bấm `Nghe` → mic mở (đèn mic Windows sáng), nói một câu → im 2 giây →
-      mic tự đóng và câu vừa nói xuất hiện trong ô, **không tự gửi**.
+- [ ] Panel Mic có select thiết bị **của trình duyệt**; chọn mic khác và bấm
+      `Nghe` → trình duyệt hỏi quyền (lần đầu) → đèn mic đúng thiết bị sáng.
+- [ ] Bấm `Nghe` → mic mở, nói một câu → im 2 giây → mic tự đóng và câu vừa nói
+      xuất hiện trong ô, **không tự gửi**.
 - [ ] Trong 2 giây sau khi chốt câu, nói tiếp → mic vẫn mở, chữ nối thêm; hết
       2 giây mới đóng.
 - [ ] Ô đã có chữ rồi bấm `Nghe` → chữ mới nối sau, chữ cũ còn nguyên.
@@ -28,7 +30,11 @@ Mục nào lỗi thì ghi lại màn hình + bước tái hiện.
 - [ ] Nghe lần hai không dính câu của lần một.
 - [ ] Đang nghe mà bấm `Đọc` → mic đóng trước, sau đó mới phát; ngược lại đang
       đọc mà bấm `Nghe` → tiếng đọc dừng ngay.
-- [ ] Trong lúc loa đọc, nói vào mic → không có transcript mới (mic đã đóng).
+- [ ] Trong lúc loa đọc, nói vào mic → không có transcript mới (track đã dừng).
+- [ ] Mở trang từ **máy thứ hai trong LAN qua HTTPS** → mic của máy đó hoạt động;
+      mic laptop chạy server không sáng.
+- [ ] DevTools → Network: để yên 5 phút **không** thấy `GET /api/state` mỗi 2 s
+      (chỉ ~1 lần/60 s watchdog); ẩn tab thì không có request.
 - [ ] Sau câu đầu tiên, URL thành `/?session=…`; `F5` vẫn còn hội thoại.
 - [ ] Câu trả lời chưa khớp hiện badge "Chưa có đáp án", text fallback, và ghi
       vào "Kho câu hỏi → chưa trả lời".
@@ -64,13 +70,15 @@ Mục nào lỗi thì ghi lại màn hình + bước tái hiện.
 
 ## 5. Đọc chính tả (`/dictation`)
 
-- [ ] Nút mũi tên quay về Hỏi đáp; mic, transcript, tạm dừng vẫn hoạt động.
-- [ ] `Esc` tạm dừng/tiếp tục; `Ctrl+,` mở cài đặt.
+- [ ] Nút mũi tên quay về Hỏi đáp; mic trình duyệt, transcript, `Bắt đầu nghe` hoạt động.
+- [ ] `Esc` bật/tắt mic; `Ctrl+,` mở cài đặt.
+- [ ] Trang này không mở mic của server (đèn mic laptop không sáng khi dùng trình duyệt khác).
 
 ## 6. Cài đặt (`/settings`)
 
 - [ ] Drawer tự mở; đóng được; thay đổi một trường "live" áp dụng ngay.
-- [ ] Model / thiết bị micro đổi được và có cảnh báo nếu cần nạp lại.
+- [ ] Không còn ô chọn “Micro” của server; có ghi chú mic nằm ở trình duyệt.
+- [ ] Model đổi được và có cảnh báo nếu cần nạp lại.
 
 ## 7. Accessibility
 

@@ -9,9 +9,10 @@ const DOT = {
   connecting: "bg-faint",
 };
 
-export default function StatusPill() {
+export default function StatusPill({ state: overrideState, label }) {
   const { status } = useApp();
-  const state = status.state || "connecting";
+  const state = overrideState || status.state || "connecting";
+  const text = label || STATUS_LABELS[state] || state;
   return (
     <div
       role="status"
@@ -22,7 +23,7 @@ export default function StatusPill() {
     >
       <span className={`h-[7px] w-[7px] rounded-full ${DOT[state] || "bg-faint"}`} />
       <span className={state === "listening" ? "text-white" : ""}>
-        {STATUS_LABELS[state] || state}
+        {text}
       </span>
     </div>
   );

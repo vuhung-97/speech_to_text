@@ -62,6 +62,7 @@ class LivePipeline:
         *,
         mic_factory: Callable[[int | str | None], Any] = MicStream,
         engine_factory: Callable[[dict[str, Any]], Any] | None = None,
+        transcribe_lock: threading.Lock | None = None,
     ) -> None:
         self._bus = bus
         self._settings = settings
@@ -73,7 +74,7 @@ class LivePipeline:
             engine.describe() if hasattr(engine, "describe") else {})
         self._engine_state = "ready"
         self._reload_token = 0
-        self._transcribe_lock = threading.Lock()  # one model call at a time
+        self._transcribe_lock = transcribe_lock or threading.Lock()  # one model call at a time
 
         self._segmenter = build_segmenter(self._values)
         self._agreement = LocalAgreement()
@@ -174,6 +175,8 @@ class LivePipeline:
             self._reload_engine(values)
         if effects["capture"]:
             self._restart_capture.set()
+        self._bus.publish({"type": "settings", "values": values,
+                           "warnings": self._settings.warnings()})
         return result
 
     def _reload_engine(self, values: dict[str, Any]) -> None:
@@ -228,6 +231,14 @@ class LivePipeline:
     def pending(self) -> int:
         with self._cv:
             return len(self._finals)
+
+    @property
+    def bus(self) -> EventBus:
+        return self._bus
+
+    @property
+    def mode(self) -> str:
+        return str(self._values.get("mode", "accurate"))
 
     def snapshot(self) -> dict[str, Any]:
         return {"type": "state", "status": self.status_event(),

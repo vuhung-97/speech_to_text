@@ -1,6 +1,7 @@
-import { useEffect, useRef } from "react";
+// Dictation transcript rendering. Data comes from the caller (browser mic +
+// WebSocket), so this component holds no state and no microphone logic.
 
-import { useApp } from "../context/AppContext";
+import { useEffect, useRef } from "react";
 
 function EmptyState() {
   return (
@@ -14,6 +15,7 @@ function EmptyState() {
           strokeLinecap="round"
           strokeLinejoin="round"
           className="h-6 w-6"
+          aria-hidden="true"
         >
           <rect x="9" y="2" width="6" height="12" rx="3" />
           <path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4" />
@@ -21,18 +23,17 @@ function EmptyState() {
       </span>
       <p className="m-0 text-base font-semibold">Sẵn sàng nghe</p>
       <p className="m-0 text-[13.5px] text-faint">
-        Nói tiếng Việt — chữ sẽ hiện khi chốt câu.
+        Bấm “Bắt đầu nghe” rồi nói tiếng Việt.
       </p>
     </div>
   );
 }
 
-export default function TranscriptView() {
-  const { transcript, live, speaking, status } = useApp();
+export default function TranscriptView({ transcript, live, speaking, paused }) {
   const scroller = useRef(null);
   const pinned = useRef(true);
-  const hasLive = Boolean(live.stable || live.tentative);
-  const hasContent = transcript.paragraphs.length > 0 || hasLive;
+  const hasLive = Boolean(live?.stable || live?.tentative);
+  const hasContent = (transcript?.paragraphs?.length || 0) > 0 || hasLive;
 
   useEffect(() => {
     if (pinned.current && scroller.current) {
@@ -47,7 +48,7 @@ export default function TranscriptView() {
       element.scrollHeight - element.scrollTop - element.clientHeight < 60;
   };
 
-  const showLive = hasLive || (speaking && !status.paused);
+  const showLive = hasLive || (speaking && !paused);
 
   return (
     <div
@@ -58,7 +59,7 @@ export default function TranscriptView() {
       {!hasContent && !speaking && <EmptyState />}
 
       <div role="log" aria-live="polite" aria-atomic="false" className="space-y-3">
-        {transcript.paragraphs.map((paragraph) => (
+        {(transcript?.paragraphs || []).map((paragraph) => (
           <p key={paragraph.id} className="transcript-text m-0 text-white">
             {paragraph.text}
           </p>
@@ -67,10 +68,8 @@ export default function TranscriptView() {
 
       {showLive && (
         <p className="transcript-text m-0 mt-3" aria-hidden="true">
-          <span className="text-white">{live.stable}</span>
-          {live.tentative && (
-            <span className="text-dim"> {live.tentative}</span>
-          )}
+          <span className="text-white">{live?.stable}</span>
+          {live?.tentative && <span className="text-dim"> {live.tentative}</span>}
           <span className="caret" />
         </p>
       )}

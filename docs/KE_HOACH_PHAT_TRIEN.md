@@ -24,7 +24,7 @@ nguyên văn và không có ảo giác.
 | Giới hạn đọc | 2000 từ/lượt; chốt an toàn 20 000 ký tự |
 | Lưu audio | PCM16 spill-to-disk, quota 512 MB, dọn session cũ khi khởi động |
 | Tự động đọc | TẮT mặc định (bấm nút mới đọc), có công tắc trong Cài đặt |
-| Mic | **TẮT mặc định**; chỉ mở khi bấm `Nghe`; đóng thiết bị khi đọc (half-duplex) |
+| Mic | **TẮT mặc định**; mic của **trình duyệt từng client** qua WebSocket `/ws/audio`; đóng track khi đọc (half-duplex) |
 | Frontend deps | chỉ thêm `react-router-dom`; test UI bằng checklist tay |
 | Thứ tự | P0 → P6 |
 | Tenant | `local`, nhưng mọi bảng/query đã scope `tenant_id` |
@@ -133,6 +133,7 @@ Tổng ~23,5 ngày công.
 | P4 Giao diện SaaS | ✅ xong | App shell rail+topbar+panel, `/` hỏi đáp, `/sessions(/:id)`, `/faq` (worklist), `/dictation`, `/settings`; command palette Ctrl+K; player đọc trong AnswerCard; `docs/qa-ui.md` |
 | P5 FAQ embedding | ✅ xong | `OnnxE5Embedder` (multilingual-e5-small, 384d, quantized 118 MB tại `models/embed/`), `HashingEmbedder` fallback, `SqliteFaqRepository` + `SqliteFaqMatcher` (ma trận RAM, lazy embed, cache theo signature), CRUD + import CSV + chống trùng 0.97 + reindex + stats, `/faq` admin UI |
 | P6 Gia cố | ✅ xong | `X-Request-ID` + log structured, audit log (schema v3) + `/audit`, prerender + cache bản đọc (`faq_audio`, LRU 512 MB) + `/qa/answers/{id}/speech`, panel hoạt động gần đây, `docs/API.md` |
+| P7 Mic client | ✅ xong | `WS /ws/audio` (mỗi kết nối một phiên, engine dùng chung + lock), `WebSocketMic`, AudioWorklet 16 kHz, `useMic`/`useSpeechStream`, bỏ poll 2 s (watchdog 60 s + event `settings`/`capture`), `docs/TRIEN_KHAI_LAN.md` |
 
 Đo thực tế trên máy phát triển (VieNeu v3 Turbo, ONNX CPU):
 

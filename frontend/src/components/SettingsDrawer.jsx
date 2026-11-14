@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { useApp } from "../context/AppContext";
-import * as api from "../services/api";
 import { formatValue } from "../utils/format";
 import PresetPanel from "./PresetPanel";
 import ReplayPanel from "./ReplayPanel";
 
 const GROUP_TITLES = {
   mode: "Chế độ",
-  engine: "Model & micro",
-  vad: "Câu & micro",
+  engine: "Model & tài nguyên",
+  vad: "Câu & im lặng",
   stream: "Luồng (realtime)",
 };
 
@@ -151,21 +150,7 @@ function FieldRow({ field, devices }) {
 }
 
 export default function SettingsDrawer({ open, onClose }) {
-  const { settings, dirty, pending, engine, capture, applyDirty, resetSettings } = useApp();
-  const [devices, setDevices] = useState([]);
-
-  const loadDevices = useCallback(async () => {
-    try {
-      const data = await api.getDevices();
-      setDevices(data.devices || []);
-    } catch {
-      setDevices([]);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (open) loadDevices();
-  }, [open, loadDevices]);
+  const { settings, dirty, pending, engine, applyDirty, resetSettings } = useApp();
 
   const dirtyCount = Object.keys(dirty).length;
 
@@ -237,6 +222,7 @@ export default function SettingsDrawer({ open, onClose }) {
             const fields = settings.fields.filter(
               (field) =>
                 field.group === group &&
+                field.key !== "device" &&
                 (!field.mode_only || field.mode_only === settings.values.mode),
             );
             if (!fields.length) return null;
@@ -247,28 +233,14 @@ export default function SettingsDrawer({ open, onClose }) {
                   {group === "engine" && <EngineBadge engine={engine} />}
                 </h3>
                 {fields.map((field) => (
-                  <FieldRow key={field.key} field={field} devices={devices} />
+                  <FieldRow key={field.key} field={field} devices={[]} />
                 ))}
 
                 {group === "engine" && (
-                  <div className="mb-2 text-[11.5px] text-faint">
-                    <div className="flex items-center justify-between">
-                      <span>Thu âm</span>
-                      <span className="font-mono text-[11px] text-dim">
-                        {capture.backend || "—"} ·{" "}
-                        {capture.frames_per_sec != null
-                          ? Number(capture.frames_per_sec).toFixed(1)
-                          : "—"}{" "}
-                        fr/s · {capture.coverage != null
-                          ? Math.round(capture.coverage * 100)
-                          : "—"}
-                        %
-                      </span>
-                    </div>
-                    <p className="mt-1 mb-0 leading-relaxed">
-                      dropped {capture.dropped ?? "—"} · xrun {capture.xruns ?? "—"} —
-                      nhỏ hơn 9 fr/s hoặc có dropped nghĩa là audio đang bị rơi.
-                    </p>
+                  <div className="mb-2 rounded-lg border border-line bg-white/[0.02] px-2.5 py-1.5 text-[11.5px] leading-relaxed text-faint">
+                    Micro được mở trong trình duyệt của từng người dùng và chỉ hoạt
+                    động khi bấm <span className="text-white">Nghe</span>. Đổi thiết bị
+                    mic ở trang Hỏi đáp.
                   </div>
                 )}
 

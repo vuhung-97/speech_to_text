@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from ..controllers import (audit, devices, faq, health, qa, samples, session,
-                           sessions, settings_ctl, state, tts)
+from ..controllers import (audio_ws, audit, devices, faq, health, qa, samples,
+                           session, sessions, settings_ctl, state, tts)
 
 _ROUTERS = (health, state, settings_ctl, devices, samples, tts, session, qa,
             sessions, faq, audit)
@@ -27,6 +27,7 @@ def build_router() -> APIRouter:
     root.include_router(_api_prefix("/api"))
     root.include_router(_api_prefix("/api/v1"))
     root.include_router(state.events_router)  # /events (SSE, no /api prefix)
+    root.include_router(audio_ws.router)      # /ws/audio (no /api prefix)
     return root
 
 

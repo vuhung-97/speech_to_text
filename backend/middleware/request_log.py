@@ -28,7 +28,9 @@ def register(app: FastAPI) -> None:
             raise
         elapsed = (time.perf_counter() - started) * 1000
         response.headers["X-Request-ID"] = request_id
-        if request.url.path.startswith("/api"):
+        if request.url.path.startswith("/api") and request.url.path != "/api/state":
             logger.info("rid=%s %s %s %s %.0fms", request_id, request.method,
                         request.url.path, response.status_code, elapsed)
+        elif request.url.path == "/api/state":
+            logger.debug("rid=%s GET /api/state %.0fms", request_id, elapsed)
         return response

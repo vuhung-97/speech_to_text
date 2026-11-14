@@ -1,10 +1,9 @@
+// Smoothed microphone meter: display only, driven by rAF.
+// The level comes from the browser worklet, not from the server.
+
 import { useEffect, useRef } from "react";
 
-import { useApp } from "../context/AppContext";
-
-// Smoothed microphone meter: display only, driven by rAF.
-export default function LevelMeter() {
-  const { level, speaking } = useApp();
+export default function LevelMeter({ level = 0, speaking = false }) {
   const fill = useRef(null);
   const target = useRef(0);
   const shown = useRef(0);

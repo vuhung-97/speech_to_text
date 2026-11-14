@@ -3,7 +3,7 @@ export const STATUS_LABELS = {
   starting: "Đang khởi động…",
   listening: "Đang nghe",
   reloading: "Đang nạp model…",
-  paused: "Đã tạm dừng",
+  paused: "Mic tắt",
   error: "Lỗi micro",
   disconnected: "Mất kết nối — đang thử lại…",
 };

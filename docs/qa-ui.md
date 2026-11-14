@@ -16,17 +16,27 @@ Mục nào lỗi thì ghi lại màn hình + bước tái hiện.
 ## 2. Hỏi đáp (`/`)
 
 - [ ] Trạng thái rỗng: 3 câu hỏi mẫu; bấm một câu → tạo lượt hỏi và câu trả lời.
-- [ ] Gõ câu hỏi + `Ctrl+Enter` → gửi; nút `Hỏi` cũng gửi.
+- [ ] Mở app: `StatusPill` hiện **"Mic tắt"**; nói vào mic → không có chữ nào xuất hiện.
+- [ ] Ô nhập tự focus; gõ câu hỏi + `Enter` → gửi; `Shift+Enter` → xuống dòng
+      (không gửi); nút `Hỏi` cũng gửi.
+- [ ] Bấm `Nghe` → mic mở (đèn mic Windows sáng), nói một câu → im 2 giây →
+      mic tự đóng và câu vừa nói xuất hiện trong ô, **không tự gửi**.
+- [ ] Trong 2 giây sau khi chốt câu, nói tiếp → mic vẫn mở, chữ nối thêm; hết
+      2 giây mới đóng.
+- [ ] Ô đã có chữ rồi bấm `Nghe` → chữ mới nối sau, chữ cũ còn nguyên.
+- [ ] Bấm `Dừng` khi đang nghe → mic đóng ngay, chữ đã chốt (hoặc bản nháp) vào ô.
+- [ ] Nghe lần hai không dính câu của lần một.
+- [ ] Đang nghe mà bấm `Đọc` → mic đóng trước, sau đó mới phát; ngược lại đang
+      đọc mà bấm `Nghe` → tiếng đọc dừng ngay.
+- [ ] Trong lúc loa đọc, nói vào mic → không có transcript mới (mic đã đóng).
 - [ ] Sau câu đầu tiên, URL thành `/?session=…`; `F5` vẫn còn hội thoại.
 - [ ] Câu trả lời chưa khớp hiện badge "Chưa có đáp án", text fallback, và ghi
       vào "Kho câu hỏi → chưa trả lời".
 - [ ] Nút `Đọc` phát audio sau ~2–3 giây; progress chạy; `Dừng đọc` cắt ngay.
 - [ ] `Tải WAV` xuất hiện sau khi audio bắt đầu và tải được file mở bằng
       Windows Media Player.
-- [ ] Panel phải: "Mic" cập nhật số từ và câu đang nghe; "Câu hỏi khớp" hiện
-      điểm/percent; "Đang đọc" hiện tiến độ.
-- [ ] Nói một câu hỏi qua mic → sau ~0,7 giây hiện gợi ý "Nghe được câu hỏi";
-      bấm `Hỏi` gửi đúng câu đó; `Bỏ qua` ẩn gợi ý.
+- [ ] Panel phải: "Mic" hiện Mic tắt / Đang nghe / Đang đọc và số từ đang nói;
+      "Câu hỏi khớp" hiện điểm/percent; "Đang đọc" hiện tiến độ.
 
 ## 3. Phiên (`/sessions`)
 

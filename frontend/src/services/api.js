@@ -11,6 +11,9 @@ export const getDevices = () => http.get("/api/devices");
 export const getSamples = () => http.get("/api/samples");
 export const replaySample = (name, segment) => http.post("/api/replay", { name, segment });
 export const setPaused = (paused) => http.post("/api/pause", { paused });
+
+export const setListening = (listening) =>
+  http.post("/api/v1/capture", { listening: Boolean(listening) });
 export const clearTranscript = () => http.post("/api/clear");
 
 export const getTtsVoices = () => http.get("/api/tts/voices");

@@ -80,6 +80,8 @@ class LivePipeline:
 
         self._stop = threading.Event()
         self._pause = threading.Event()
+        self._listen = threading.Event()
+        self._listen.set()  # direct construction listens; the app pauses at start
         self._restart_capture = threading.Event()
         self._cv = threading.Condition()
         self._partial: np.ndarray | None = None
@@ -113,14 +115,25 @@ class LivePipeline:
     # --------------------------------------------------------------- control
     def set_paused(self, paused: bool) -> bool:
         if paused:
+            self._listen.clear()
             self._pause.set()
             self._drop_in_progress()
             self._set_state("paused")
         else:
+            self._listen.set()
             self._pause.clear()
             self._segmenter.gate.resume()
             self._set_state("listening")
         return self._pause.is_set()
+
+    def set_listening(self, listening: bool) -> bool:
+        """Open or close the microphone for real.
+
+        Unlike a soft pause, closing releases the audio device: nothing is
+        captured while the assistant is reading or the user is typing.
+        """
+        self.set_paused(not listening)
+        return self._listen.is_set()
 
     def clear(self) -> None:
         with self._cv:
@@ -197,6 +210,7 @@ class LivePipeline:
         with self._state_lock:
             state = self._state
         return {"type": "status", "state": state, "paused": self._pause.is_set(),
+                "listening": self._listen.is_set(),
                 "rtf": self._rtf, "mode": self._values.get("mode")}
 
     def engine_info(self) -> dict[str, Any]:
@@ -225,6 +239,13 @@ class LivePipeline:
     def _capture_loop(self) -> None:
         while not self._stop.is_set():
             self._restart_capture.clear()
+            if not self._listen.is_set():
+                # Microphone off: keep the device closed instead of reading and
+                # discarding frames. This is what makes "reading" and
+                # "listening" mutually exclusive.
+                self._set_state("paused")
+                self._listen.wait(0.1)
+                continue
             device = self._values.get("device") or None
             try:
                 with self._mic_factory(device) as mic:
@@ -232,7 +253,8 @@ class LivePipeline:
                     if not self._pause.is_set():
                         self._set_state("listening")
                     while (not self._stop.is_set()
-                           and not self._restart_capture.is_set()):
+                           and not self._restart_capture.is_set()
+                           and self._listen.is_set()):
                         frame = mic.read(timeout=0.2)
                         if frame is not None:
                             self._on_frame(frame)

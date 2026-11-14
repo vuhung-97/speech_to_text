@@ -49,7 +49,7 @@ export default function ControlsBar({ onOpenTts }) {
   return (
     <div className="flex flex-wrap items-center gap-2.5 border-t border-line bg-white/[0.018] px-4 py-3">
       <Button active={status.paused} onClick={togglePause}>
-        {status.paused ? "Tiếp tục" : "Tạm dừng"}
+        {status.paused ? "Bắt đầu nghe" : "Tạm dừng"}
       </Button>
       <Button onClick={copy}>Sao chép</Button>
       <Button onClick={onOpenTts} title="Chuyển văn bản thành giọng nói">

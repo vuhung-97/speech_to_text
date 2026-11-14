@@ -73,13 +73,17 @@ def create_app(settings: Settings, pipeline: LivePipeline, replay: ReplayService
                db_path: str | Path | None = None,
                qa: QaService | None = None,
                embedder: Embedder | None = None,
-               audio_cache_dir: str | Path | None = None) -> FastAPI:
+               audio_cache_dir: str | Path | None = None,
+               auto_listen: bool = False) -> FastAPI:
     """Composition root for the HTTP layer (also used by the tests)."""
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         cleanup_stale_sessions(TTS_TEMP_DIR)
         pipeline.start()
+        pause = getattr(pipeline, "set_paused", None)
+        if callable(pause) and not _app.state.auto_listen:
+            pause(True)  # typing is the default; the mic opens only on demand
         try:
             yield
         finally:
@@ -96,6 +100,7 @@ def create_app(settings: Settings, pipeline: LivePipeline, replay: ReplayService
     app.state.replay = replay
     app.state.bus = bus
     app.state.tts = tts or TtsService()
+    app.state.auto_listen = bool(auto_listen)
 
     database = Database(db_path or DB_PATH)
     sessions_repo = SqliteSessionRepository(database)
@@ -156,6 +161,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--settings", default=str(SETTINGS_PATH),
                    help="settings file (default: settings.json in the project root)")
     p.add_argument("--no-browser", action="store_true", help="do not open the browser")
+    p.add_argument("--listen-on-start", action="store_true",
+                   help="mở micro ngay khi khởi động (mặc định tắt, bấm Nghe để nghe)")
     p.add_argument("--list-devices", action="store_true", help="list audio input devices")
     return p.parse_args()
 
@@ -216,7 +223,8 @@ def main() -> int:
     bus = EventBus()
     pipeline = LivePipeline(engine, bus, settings)
     replay = ReplayService(pipeline.decode, settings, SAMPLES_DIR)
-    app = create_app(settings, pipeline, replay, bus)
+    app = create_app(settings, pipeline, replay, bus,
+                     auto_listen=args.listen_on_start)
 
     port = free_port(args.port)
     url = f"http://{args.host}:{port}/"

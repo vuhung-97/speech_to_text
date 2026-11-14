@@ -6,11 +6,12 @@ import { useParams, useSearchParams } from "react-router-dom";
 import AppShell from "../../app/AppShell";
 import Badge from "../../components/ui/Badge";
 import { useApp } from "../../context/AppContext";
+import * as api from "../../services/api";
 import { useSpeechPlayer } from "../tts/useSpeechPlayer";
 import Composer from "./Composer";
 import Thread from "./Thread";
 import { useAsk } from "./useAsk";
-import { useQuestionSuggest } from "./useQuestionSuggest";
+import { useListen } from "./useListen";
 
 const VOICE_KEY = "tts.voice";
 
@@ -28,7 +29,8 @@ function PanelSection({ title, children }) {
 export default function QaPage() {
   const { id: routeId } = useParams();
   const [params, setParams] = useSearchParams();
-  const { transcript, live, fullText, words, speaking } = useApp();
+  const { live } = useApp();
+  const [draft, setDraft] = useState("");
 
   const sessionId = routeId || params.get("session") || "";
   const { turns, busy, error, ask, load } = useAsk(sessionId);
@@ -37,8 +39,14 @@ export default function QaPage() {
   const audioRef = useRef(null);
   const speech = useSpeechPlayer();
 
-  const lastFinal = transcript.paragraphs.at(-1)?.text || "";
-  const { suggestion, dismiss, clear } = useQuestionSuggest(lastFinal);
+  const listen = useListen({
+    onText: (heard) =>
+      setDraft((previous) =>
+        previous.trim()
+          ? `${previous.trimEnd()} ${heard}`
+          : heard,
+      ),
+  });
 
   useEffect(() => {
     if (sessionId) load(sessionId);
@@ -59,15 +67,28 @@ export default function QaPage() {
   const handleAsk = useCallback(
     async (question, source) => {
       const data = await ask(question, source);
-      if (data) clear();
+      if (data) setDraft("");
       return data;
     },
-    [ask, clear],
+    [ask],
+  );
+
+  const submitDraft = useCallback(
+    async (question) => {
+      let value = question;
+      if (listen.active) {
+        const heard = await listen.stop(); // closes mic and hands over the text
+        if (heard) value = `${value} ${heard}`.trim();
+      }
+      await handleAsk(value, "typed");
+    },
+    [handleAsk, listen],
   );
 
   const read = useCallback(
     async (answer) => {
       if (!answer?.text) return;
+      if (listen.active) await listen.stop();
       const voice = window.localStorage.getItem(VOICE_KEY) || "";
       setReadingId(answer.id);
       try {
@@ -85,7 +106,7 @@ export default function QaPage() {
       }
       speech.start(answer.text, voice);
     },
-    [speech],
+    [listen, speech],
   );
 
   const stopReading = useCallback(() => {
@@ -103,23 +124,41 @@ export default function QaPage() {
     if (speech.status === "idle") setReadingId("");
   }, [speech.status]);
 
+  const toggleListen = useCallback(async () => {
+    if (listen.active) {
+      await listen.stop();
+      return;
+    }
+    stopReading();          // reading and listening are mutually exclusive
+    await listen.start();
+  }, [listen, stopReading]);
+
   const lastTurn = turns[turns.length - 1] || null;
   const lastAnswer = lastTurn?.answer || null;
   const liveText = `${live.stable || ""} ${live.tentative || ""}`.trim();
+  const liveWords = liveText ? liveText.split(/\s+/).length : 0;
+  const micLabel = listen.active
+    ? "Đang nghe"
+    : speech.busy || audioPlaying
+      ? "Đang đọc"
+      : "Mic tắt";
 
   const right = (
     <>
       <PanelSection title="Mic">
         <div className="flex items-center justify-between text-[12px]">
-          <span className={speaking ? "text-accent" : "text-dim"}>
-            {speaking ? "Đang nghe bạn nói" : "Đang chờ câu hỏi"}
+          <span className={listen.active ? "text-accent" : "text-dim"}>
+            {micLabel}
           </span>
-          <Badge tone={speaking ? "accent" : "neutral"}>
-            {words} từ
+          <Badge tone={listen.active ? "accent" : "neutral"}>
+            {liveWords} từ
           </Badge>
         </div>
         <p className="mt-2 mb-0 line-clamp-4 text-[12px] leading-relaxed text-faint">
-          {liveText || fullText.slice(-220) || "Chưa có nội dung nhận dạng."}
+          {liveText ||
+            (listen.active
+              ? "Đang chờ bạn nói…"
+              : "Mic tắt — bấm Nghe khi muốn nói câu hỏi.")}
         </p>
       </PanelSection>
 
@@ -235,10 +274,13 @@ export default function QaPage() {
       )}
 
       <Composer
-        onAsk={handleAsk}
+        value={draft}
+        onChange={setDraft}
+        onSubmit={submitDraft}
         busy={busy}
-        suggestion={suggestion}
-        onDismissSuggestion={dismiss}
+        listening={listen.active}
+        onToggleListen={toggleListen}
+        error={listen.error}
       />
     </AppShell>
   );

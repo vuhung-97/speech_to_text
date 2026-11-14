@@ -24,6 +24,7 @@ nguyên văn và không có ảo giác.
 | Giới hạn đọc | 2000 từ/lượt; chốt an toàn 20 000 ký tự |
 | Lưu audio | PCM16 spill-to-disk, quota 512 MB, dọn session cũ khi khởi động |
 | Tự động đọc | TẮT mặc định (bấm nút mới đọc), có công tắc trong Cài đặt |
+| Mic | **TẮT mặc định**; chỉ mở khi bấm `Nghe`; đóng thiết bị khi đọc (half-duplex) |
 | Frontend deps | chỉ thêm `react-router-dom`; test UI bằng checklist tay |
 | Thứ tự | P0 → P6 |
 | Tenant | `local`, nhưng mọi bảng/query đã scope `tenant_id` |

@@ -23,6 +23,7 @@ export const useLive = () => useContext(LiveContext);
 const INITIAL_STATUS = {
   state: "connecting",
   paused: false,
+  listening: false,
   rtf: null,
   mode: "accurate",
 };
@@ -36,6 +37,7 @@ export function LiveProvider({ children }) {
   const [level, setLevel] = useState(0);
   const [speaking, setSpeaking] = useState(false);
   const [live, setLive] = useState({ stable: "", tentative: "" });
+  const [lastFinal, setLastFinal] = useState({ seq: 0, text: "" });
   const [transcript, setTranscript] = useState({ paragraphs: [], openId: null });
   const [snapshot, setSnapshot] = useState({ values: {}, warnings: [] });
   const nextId = useRef(1);
@@ -69,6 +71,7 @@ export function LiveProvider({ children }) {
           setStatus({
             state: event.state || "listening",
             paused: Boolean(event.paused),
+            listening: event.listening ?? !event.paused,
             rtf: event.rtf ?? null,
             mode: event.mode || "accurate",
           });
@@ -83,6 +86,10 @@ export function LiveProvider({ children }) {
           break;
         case "final":
           appendFinal(event.text || "", Boolean(event.hard));
+          setLastFinal((previous) => ({
+            seq: previous.seq + 1,
+            text: (event.text || "").trim(),
+          }));
           setLive({ stable: "", tentative: "" });
           break;
         case "queue":
@@ -191,6 +198,7 @@ export function LiveProvider({ children }) {
       level,
       speaking,
       live,
+      lastFinal,
       transcript,
       snapshot,
       fullText,
@@ -206,6 +214,7 @@ export function LiveProvider({ children }) {
       level,
       speaking,
       live,
+      lastFinal,
       transcript,
       snapshot,
       fullText,

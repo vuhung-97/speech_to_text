@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import queue
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -20,6 +21,7 @@ router = APIRouter(tags=["audio"])
 
 HEARTBEAT_SECONDS = 10.0
 NO_AUDIO_WARNING_SECONDS = 3.0
+DEBUG_TEXT = os.environ.get("STT_WS_DEBUG") == "1"
 logger = logging.getLogger("stt_binh.ws")
 
 
@@ -78,6 +80,12 @@ async def audio_stream(websocket: WebSocket, sample_rate: int = SAMPLE_RATE) -> 
                 event = await asyncio.to_thread(subscriber.get, True, HEARTBEAT_SECONDS)
             except queue.Empty:
                 continue
+            if DEBUG_TEXT and event.get("type") in ("partial", "final"):
+                if event["type"] == "final":
+                    logger.info("ws final %r", event.get("text", ""))
+                else:
+                    logger.info("ws partial %r | %r", event.get("stable", ""),
+                                event.get("tentative", ""))
             try:
                 await websocket.send_json(event)
             except Exception:

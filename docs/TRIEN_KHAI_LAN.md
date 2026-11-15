@@ -60,4 +60,5 @@ nhận.
 | Không thấy thiết bị mic | Trang chạy HTTP (không phải localhost) | Dùng HTTPS theo mục 2 hoặc 3 |
 | WS báo mất kết nối | Reverse proxy không nâng cấp WebSocket | Caddy tự làm; nginx cần `proxy_set_header Upgrade` |
 | Nhận dạng chậm khi nhiều người nói | Model dùng chung CPU | Giảm số client đồng thời; tăng `cpu_threads` trong Cài đặt |
+| Muốn thấy server gửi chữ gì | Không in text mặc định | Chạy `$env:STT_WS_DEBUG="1"; python run.py` → terminal in `ws partial/final '…'` |
 | Điện thoại ngủ → mất mic | Hệ điều hành khoá trình duyệt | Giữ màn hình sáng khi đang hỏi |

@@ -370,6 +370,7 @@ export default function QaPage() {
         onSubmit={submitDraft}
         busy={busy}
         listening={listen.active}
+        preview={liveText}
         onToggleListen={toggleListen}
         error={listen.error}
       />

@@ -11,7 +11,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSpeechStream } from "./useSpeechStream";
 
 const GRACE_MS = 2_000;
-const IDLE_LIMIT_MS = 30_000;
+const INITIAL_GRACE_MS = 4_000; // time to start speaking after pressing Nghe
+const HARD_LIMIT_MS = 12_000; // a question session never lasts longer than this
+const SPEECH_LEVEL = 0.05; // client RMS above this counts as "still talking"
 
 export function useListen({ onText } = {}) {
   const stream = useSpeechStream();
@@ -21,7 +23,7 @@ export function useListen({ onText } = {}) {
   const baselineRef = useRef(0);
   const chunksRef = useRef([]);
   const graceRef = useRef(0);
-  const idleRef = useRef(0);
+  const hardRef = useRef(0);
   const onTextRef = useRef(onText);
   const liveRef = useRef(stream.live);
   const finishRef = useRef(() => Promise.resolve(""));
@@ -44,9 +46,9 @@ export function useListen({ onText } = {}) {
 
   const clearTimers = useCallback(() => {
     if (graceRef.current) window.clearTimeout(graceRef.current);
-    if (idleRef.current) window.clearTimeout(idleRef.current);
+    if (hardRef.current) window.clearTimeout(hardRef.current);
     graceRef.current = 0;
-    idleRef.current = 0;
+    hardRef.current = 0;
   }, []);
 
   const finish = useCallback(async () => {
@@ -74,10 +76,6 @@ export function useListen({ onText } = {}) {
     graceRef.current = window.setTimeout(() => {
       finishRef.current();
     }, GRACE_MS);
-    if (idleRef.current) {
-      window.clearTimeout(idleRef.current);
-      idleRef.current = 0;
-    }
   }, []);
 
   const start = useCallback(async (deviceId) => {
@@ -89,10 +87,16 @@ export function useListen({ onText } = {}) {
     if (!opened) return;
     activeRef.current = true;
     setActive(true);
-    idleRef.current = window.setTimeout(() => {
+    // Two timers: a silence grace that restarts while the server hears speech,
+    // and a hard cap so the microphone can never stay open forever. The first
+    // grace is longer, to give the speaker time to start.
+    graceRef.current = window.setTimeout(() => {
       finishRef.current();
-    }, IDLE_LIMIT_MS);
-  }, []);
+    }, INITIAL_GRACE_MS);
+    hardRef.current = window.setTimeout(() => {
+      finishRef.current();
+    }, HARD_LIMIT_MS);
+  }, [armGrace]);
 
   // A finalized sentence belongs to this session only if it arrived after start.
   useEffect(() => {
@@ -103,12 +107,14 @@ export function useListen({ onText } = {}) {
     armGrace();
   }, [active, stream.lastFinal.seq, stream.lastFinal.text, armGrace]);
 
-  // Live partial text means the speaker is still going: keep the mic open.
+  // Still talking? Use the client-side RMS, not the partial text: ambient noise
+  // can keep producing drafts forever in realtime mode, while real speech is
+  // clearly louder than the room.
   useEffect(() => {
     if (!active) return;
-    if (!stream.live.stable && !stream.live.tentative) return;
+    if (stream.level < SPEECH_LEVEL) return;
     armGrace();
-  }, [active, stream.live.stable, stream.live.tentative, armGrace]);
+  }, [active, stream.level, armGrace]);
 
   // Leaving the screen must never leave the microphone open.
   useEffect(

@@ -27,6 +27,7 @@ export default function Composer({
   onSubmit,
   busy,
   listening,
+  preview = "",
   onToggleListen,
   error,
 }) {
@@ -48,6 +49,13 @@ export default function Composer({
       {error && (
         <p className="mx-auto mb-2 max-w-[720px] rounded-lg border border-err/35 bg-err/10 px-3 py-1.5 text-[12px] text-err">
           {error}
+        </p>
+      )}
+
+      {listening && preview && (
+        <p className="mx-auto mb-2 max-w-[720px] truncate rounded-lg border border-line bg-white/[0.03] px-3 py-1.5 text-[12.5px] text-dim">
+          <span className="text-faint">Đang nghe: </span>
+          <span className="text-white">{preview}</span>
         </p>
       )}
 

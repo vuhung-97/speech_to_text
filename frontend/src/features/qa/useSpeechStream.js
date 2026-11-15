@@ -8,6 +8,7 @@ import { useMic } from "../mic/useMic";
 export function useSpeechStream() {
   const [live, setLive] = useState({ stable: "", tentative: "" });
   const [lastFinal, setLastFinal] = useState({ seq: 0, text: "" });
+  const [speechActive, setSpeechActive] = useState(false);
   const [remoteError, setRemoteError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -24,6 +25,8 @@ export function useSpeechStream() {
           text: (event.text || "").trim(),
         }));
         setLive({ stable: "", tentative: "" });
+      } else if (event.type === "level") {
+        setSpeechActive(Boolean(event.speech));
       } else if (event.type === "error") {
         setRemoteError(event.detail || "lỗi nhận dạng");
       } else if (event.type === "warning") {
@@ -42,6 +45,7 @@ export function useSpeechStream() {
     ...mic,
     live,
     lastFinal,
+    speechActive,
     notice,
     error: mic.error || remoteError,
     clear,

@@ -130,6 +130,8 @@ export function useListen({ onText } = {}) {
     live: stream.live,
     level: stream.level,
     packets: stream.packets,
+    deviceLabel: stream.deviceLabel,
+    sampleRate: stream.sampleRate,
     start,
     stop: finish,
   };

@@ -242,7 +242,8 @@ def main() -> int:
     print("Loading model...")
     engine = _load_engine(settings)
     bus = EventBus()
-    pipeline = LivePipeline(engine, bus, settings)
+    pipeline = LivePipeline(engine, bus, settings,
+                            start_listening=args.listen_on_start)
     replay = ReplayService(pipeline.decode, settings, SAMPLES_DIR)
     app = create_app(settings, pipeline, replay, bus,
                      auto_listen=args.listen_on_start)

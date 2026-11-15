@@ -16,6 +16,8 @@ export function useMic({ onEvent } = {}) {
   const [state, setState] = useState("idle"); // idle | connecting | live | error
   const [level, setLevel] = useState(0);
   const [packets, setPackets] = useState(0);
+  const [deviceLabel, setDeviceLabel] = useState("");
+  const [sampleRate, setSampleRate] = useState(0);
   const [error, setError] = useState("");
   const refs = useRef({});
   const packetsRef = useRef(0);
@@ -133,9 +135,11 @@ export function useMic({ onEvent } = {}) {
         // AudioContext once the page is capturing audio. Creating it earlier
         // leaves it suspended and the worklet never runs.
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        stream.getAudioTracks().forEach((track) => {
+        const tracks = stream.getAudioTracks();
+        tracks.forEach((track) => {
           track.enabled = true;
         });
+        setDeviceLabel(tracks[0]?.label || "");
 
         let context;
         try {
@@ -164,7 +168,9 @@ export function useMic({ onEvent } = {}) {
         if (context.state !== "running") {
           throw new Error("trình duyệt đang chặn âm thanh — bấm Nghe lại");
         }
-        console.info("[mic] context", context.state, context.sampleRate);
+        setSampleRate(context.sampleRate);
+        console.info("[mic] context", context.state, context.sampleRate,
+                     tracks[0]?.label || "micro mặc định");
 
         node.port.onmessage = (event) => {
           const payload = event.data;
@@ -202,7 +208,7 @@ export function useMic({ onEvent } = {}) {
 
   useEffect(() => () => { teardown(); }, [teardown]);
 
-  return { state, level, packets, error, start, stop };
+  return { state, level, packets, deviceLabel, sampleRate, error, start, stop };
 }
 
 export default useMic;

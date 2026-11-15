@@ -164,6 +164,12 @@ export default function QaPage() {
     typeof window !== "undefined" &&
     !window.isSecureContext &&
     !["localhost", "127.0.0.1"].includes(window.location.hostname);
+  const levelPercent = Math.min(
+    100,
+    Math.round(Math.sqrt(Math.max(0, listen.level)) * 220),
+  );
+  const silentMic =
+    listen.active && listen.packets > 0 && listen.level < 0.002;
   const micLabel = listen.active
     ? listen.packets
       ? "Đang nghe"
@@ -197,6 +203,25 @@ export default function QaPage() {
                   : "Đang chờ audio từ micro… nếu mãi không đổi, kiểm tra quyền mic."
                 : "Mic tắt — bấm Nghe khi muốn nói câu hỏi.")}
         </p>
+        {listen.active && (
+          <div className="mt-2">
+            <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-accent-2 to-accent transition-[width] duration-100"
+                style={{ width: `${levelPercent}%` }}
+              />
+            </div>
+            <p className="m-0 mt-1 truncate font-mono text-[10px] text-faint">
+              {listen.deviceLabel || "micro mặc định"} · {listen.sampleRate || "?"} Hz
+            </p>
+          </div>
+        )}
+        {silentMic && (
+          <p className="mt-2 mb-0 rounded-lg border border-accent/30 bg-accent/[0.08] px-2 py-1.5 text-[11px] leading-relaxed text-accent">
+            Có gửi audio nhưng mức âm thanh gần 0: chọn micro khác trong danh sách,
+            hoặc kiểm tra Windows → Sound → Input.
+          </p>
+        )}
         {insecure && (
           <p className="mt-2 mb-0 rounded-lg border border-err/35 bg-err/10 px-2 py-1.5 text-[11px] leading-relaxed text-err">
             Trang không chạy HTTPS nên trình duyệt chặn micro. Dùng localhost hoặc

@@ -63,6 +63,7 @@ class LivePipeline:
         mic_factory: Callable[[int | str | None], Any] = MicStream,
         engine_factory: Callable[[dict[str, Any]], Any] | None = None,
         transcribe_lock: threading.Lock | None = None,
+        start_listening: bool = True,
     ) -> None:
         self._bus = bus
         self._settings = settings
@@ -82,7 +83,8 @@ class LivePipeline:
         self._stop = threading.Event()
         self._pause = threading.Event()
         self._listen = threading.Event()
-        self._listen.set()  # direct construction listens; the app pauses at start
+        if start_listening:
+            self._listen.set()  # tests/direct use listen; the web app passes False
         self._restart_capture = threading.Event()
         self._cv = threading.Condition()
         self._partial: np.ndarray | None = None

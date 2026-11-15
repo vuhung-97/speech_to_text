@@ -19,6 +19,8 @@ export function useMic({ onEvent } = {}) {
   const [error, setError] = useState("");
   const refs = useRef({});
   const packetsRef = useRef(0);
+  const readyRef = useRef(false);
+  const setupRef = useRef(false);
   const onEventRef = useRef(onEvent);
 
   useEffect(() => {
@@ -72,7 +74,13 @@ export function useMic({ onEvent } = {}) {
       setError("");
       setState("connecting");
       packetsRef.current = 0;
+      readyRef.current = false;
+      setupRef.current = false;
       setPackets(0);
+
+      const markLive = () => {
+        if (readyRef.current && setupRef.current) setState("live");
+      };
 
       const ws = new WebSocket(socketUrl());
       ws.binaryType = "arraybuffer";
@@ -81,7 +89,10 @@ export function useMic({ onEvent } = {}) {
       ws.onmessage = (event) => {
         try {
           const payload = JSON.parse(event.data);
-          if (payload.type === "ready") setState("live");
+          if (payload.type === "ready") {
+            readyRef.current = true;
+            markLive();
+          }
           onEventRef.current?.(payload);
         } catch {
           /* malformed frame */
@@ -108,6 +119,7 @@ export function useMic({ onEvent } = {}) {
               : "trang chưa chạy HTTPS — micro bị chặn (xem docs/TRIEN_KHAI_LAN.md)",
           );
         }
+
         const constraints = {
           audio: {
             channelCount: 1,
@@ -117,17 +129,23 @@ export function useMic({ onEvent } = {}) {
             ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
           },
         };
+        // Ask for the microphone first: Chrome's autoplay policy allows an
+        // AudioContext once the page is capturing audio. Creating it earlier
+        // leaves it suspended and the worklet never runs.
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         stream.getAudioTracks().forEach((track) => {
           track.enabled = true;
         });
-        const context = new AudioContext({ sampleRate: TARGET_RATE });
-        await context.audioWorklet.addModule(WORKLET_URL);
-        // Chrome/Firefox may hand back a suspended context when the permission
-        // prompt took a while; without resume() the worklet never runs.
-        if (context.state !== "running") {
-          await context.resume().catch(() => {});
+
+        let context;
+        try {
+          context = new AudioContext({ sampleRate: TARGET_RATE });
+        } catch {
+          context = new AudioContext();
         }
+        if (context.state !== "running") await context.resume().catch(() => {});
+        await context.audioWorklet.addModule(WORKLET_URL);
+
         const source = context.createMediaStreamSource(stream);
         const node = new AudioWorkletNode(context, "pcm-processor", {
           processorOptions: { targetRate: TARGET_RATE },
@@ -137,6 +155,16 @@ export function useMic({ onEvent } = {}) {
         source.connect(node);
         node.connect(mute);
         mute.connect(context.destination);
+        node.onprocessorerror = () => {
+          setState("error");
+          setError("bộ xử lý âm thanh (worklet) gặp lỗi");
+        };
+
+        if (context.state !== "running") await context.resume().catch(() => {});
+        if (context.state !== "running") {
+          throw new Error("trình duyệt đang chặn âm thanh — bấm Nghe lại");
+        }
+        console.info("[mic] context", context.state, context.sampleRate);
 
         node.port.onmessage = (event) => {
           const payload = event.data;
@@ -146,6 +174,7 @@ export function useMic({ onEvent } = {}) {
               packetsRef.current += 1;
               if (packetsRef.current % 25 === 0) {
                 setPackets(packetsRef.current);
+                console.info("[mic] sent packets", packetsRef.current);
               }
             }
           } else if (payload.type === "level") {
@@ -154,7 +183,8 @@ export function useMic({ onEvent } = {}) {
         };
 
         refs.current = { ws, stream, context, source, node, mute };
-        setState("live");
+        setupRef.current = true;
+        markLive();
         return true;
       } catch (startError) {
         await teardown();

@@ -165,7 +165,9 @@ export default function QaPage() {
     !window.isSecureContext &&
     !["localhost", "127.0.0.1"].includes(window.location.hostname);
   const micLabel = listen.active
-    ? "Đang nghe"
+    ? listen.packets
+      ? "Đang nghe"
+      : "Đang kết nối audio…"
     : listen.micState === "connecting"
       ? "Đang kết nối mic…"
       : listen.micState === "error"

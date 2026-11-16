@@ -62,19 +62,6 @@ def test_ask_rejects_empty_and_unknown_session(client: TestClient) -> None:
     assert unknown.status_code == 404
 
 
-def test_detect_endpoint(client: TestClient) -> None:
-    assert client.post("/api/v1/qa/detect",
-                       json={"text": "Thủ đô là gì?"}).json()["is_question"] is True
-    assert client.post("/api/v1/qa/detect",
-                       json={"text": "Tôi đang đi học"}).json()["is_question"] is False
-
-    merged = client.post("/api/v1/qa/detect", json={
-        "parts": [{"text": "Quy trình gồm", "ts": 1.0},
-                  {"text": "mấy bước nào", "ts": 1.4}]}).json()
-    assert merged["question"] == "Quy trình gồm mấy bước nào"
-    assert merged["is_question"] is True
-
-
 def test_sessions_list_detail_delete(client: TestClient) -> None:
     asked = client.post("/api/v1/qa/ask", json={"question": "Câu hỏi đầu"}).json()
     session_id = asked["session_id"]

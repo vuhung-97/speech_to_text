@@ -45,7 +45,7 @@ def test_defaults() -> None:
         assert values["mode"] == "accurate"
         assert values["model"] == "fake-engine", "first catalog entry is the default"
         keys = {field["key"] for field in settings.schema()}
-        assert {"model", "mode", "cpu_threads", "device", "silence_hang",
+        assert {"model", "mode", "cpu_threads", "silence_hang",
                 "threshold", "queue_size", "fake_param"} <= keys
         assert "fake_param" in keys, "engine-provided field appears in the schema"
     print("[1] Defaults OK - base + engine fields merged into the schema")
@@ -73,11 +73,11 @@ def test_validation() -> None:
 def test_effects() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         settings = new_settings(Path(tmp))
-        result = settings.update({"cpu_threads": 4, "device": "3", "silence_hang": 0.8})
+        result = settings.update({"cpu_threads": 4, "silence_hang": 0.8})
         assert result["effects"]["engine"] == ["cpu_threads"]
-        assert result["effects"]["capture"] == ["device"]
-        assert set(result["applied"]) == {"cpu_threads", "device", "silence_hang"}
-    print("[3] Effects OK - engine / capture / live split correctly")
+        assert result["effects"]["capture"] == []
+        assert set(result["applied"]) == {"cpu_threads", "silence_hang"}
+    print("[3] Effects OK - engine / live split correctly")
 
 
 def test_persistence() -> None:

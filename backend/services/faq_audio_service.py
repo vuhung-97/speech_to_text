@@ -21,6 +21,7 @@ from ..config.paths import AUDIO_CACHE_DIR
 from ..services.tts_service import TtsBusy, TtsService
 
 MAX_CACHE_MB = 512
+MAX_JOBS = 20
 _VOICE_SAFE = re.compile(r"[^a-z0-9_-]+")
 
 
@@ -50,6 +51,10 @@ class FaqAudioService:
 
     # ------------------------------------------------------------------ cache
     def cached(self, entry_id: str, tenant: str, voice: str) -> dict[str, object] | None:
+        return self._cached_locked(entry_id, tenant, voice)
+
+    def _cached_locked(self, entry_id: str, tenant: str,
+                       voice: str) -> dict[str, object] | None:
         row = self._repo.get_audio(entry_id, tenant, voice)
         if not row:
             return None
@@ -58,6 +63,13 @@ class FaqAudioService:
             self._repo.delete_audio(entry_id, tenant, voice)
             return None
         return row
+
+    def _prune_locked(self) -> None:
+        """Keep only the most recent job records (they are status only)."""
+        if len(self._jobs) <= MAX_JOBS:
+            return
+        for job in sorted(self._jobs.values(), key=lambda item: item.started_at)[:-MAX_JOBS]:
+            self._jobs.pop(job.id, None)
 
     def usage(self, tenant: str) -> int:
         return self._repo.audio_usage(tenant)
@@ -77,22 +89,22 @@ class FaqAudioService:
         if selected is None:
             raise ValueError("chưa chọn được giọng đọc")
 
-        existing = self.cached(entry_id, tenant, selected)
-        if existing:
-            job = FaqAudioJob(id=uuid.uuid4().hex[:12], entry_id=entry_id,
-                              tenant=tenant, voice=selected, status="done",
-                              seconds=float(existing["seconds"]))
-            with self._lock:
-                self._jobs[job.id] = job
-            return job
-
         with self._lock:
+            existing = self._cached_locked(entry_id, tenant, selected)
+            if existing:
+                job = FaqAudioJob(id=uuid.uuid4().hex[:12], entry_id=entry_id,
+                                  tenant=tenant, voice=selected, status="done",
+                                  seconds=float(existing["seconds"]))
+                self._jobs[job.id] = job
+                self._prune_locked()
+                return job
             if self._running:
                 raise TtsBusy("đang tổng hợp sẵn một câu khác — thử lại sau")
             job = FaqAudioJob(id=uuid.uuid4().hex[:12], entry_id=entry_id,
                               tenant=tenant, voice=selected)
             self._jobs[job.id] = job
             self._running = True
+            self._prune_locked()
 
         thread = threading.Thread(
             target=self._run, args=(job, entry.answer), daemon=True,

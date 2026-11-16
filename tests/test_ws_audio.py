@@ -47,8 +47,7 @@ def client(tmp_path: Path):
     base = LivePipeline(FakeEngine(), EventBus(), settings)
     app = create_app(None, base, None, None, tmp_path,  # type: ignore[arg-type]
                      db_path=tmp_path / "app.db",
-                     embedder=HashingEmbedder(),
-                     auto_listen=False)
+                     embedder=HashingEmbedder())
     with TestClient(app) as instance:
         yield instance
 
@@ -61,13 +60,19 @@ def drain_until_final(websocket, limit: int = 120) -> dict:
     raise AssertionError("không nhận được final")
 
 
+def send_pcm(websocket, data: bytes, chunk: int = 640) -> None:
+    """Send audio in 20 ms frames, like the browser worklet does."""
+    for start in range(0, len(data), chunk):
+        websocket.send_bytes(data[start:start + chunk])
+
+
 def test_websocket_stream_produces_final(client: TestClient) -> None:
     with client.websocket_connect("/ws/audio?sample_rate=16000") as ws:
         ready = ws.receive_json()
         assert ready["type"] == "ready"
         assert ready["sample_rate"] == SAMPLE_RATE
 
-        ws.send_bytes(pcm([SILENCE] * 2 + [SPEECH] * 20 + [SILENCE] * 10))
+        send_pcm(ws, pcm([SILENCE] * 2 + [SPEECH] * 20 + [SILENCE] * 10))
         final = drain_until_final(ws)
         assert final["text"] == "xin chào"
         assert final["hard"] is True
@@ -83,7 +88,7 @@ def test_websocket_rejects_wrong_sample_rate(client: TestClient) -> None:
 def test_websocket_reconnect_works(client: TestClient) -> None:
     with client.websocket_connect("/ws/audio?sample_rate=16000") as ws:
         assert ws.receive_json()["type"] == "ready"
-        ws.send_bytes(pcm([SILENCE] * 2 + [SPEECH] * 20 + [SILENCE] * 10))
+        send_pcm(ws, pcm([SILENCE] * 2 + [SPEECH] * 20 + [SILENCE] * 10))
         assert drain_until_final(ws)["text"] == "xin chào"
 
     # The session is gone; a new connection must start cleanly.

@@ -23,7 +23,7 @@ from ...domain.faq.normalize import normalize_question
 from ...domain.qa.models import (Answer, Question, SessionNotFound,
                                  TurnNotFound)
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 _SCHEMA_V1 = """
 CREATE TABLE IF NOT EXISTS sessions (
@@ -122,6 +122,12 @@ CREATE INDEX IF NOT EXISTS idx_audit_tenant
     ON audit_log(tenant_id, created_at DESC);
 """
 
+_SCHEMA_V4 = """
+ALTER TABLE faq_entries ADD COLUMN question_norm TEXT;
+CREATE INDEX IF NOT EXISTS idx_faq_entries_norm
+    ON faq_entries(tenant_id, question_norm);
+"""
+
 
 def _new_id() -> str:
     return uuid.uuid4().hex[:16]
@@ -177,6 +183,20 @@ class Database:
                 if version < 3:
                     connection.executescript(_SCHEMA_V3)
                     connection.execute("PRAGMA user_version = 3")
+                    version = 3
+                if version < 4:
+                    try:
+                        connection.executescript(_SCHEMA_V4)
+                    except sqlite3.OperationalError:
+                        pass  # column already added by an interrupted run
+                    rows = connection.execute(
+                        "SELECT id, question FROM faq_entries").fetchall()
+                    for row in rows:
+                        connection.execute(
+                            "UPDATE faq_entries SET question_norm = ? WHERE id = ?",
+                            (normalize_question(row["question"]), row["id"]),
+                        )
+                    connection.execute("PRAGMA user_version = 4")
                 connection.commit()
             finally:
                 connection.close()
@@ -313,8 +333,8 @@ class SqliteSessionRepository:
             connection.execute(
                 """
                 INSERT INTO answers (id, turn_id, tenant_id, text, entry_id, score,
-                                     status, voice, audio_path, seconds, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                     status, seconds, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(turn_id) DO UPDATE SET
                     text = excluded.text,
                     entry_id = excluded.entry_id,
@@ -323,7 +343,7 @@ class SqliteSessionRepository:
                     seconds = excluded.seconds
                 """,
                 (answer.id, turn_id, tenant, answer.text, answer.entry_id,
-                 answer.score, str(answer.status), None, None, answer.seconds, now),
+                 answer.score, str(answer.status), answer.seconds, now),
             )
             connection.execute(
                 "UPDATE turns SET state = ? WHERE id = ?",
@@ -331,21 +351,12 @@ class SqliteSessionRepository:
             )
         return answer
 
-    def update_answer_audio(self, answer_id: str, tenant: str, *, voice: str,
-                            audio_path: str, seconds: float) -> None:
-        with self._db.connect() as connection:
-            connection.execute(
-                "UPDATE answers SET voice = ?, audio_path = ?, seconds = ?"
-                " WHERE id = ? AND tenant_id = ?",
-                (voice, audio_path, seconds, answer_id, tenant),
-            )
-
     def get_answer(self, answer_id: str, tenant: str) -> dict[str, Any] | None:
         with self._db.connect() as connection:
             row = connection.execute(
                 """
-                SELECT a.id, a.turn_id, a.text, a.entry_id, a.score, a.voice,
-                       a.audio_path, a.seconds, a.status, a.created_at,
+                SELECT a.id, a.turn_id, a.text, a.entry_id, a.score,
+                       a.seconds, a.status, a.created_at,
                        t.session_id, t.question
                 FROM answers a
                 JOIN turns t ON t.id = a.turn_id

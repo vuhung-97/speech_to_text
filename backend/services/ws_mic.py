@@ -1,4 +1,4 @@
-"""A microphone whose audio arrives over a WebSocket.
+"""A microphone source whose audio arrives over a WebSocket.
 
 The browser owns the device; the server only sees 16 kHz mono PCM16. Frames are
 re-assembled into the 100 ms blocks the segmenter expects, with a bounded queue
@@ -17,6 +17,7 @@ import numpy as np
 from ..config.constants import BLOCK, SAMPLE_RATE
 
 MAX_FRAMES = 100  # 10 s of 100 ms blocks
+MAX_FRAME_BYTES = 64 * 1024  # larger than 2 s of audio is not a valid block
 
 
 class WebSocketMic:
@@ -35,6 +36,7 @@ class WebSocketMic:
         self._received = 0
         self._dropped = 0
         self._frames_done = 0
+        self._oversize = 0
 
     # ------------------------------------------------------------- lifecycle
     def __enter__(self) -> "WebSocketMic":
@@ -54,6 +56,9 @@ class WebSocketMic:
     def push(self, data: bytes) -> int:
         """Append PCM16LE bytes; returns how many blocks were dropped."""
         if not data or self._closed.is_set():
+            return 0
+        if len(data) > MAX_FRAME_BYTES:
+            self._oversize += 1
             return 0
         usable = len(data) - (len(data) % 2)
         if usable <= 0:
@@ -104,6 +109,7 @@ class WebSocketMic:
             "coverage": round(received / (elapsed * self.sample_rate), 3),
             "dropped": dropped,
             "xruns": 0,
+            "oversize": self._oversize,
         }
 
 

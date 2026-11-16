@@ -6,7 +6,7 @@ from typing import Any
 
 from fastapi import APIRouter, Body
 
-from .deps import PipelineDep, SettingsDep
+from .deps import AudioHubDep, PipelineDep, SettingsDep
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
@@ -29,16 +29,20 @@ def read_settings(settings: SettingsDep, pipeline: PipelineDep) -> dict[str, Any
 
 @router.post("")
 def update_settings(settings: SettingsDep, pipeline: PipelineDep,
+                    hub: AudioHubDep,
                     patch: dict[str, Any] = Body(...)) -> dict[str, Any]:
     result = pipeline.apply(patch)
     result["fields"] = settings.schema()  # the model switching may change the schema
     result["engines"] = [spec.to_dict() for spec in settings.engine_specs().values()]
+    hub.broadcast({"type": "settings_changed"})
     return result
 
 
 @router.post("/reset")
-def reset_settings(settings: SettingsDep, pipeline: PipelineDep) -> dict[str, Any]:
+def reset_settings(settings: SettingsDep, pipeline: PipelineDep,
+                   hub: AudioHubDep) -> dict[str, Any]:
     result = pipeline.reset_settings()
     result["fields"] = settings.schema()
     result["engines"] = [spec.to_dict() for spec in settings.engine_specs().values()]
+    hub.broadcast({"type": "settings_changed"})
     return result

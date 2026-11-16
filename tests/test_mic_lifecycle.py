@@ -7,7 +7,9 @@ hardware and no model.
 
 from __future__ import annotations
 
+import asyncio
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -19,7 +21,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from backend.config.settings import Settings
 from backend.main import create_app
+from backend.services.audio_sessions import AudioSessionHub, SessionLimitReached
 from backend.services.engines import available_engines
+from backend.services.ws_mic import WebSocketMic
 from backend.services.event_service import EventBus
 from backend.services.transcription_service import LivePipeline
 
@@ -117,8 +121,11 @@ def test_pause_releases_device_and_resume_reopens(tmp_path: Path) -> None:
 class StubPipeline:
     def __init__(self) -> None:
         self.calls: list[bool] = []
+        self.started = False
 
-    def start(self) -> None: ...
+    def start(self) -> None:
+        self.started = True
+
     def stop(self) -> None: ...
     def set_paused(self, paused: bool) -> bool:
         self.calls.append(paused)
@@ -138,23 +145,20 @@ def test_app_starts_with_microphone_off(tmp_path: Path) -> None:
                      db_path=tmp_path / "app.db")
     with TestClient(app):
         assert pipeline.calls[:1] == [True], "lifespan must pause the mic"
+        assert pipeline.started is False, "server must not start capture threads"
 
 
-def test_listen_on_start_flag_keeps_old_behaviour(tmp_path: Path) -> None:
-    pipeline = StubPipeline()
-    app = create_app(None, pipeline, None, None, tmp_path,  # type: ignore[arg-type]
-                     db_path=tmp_path / "app.db", auto_listen=True)
-    with TestClient(app):
-        assert pipeline.calls == []
-
-
-def test_capture_endpoint_toggles_listening(tmp_path: Path) -> None:
-    pipeline = StubPipeline()
-    app = create_app(None, pipeline, None, None, tmp_path,  # type: ignore[arg-type]
-                     db_path=tmp_path / "app.db", auto_listen=True)
-    with TestClient(app) as client:
-        started = client.post("/api/v1/capture", json={"listening": True})
-        assert started.json() == {"ok": True, "listening": True}
-        stopped = client.post("/api/v1/capture", json={"listening": False})
-        assert stopped.json() == {"ok": True, "listening": False}
-        assert pipeline.calls == [False, True]
+def test_audio_session_hub_enforces_limit(tmp_path: Path) -> None:
+    settings = make_settings(tmp_path)
+    engine = FakeEngine()
+    hub = AudioSessionHub(lambda: engine, lambda: settings, threading.Lock(),
+                          max_sessions=1)
+    mic = WebSocketMic(16000)
+    session = hub.open(mic)
+    session.start()
+    try:
+        with pytest.raises(SessionLimitReached):
+            hub.open(WebSocketMic(16000))
+    finally:
+        asyncio.run(hub.close(session))
+    assert hub.active == 0

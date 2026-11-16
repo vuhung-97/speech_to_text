@@ -1,7 +1,8 @@
 """WebSocket audio ingestion: the browser's microphone feeds the recogniser.
 
-One connection = one independent recognition session (own segmenter, own event
-bus) while all sessions share the single ONNX engine behind one lock.
+One connection = one session from ``AudioSessionHub`` (own segmenter and event
+bus, shared engine behind one lock). Guardrails: bounded frame size, bounded
+session count, same-origin check, and session shutdown off the event loop.
 """
 
 from __future__ import annotations
@@ -11,24 +12,36 @@ import json
 import logging
 import os
 import queue
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from ..config.constants import SAMPLE_RATE
+from ..services.audio_sessions import SessionLimitReached
 from ..services.ws_mic import WebSocketMic
 
 router = APIRouter(tags=["audio"])
 
 HEARTBEAT_SECONDS = 10.0
 NO_AUDIO_WARNING_SECONDS = 3.0
+MAX_FRAME_BYTES = 64 * 1024  # 2 s of 16 kHz PCM16
 DEBUG_TEXT = os.environ.get("STT_WS_DEBUG") == "1"
 logger = logging.getLogger("stt_binh.ws")
+
+
+def _origin_allowed(websocket: WebSocket) -> bool:
+    origin = websocket.headers.get("origin")
+    if not origin:
+        return True  # native client / tests
+    parsed = urlparse(origin)
+    host = websocket.headers.get("host", "")
+    return parsed.netloc == host or parsed.hostname in ("localhost", "127.0.0.1")
 
 
 async def _fail(websocket: WebSocket, detail: str, code: int = 1011) -> None:
     try:
         await websocket.send_json({"type": "error", "detail": detail})
-        await websocket.close(code=code)
+        await websocket.close(code=code, reason=detail[:120])
     except Exception:
         pass
 
@@ -36,18 +49,24 @@ async def _fail(websocket: WebSocket, detail: str, code: int = 1011) -> None:
 @router.websocket("/ws/audio")
 async def audio_stream(websocket: WebSocket, sample_rate: int = SAMPLE_RATE) -> None:
     await websocket.accept()
+    if not _origin_allowed(websocket):
+        await _fail(websocket, "origin không được phép", 1008)
+        return
     if int(sample_rate or 0) != SAMPLE_RATE:
         await _fail(websocket, f"chỉ hỗ trợ {SAMPLE_RATE} Hz", 1003)
         return
 
-    factory = getattr(websocket.app.state, "make_audio_session", None)
-    if not callable(factory):
+    hub = getattr(websocket.app.state, "audio_hub", None)
+    if hub is None:
         await _fail(websocket, "server chưa sẵn sàng nhận audio")
         return
 
     mic = WebSocketMic(SAMPLE_RATE)
     try:
-        pipeline = factory(mic)
+        pipeline = hub.open(mic)
+    except SessionLimitReached as exc:
+        await _fail(websocket, str(exc), 1013)
+        return
     except Exception as exc:  # engine missing, settings not ready…
         await _fail(websocket, str(exc) or "không tạo được phiên nhận dạng")
         return
@@ -55,11 +74,12 @@ async def audio_stream(websocket: WebSocket, sample_rate: int = SAMPLE_RATE) -> 
     subscriber = pipeline.bus.subscribe()
     pipeline.start()
     pipeline.set_paused(False)
-    logger.info("ws audio open mode=%s", pipeline.mode)
+    logger.info("ws audio open mode=%s active=%s", pipeline.mode, hub.active)
     await websocket.send_json({
         "type": "ready",
         "sample_rate": SAMPLE_RATE,
         "mode": pipeline.mode,
+        "max_frame_bytes": MAX_FRAME_BYTES,
     })
 
     async def watch_audio() -> None:
@@ -80,6 +100,12 @@ async def audio_stream(websocket: WebSocket, sample_rate: int = SAMPLE_RATE) -> 
                 event = await asyncio.to_thread(subscriber.get, True, HEARTBEAT_SECONDS)
             except queue.Empty:
                 continue
+            if event.get("type") == "settings_changed":
+                try:
+                    await websocket.send_json(event)
+                except Exception:
+                    return
+                return  # client reconnects with the new settings
             if DEBUG_TEXT and event.get("type") in ("partial", "final"):
                 if event["type"] == "final":
                     logger.info("ws final %r", event.get("text", ""))
@@ -97,7 +123,17 @@ async def audio_stream(websocket: WebSocket, sample_rate: int = SAMPLE_RATE) -> 
             if message.get("type") == "websocket.disconnect":
                 return
             data = message.get("bytes")
-            if data:
+            if data is not None:
+                if len(data) > MAX_FRAME_BYTES:
+                    logger.warning("ws audio: oversized frame %s bytes", len(data))
+                    try:
+                        await websocket.send_json({
+                            "type": "warning",
+                            "detail": "gói audio quá lớn — đã bỏ qua",
+                        })
+                    except Exception:
+                        return
+                    continue
                 mic.push(data)
                 continue
             text = message.get("text")
@@ -119,15 +155,12 @@ async def audio_stream(websocket: WebSocket, sample_rate: int = SAMPLE_RATE) -> 
     finally:
         forward_task.cancel()
         watch_task.cancel()
-        try:
-            await forward_task
-        except (asyncio.CancelledError, Exception):
-            pass
-        try:
-            await watch_task
-        except (asyncio.CancelledError, Exception):
-            pass
-        pipeline.stop()
+        for task in (forward_task, watch_task):
+            try:
+                await task
+            except (asyncio.CancelledError, Exception):
+                pass
+        await hub.close(pipeline)
         mic.close()
         pipeline.bus.unsubscribe(subscriber)
         stats = mic.stats()

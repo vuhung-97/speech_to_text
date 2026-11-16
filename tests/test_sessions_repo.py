@@ -26,7 +26,7 @@ def test_schema_is_created_lazily(tmp_path: Path) -> None:
     assert not path.exists()  # importing/constructing must not touch disk
     database.initialize()
     assert path.exists()
-    assert database.schema_version == 3
+    assert database.schema_version == 4
 
 
 def test_session_lifecycle(tmp_path: Path) -> None:
@@ -101,19 +101,6 @@ def test_save_answer_is_idempotent_per_turn(tmp_path: Path) -> None:
     assert len(turns) == 1
     assert turns[0]["answer"]["text"] == "mới"
     assert turns[0]["answer"]["entry_id"] == "e1"
-
-
-def test_update_answer_audio(tmp_path: Path) -> None:
-    _, sessions, _ = make(tmp_path)
-    session_id = sessions.create_session("local")
-    turn_id = sessions.add_turn(session_id, "local", Question("hỏi"))
-    sessions.save_answer(turn_id, "local", Answer(
-        id="a1", turn_id=turn_id, text="x", status=AnswerStatus.MATCHED))
-
-    sessions.update_answer_audio("a1", "local", voice="Mai Anh",
-                                 audio_path="/tmp/a.wav", seconds=1.5)
-    detail = sessions.get_session(session_id, "local")
-    assert detail["turns"][0]["answer"]["seconds"] == 1.5
 
 
 def test_query_log_unanswered(tmp_path: Path) -> None:

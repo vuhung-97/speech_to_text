@@ -169,4 +169,4 @@ def test_cached_audio_is_tenant_scoped(client: TestClient) -> None:
 
 def test_schema_v3(tmp_path: Path) -> None:
     database = Database(tmp_path / "app.db")
-    assert database.schema_version == 3
+    assert database.schema_version == 4

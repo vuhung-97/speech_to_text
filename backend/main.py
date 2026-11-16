@@ -16,7 +16,6 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-import sounddevice as sd
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,6 +32,7 @@ from .config.settings import Settings
 from .middleware import errors, request_log
 from .ports.embedding import Embedder
 from .routes import build_router
+from .services.audio_sessions import AudioSessionHub
 from .services.audio.temp_store import cleanup_stale_sessions
 from .services.engines import available_engines, create_engine
 from .services.event_service import EventBus
@@ -74,21 +74,23 @@ def create_app(settings: Settings, pipeline: LivePipeline, replay: ReplayService
                db_path: str | Path | None = None,
                qa: QaService | None = None,
                embedder: Embedder | None = None,
-               audio_cache_dir: str | Path | None = None,
-               auto_listen: bool = False) -> FastAPI:
+               audio_cache_dir: str | Path | None = None) -> FastAPI:
     """Composition root for the HTTP layer (also used by the tests)."""
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         cleanup_stale_sessions(TTS_TEMP_DIR)
-        pipeline.start()
+        # The browser owns the microphone: the server pipeline is a recognition
+        # engine only (replay + settings), no capture threads are started.
         pause = getattr(pipeline, "set_paused", None)
-        if callable(pause) and not _app.state.auto_listen:
-            pause(True)  # typing is the default; the mic opens only on demand
+        if callable(pause):
+            pause(True)
         try:
             yield
         finally:
-            pipeline.stop()
+            stop = getattr(pipeline, "stop", None)
+            if callable(stop):
+                stop()
             speech = getattr(_app.state, "tts", None)
             shutdown = getattr(speech, "shutdown", None)
             if callable(shutdown):
@@ -101,7 +103,6 @@ def create_app(settings: Settings, pipeline: LivePipeline, replay: ReplayService
     app.state.replay = replay
     app.state.bus = bus
     app.state.tts = tts or TtsService()
-    app.state.auto_listen = bool(auto_listen)
 
     database = Database(db_path or DB_PATH)
     sessions_repo = SqliteSessionRepository(database)
@@ -129,23 +130,11 @@ def create_app(settings: Settings, pipeline: LivePipeline, replay: ReplayService
 
     # One ONNX engine, one lock: browser sessions share it and take turns.
     app.state.transcribe_lock = threading.Lock()
-
-    def make_audio_session(mic):
-        base = app.state.pipeline
-        engine = getattr(base, "_engine", None)
-        settings_store = getattr(base, "_settings", None)
-        if engine is None or settings_store is None:
-            raise RuntimeError("engine chưa nạp xong")
-        return LivePipeline(
-            engine,
-            EventBus(),
-            settings_store,
-            mic_factory=lambda _device: mic,
-            engine_factory=lambda _values: engine,
-            transcribe_lock=app.state.transcribe_lock,
-        )
-
-    app.state.make_audio_session = make_audio_session
+    app.state.audio_hub = AudioSessionHub(
+        engine_provider=lambda: getattr(app.state.pipeline, "engine", None),
+        settings_provider=lambda: getattr(app.state.pipeline, "settings", None),
+        transcribe_lock=app.state.transcribe_lock,
+    )
 
     errors.register(app)
     request_log.register(app)
@@ -170,7 +159,6 @@ def parse_args() -> argparse.Namespace:
                    help="model CPU threads (default: settings.json -> 2)")
     p.add_argument("--mode", default=None, choices=("accurate", "realtime"),
                    help="accurate: one decode per sentence (default) | realtime: live draft")
-    p.add_argument("--device", default=None, help="input device index or name")
     p.add_argument("--silence-hang", type=float, default=None,
                    help="seconds of silence that close a sentence")
     p.add_argument("--threshold", type=float, default=None,
@@ -182,9 +170,6 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--settings", default=str(SETTINGS_PATH),
                    help="settings file (default: settings.json in the project root)")
     p.add_argument("--no-browser", action="store_true", help="do not open the browser")
-    p.add_argument("--listen-on-start", action="store_true",
-                   help="mở micro ngay khi khởi động (mặc định tắt, bấm Nghe để nghe)")
-    p.add_argument("--list-devices", action="store_true", help="list audio input devices")
     return p.parse_args()
 
 
@@ -222,15 +207,11 @@ def main() -> int:
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
         datefmt="%H:%M:%S",
     )
-    if args.list_devices:
-        print(sd.query_devices())
-        return 0
 
     settings = Settings(args.settings, catalog=available_engines)
     settings.apply_cli({
         "cpu_threads": args.cpu_threads,
         "mode": args.mode,
-        "device": args.device,
         "silence_hang": args.silence_hang,
         "threshold": args.threshold,
         "decode_interval": args.decode_interval,
@@ -242,11 +223,9 @@ def main() -> int:
     print("Loading model...")
     engine = _load_engine(settings)
     bus = EventBus()
-    pipeline = LivePipeline(engine, bus, settings,
-                            start_listening=args.listen_on_start)
+    pipeline = LivePipeline(engine, bus, settings)
     replay = ReplayService(pipeline.decode, settings, SAMPLES_DIR)
-    app = create_app(settings, pipeline, replay, bus,
-                     auto_listen=args.listen_on_start)
+    app = create_app(settings, pipeline, replay, bus)
 
     port = free_port(args.port)
     url = f"http://{args.host}:{port}/"

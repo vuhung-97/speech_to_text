@@ -28,9 +28,6 @@ BASE_FIELDS: tuple[Field, ...] = (
     Field("cpu_threads", "engine", "CPU threads", "int", 2,
           hint="Số thread cho model. 2 là cân bằng; tăng nếu máy nhiều nhân rảnh.",
           effect="engine", minimum=1, maximum=6, step=1),
-    Field("device", "engine", "Micro", "device", "",
-          hint="Đổi micro sẽ mở lại luồng thu (câu đang nói bị bỏ).",
-          effect="capture"),
     Field("silence_hang", "vad", "Nghỉ để chốt câu", "float", 0.6,
           hint="Ngắn hơn: chốt nhanh nhưng dễ cắt giữa câu.",
           minimum=0.3, maximum=2.0, step=0.05, unit="s"),
@@ -281,7 +278,7 @@ def _coerce(field: Field, raw: Any) -> tuple[Any, str | None]:
         return text, None
 
     if field.kind == "device":
-        return str(raw).strip(), None
+        return str(raw).strip(), None  # kept for older settings files
 
     raise ValueError(f"unsupported field kind: {field.kind}")
 

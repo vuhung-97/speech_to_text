@@ -79,6 +79,7 @@ class SqliteFaqRepository:
     def upsert(self, entry: FaqEntry) -> FaqEntry:
         now = time.time()
         entry_id = entry.id or uuid.uuid4().hex[:16]
+        norm = normalize_question(entry.question)
         with self._db.connect() as connection:
             existing = connection.execute(
                 "SELECT created_at FROM faq_entries WHERE id = ? AND tenant_id = ?",
@@ -89,10 +90,12 @@ class SqliteFaqRepository:
                 """
                 INSERT INTO faq_entries (id, tenant_id, question, answer, category,
                                          active, embedding, embed_model,
-                                         embed_version, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, 0, ?, ?)
+                                         embed_version, updated_at, created_at,
+                                         question_norm)
+                VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, 0, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
                     question = excluded.question,
+                    question_norm = excluded.question_norm,
                     answer = excluded.answer,
                     category = excluded.category,
                     active = excluded.active,
@@ -102,7 +105,7 @@ class SqliteFaqRepository:
                     updated_at = excluded.updated_at
                 """,
                 (entry_id, entry.tenant_id, entry.question, entry.answer,
-                 entry.category, 1 if entry.active else 0, created, now),
+                 entry.category, 1 if entry.active else 0, now, created, norm),
             )
         return FaqEntry(
             id=entry_id,
@@ -114,6 +117,15 @@ class SqliteFaqRepository:
             created_at=created,
             updated_at=now,
         )
+
+    def find_by_norm(self, tenant: str, norm: str) -> FaqEntry | None:
+        with self._db.connect() as connection:
+            row = connection.execute(
+                f"SELECT {_COLUMNS} FROM faq_entries"
+                " WHERE tenant_id = ? AND question_norm = ? LIMIT 1",
+                (tenant, norm),
+            ).fetchone()
+        return _row_to_entry(row) if row else None
 
     def delete(self, entry_id: str, tenant: str) -> bool:
         with self._db.connect() as connection:

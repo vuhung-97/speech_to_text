@@ -34,17 +34,9 @@ def validate_entry(question: str, answer: str,
     return clean_question, clean_answer, clean_category
 
 
-def is_duplicate(left: str, right: str) -> bool:
-    """Cheap exact check used when no embedder is available."""
-    from .normalize import normalize_question
-
-    return bool(left and right) and normalize_question(left) == normalize_question(right)
-
-
 __all__ = [
     "DUPLICATE_THRESHOLD",
     "MAX_FAQ_CATEGORY_CHARS",
     "MAX_FAQ_QUESTION_CHARS",
-    "is_duplicate",
     "validate_entry",
 ]

@@ -460,9 +460,6 @@ def test_webapp() -> None:
             invalid = client.post("/api/settings", json={"bogus": 1}).json()
             assert "bogus" in invalid["rejected"]
 
-            devices = client.get("/api/devices").json()
-            assert isinstance(devices["devices"], list)
-
             samples = client.get("/api/samples").json()
             assert [s["name"] for s in samples["samples"]] == ["tone.wav"]
 
@@ -475,9 +472,6 @@ def test_webapp() -> None:
                                         json={"name": "tone.wav", "segment": True}).json()
             assert replay_result["ok"] and replay_result["text"]
 
-            paused = client.post("/api/pause", json={"paused": True}).json()
-            assert paused == {"ok": True, "paused": True}
-
             reset = client.post("/api/settings/reset").json()
             assert reset["values"]["mode"] == "accurate" and reset["fields"]
 
@@ -486,8 +480,8 @@ def test_webapp() -> None:
                 assert "text/event-stream" in response.headers["content-type"]
                 first = next(response.iter_lines())
                 assert first.startswith("data: ")
-        print("[8] API OK - page, state, health, settings, devices, samples, "
-              "replay, pause, reset, SSE")
+        print("[8] API OK - page, state, health, settings, samples, "
+              "replay, reset, SSE")
 
 
 if __name__ == "__main__":

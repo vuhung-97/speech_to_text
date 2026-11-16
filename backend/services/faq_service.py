@@ -14,8 +14,7 @@ import numpy as np
 
 from ..domain.faq.models import FaqEntry
 from ..domain.faq.normalize import normalize_question
-from ..domain.faq.rules import (DUPLICATE_THRESHOLD, is_duplicate,
-                                validate_entry)
+from ..domain.faq.rules import DUPLICATE_THRESHOLD, validate_entry
 from ..ports.embedding import Embedder
 from ..ports.faq import FaqRepository
 from ..adapters.retrieval.sqlite_faq import SqliteFaqMatcher
@@ -152,13 +151,9 @@ class FaqService:
     # ----------------------------------------------------------------- helpers
     def _reject_exact_duplicate(self, tenant: str, question: str,
                                 ignore_id: str | None = None) -> None:
-        target = normalize_question(question)
-        for existing in self._repo.list(tenant, limit=200, offset=0):
-            if existing.id == ignore_id:
-                continue
-            if is_duplicate(existing.question, question) or \
-                    normalize_question(existing.question) == target:
-                raise ValueError("câu hỏi này đã có trong kho")
+        existing = self._repo.find_by_norm(tenant, normalize_question(question))
+        if existing is not None and existing.id != ignore_id:
+            raise ValueError("câu hỏi này đã có trong kho")
 
     def _vector(self, question: str) -> np.ndarray | None:
         if self._embedder is None:

@@ -9,7 +9,6 @@ from pydantic import BaseModel
 from urllib.parse import quote
 
 from ..domain.faq.models import FaqMatch
-from ..domain.qa.detector import is_question, merge_continuations
 from ..domain.qa.models import Answer, SessionNotFound
 from ..services.qa_service import QaOutcome
 from ..utils.errors import ApiError, NotFoundError
@@ -18,20 +17,10 @@ from .deps import (FaqAudioDep, QaDep, QueryLogDep, SessionsRepoDep, TenantDep)
 router = APIRouter(tags=["qa"])
 
 
-class Part(BaseModel):
-    text: str = ""
-    ts: float = 0.0
-
-
 class AskRequest(BaseModel):
     question: str = ""
     session_id: str | None = None
     source: str = "voice"
-
-
-class DetectRequest(BaseModel):
-    text: str = ""
-    parts: list[Part] | None = None
 
 
 class SpeechRequest(BaseModel):
@@ -83,20 +72,6 @@ def ask(request: AskRequest, qa: QaDep, tenant: TenantDep) -> dict[str, Any]:
     except SessionNotFound as exc:
         raise ApiError(str(exc), status_code=404) from exc
     return answer_json(outcome)
-
-
-@router.post("/qa/detect")
-def detect(request: DetectRequest) -> dict[str, Any]:
-    """Tell the composer whether the last utterance should trigger a lookup."""
-    if request.parts:
-        merged = merge_continuations([(part.text, part.ts) for part in request.parts])
-    else:
-        merged = (request.text or "").strip()
-    return {
-        "ok": True,
-        "question": merged,
-        "is_question": is_question(merged),
-    }
 
 
 @router.get("/qa/unanswered")

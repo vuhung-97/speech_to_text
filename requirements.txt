@@ -5,7 +5,6 @@ click>=8.1
 python-multipart>=0.0.9
 sherpa-onnx>=2.0.1
 av>=14
-sounddevice>=0.5.6
 numpy>=2.0
 
 # tts (VieNeu-TTS v3 Turbo, CPU/ONNX)

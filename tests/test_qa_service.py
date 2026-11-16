@@ -9,13 +9,19 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from backend.adapters.retrieval.null import NullFaqMatcher
 from backend.adapters.storage.sqlite import (Database, SqliteQueryLog,
                                              SqliteSessionRepository)
 from backend.domain.faq.models import FaqEntry, FaqMatch, FaqResult
 from backend.domain.qa.models import (FALLBACK_TEXT, MAX_QUESTION_CHARS,
                                       AnswerStatus, SessionNotFound)
 from backend.services.qa_service import QaService
+
+
+class NullMatcher:
+    """Test double: no catalogue in this phase."""
+
+    def match(self, question: str, tenant: str, k: int = 3) -> FaqResult:
+        return FaqResult(matched=None, candidates=())
 
 
 class FixedMatcher:
@@ -44,7 +50,7 @@ def make(tmp_path: Path, matcher):
 
 
 def test_unanswered_uses_fallback_and_logs(tmp_path: Path) -> None:
-    service, sessions, log = make(tmp_path, NullFaqMatcher())
+    service, sessions, log = make(tmp_path, NullMatcher())
 
     outcome = service.ask("Thủ đô Việt Nam là gì?", tenant="local")
 
@@ -83,7 +89,7 @@ def test_near_miss_answers_but_flags_the_turn(tmp_path: Path) -> None:
 
 
 def test_empty_and_oversized_questions_are_rejected(tmp_path: Path) -> None:
-    service, _, _ = make(tmp_path, NullFaqMatcher())
+    service, _, _ = make(tmp_path, NullMatcher())
 
     with pytest.raises(ValueError, match="chưa có câu hỏi"):
         service.ask("   ", tenant="local")
@@ -92,7 +98,7 @@ def test_empty_and_oversized_questions_are_rejected(tmp_path: Path) -> None:
 
 
 def test_session_is_reused_and_title_kept(tmp_path: Path) -> None:
-    service, sessions, _ = make(tmp_path, NullFaqMatcher())
+    service, sessions, _ = make(tmp_path, NullMatcher())
 
     first = service.ask("Câu thứ nhất", tenant="local")
     second = service.ask("Câu thứ hai", tenant="local",

@@ -18,8 +18,9 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+__test__ = False  # manual script, not part of the pytest suite
+
 from backend.config.constants import BLOCK, BLOCK_DUR, SAMPLE_RATE
-from backend.services.capture_service import MicStream
 from backend.services.engines import create_engine
 from backend.services.segmentation_service import UtteranceSegmenter
 
@@ -46,23 +47,7 @@ def test_engine() -> None:
 
 
 def test_mic() -> None:
-    try:
-        with MicStream() as mic:
-            block = mic.read(timeout=2.0)
-            assert block is not None and block.size == BLOCK
-            stats = mic.stats()
-            print(f"[3] MicStream OK - backend={stats['backend']} "
-                  f"{stats['frames_per_sec']}/s coverage={stats['coverage'] * 100:.0f}% "
-                  f"dropped={stats['dropped']} peak={np.abs(block).max():.4f}")
-            for _ in range(30):  # 3 s of audio: how much actually arrived?
-                mic.read(timeout=0.3)
-            late = mic.stats()
-            coverage = float(late["coverage"]) * 100
-            note = "OK" if coverage >= 95 else "WARNING: audio is being dropped"
-            print(f"[4] Capture {late['frames']} frames -> coverage {coverage:.0f}% "
-                  f"dropped={late['dropped']} ({note})")
-    except Exception as e:
-        print(f"[3] MicStream WARNING - could not open input device: {e}")
+    print("[3] MicStream đã bỏ — mic thuộc trình duyệt (xem docs/TRIEN_KHAI_LAN.md)")
 
 
 if __name__ == "__main__":

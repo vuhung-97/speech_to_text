@@ -29,7 +29,7 @@ def entry(tenant: str = "local", question: str = "Câu hỏi?",
 
 def test_schema_upgrades_to_v2(tmp_path: Path) -> None:
     database, _ = make(tmp_path)
-    assert database.schema_version == 3
+    assert database.schema_version == 4
 
 
 def test_crud_and_tenant_scope(tmp_path: Path) -> None:

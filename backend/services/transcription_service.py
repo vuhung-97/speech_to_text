@@ -27,7 +27,6 @@ from ..config.constants import BLOCK_DUR
 from ..config.settings import Settings
 from ..models.dto import CaptureStats
 from ..utils import priority
-from .capture_service import MicStream
 from .engines import ASREngine, create_engine
 from .event_service import Event, EventBus
 from .segmentation_service import (FinalAudio, LocalAgreement, UtteranceSegmenter,
@@ -60,7 +59,7 @@ class LivePipeline:
         bus: EventBus,
         settings: Settings,
         *,
-        mic_factory: Callable[[int | str | None], Any] = MicStream,
+        mic_factory: Callable[[int | str | None], Any] | None = None,
         engine_factory: Callable[[dict[str, Any]], Any] | None = None,
         transcribe_lock: threading.Lock | None = None,
         start_listening: bool = True,
@@ -101,6 +100,8 @@ class LivePipeline:
 
     # ------------------------------------------------------------------ life
     def start(self) -> None:
+        if self._mic_factory is None:
+            raise RuntimeError("không có nguồn micro — mic do trình duyệt gửi qua WebSocket")
         self._threads = [
             threading.Thread(target=self._capture_loop, name="stt-capture", daemon=True),
             threading.Thread(target=self._decode_loop, name="stt-decode", daemon=True),
@@ -108,12 +109,13 @@ class LivePipeline:
         for thread in self._threads:
             thread.start()
 
-    def stop(self) -> None:
+    def stop(self, timeout: float = 2.5) -> None:
         self._stop.set()
+        self._listen.clear()
         with self._cv:
             self._cv.notify_all()
         for thread in self._threads:
-            thread.join(timeout=2.5)
+            thread.join(timeout=timeout)
 
     # --------------------------------------------------------------- control
     def set_paused(self, paused: bool) -> bool:
@@ -237,6 +239,18 @@ class LivePipeline:
     @property
     def bus(self) -> EventBus:
         return self._bus
+
+    @property
+    def engine(self):
+        return self._engine
+
+    @property
+    def settings(self):
+        return self._settings
+
+    @property
+    def values(self) -> dict[str, Any]:
+        return dict(self._values)
 
     @property
     def mode(self) -> str:

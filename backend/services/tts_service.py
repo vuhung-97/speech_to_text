@@ -32,6 +32,7 @@ from .audio.temp_store import (TempAudioStore, TempSession, cleanup_stale_sessio
 
 MAX_TTS_CHARS = 1000
 SAMPLE_RATE = 48_000
+JOB_TTL_SECONDS = 1_800  # finished WAVs are removed after 30 minutes
 BACKBONE_REPO = "pnnbao-ump/VieNeu-TTS-v3-Turbo"
 CODEC_REPO = "OpenMOSS-Team/MOSS-Audio-Tokenizer-Nano-ONNX"
 _PRECISION_SUBFOLDERS = {"fp32": "onnx_update", "int8": "onnx_int8"}
@@ -398,6 +399,7 @@ class TtsService:
 
         estimated = max(1.0, len(value) / 11.7)  # ~11.7 chars/second of speech
         needed = int(estimated * self._bytes_per_second)
+        self._prune_finished()
         if needed > self._quota_bytes:
             raise TtsStorageError(
                 "văn bản vượt quá hạn mức đĩa cho phép — giảm bớt độ dài")
@@ -531,6 +533,16 @@ class TtsService:
             if self._active is job:
                 self._active = None
         job.session.cleanup()
+
+    def _prune_finished(self) -> None:
+        """Drop finished jobs (and their temp WAVs) older than the TTL."""
+        cutoff = time.time() - JOB_TTL_SECONDS
+        with self._jobs_lock:
+            stale = [job for job in self._jobs.values()
+                     if job.finalized and job is not self._active
+                     and job.created_at < cutoff]
+        for job in stale:
+            self._drop_job(job)
 
     def _evict_for_quota(self, needed: int) -> None:
         """Delete the oldest finished jobs until ``needed`` bytes fit the quota."""

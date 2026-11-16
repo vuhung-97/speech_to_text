@@ -10,6 +10,7 @@ from fastapi import Depends, Header, Request
 from ..adapters.storage.sqlite import SqliteAuditLog, SqliteSessionRepository
 from ..config.settings import Settings
 from ..ports.faq import QueryLog
+from ..services.audio_sessions import AudioSessionHub
 from ..services.event_service import EventBus
 from ..services.faq_audio_service import FaqAudioService
 from ..services.faq_service import FaqService
@@ -67,6 +68,10 @@ def get_audit(request: Request) -> SqliteAuditLog:
     return request.app.state.audit
 
 
+def get_audio_hub(request: Request) -> AudioSessionHub:
+    return request.app.state.audio_hub
+
+
 def current_tenant(
     x_workspace: str | None = Header(default=None, alias="X-Workspace"),
 ) -> str:
@@ -94,3 +99,4 @@ QueryLogDep = Annotated[QueryLog, Depends(get_query_log)]
 FaqServiceDep = Annotated[FaqService, Depends(get_faq_service)]
 FaqAudioDep = Annotated[FaqAudioService, Depends(get_faq_audio)]
 AuditDep = Annotated[SqliteAuditLog, Depends(get_audit)]
+AudioHubDep = Annotated[AudioSessionHub, Depends(get_audio_hub)]

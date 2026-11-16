@@ -8,11 +8,10 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from ..controllers import (audio_ws, audit, devices, faq, health, qa, samples,
-                           session, sessions, settings_ctl, state, tts)
+from ..controllers import (audio_ws, audit, faq, health, qa, samples,
+                           sessions, settings_ctl, state, tts)
 
-_ROUTERS = (health, state, settings_ctl, devices, samples, tts, session, qa,
-            sessions, faq, audit)
+_ROUTERS = (health, state, settings_ctl, samples, tts, qa, sessions, faq, audit)
 
 
 def _api_prefix(prefix: str) -> APIRouter:

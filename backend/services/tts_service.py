@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import logging
 import os
 import threading
 import time
@@ -33,6 +34,7 @@ from .audio.temp_store import (TempAudioStore, TempSession, cleanup_stale_sessio
 MAX_TTS_CHARS = 1000
 SAMPLE_RATE = 48_000
 JOB_TTL_SECONDS = 1_800  # finished WAVs are removed after 30 minutes
+logger = logging.getLogger("stt_binh.tts")
 BACKBONE_REPO = "pnnbao-ump/VieNeu-TTS-v3-Turbo"
 CODEC_REPO = "OpenMOSS-Team/MOSS-Audio-Tokenizer-Nano-ONNX"
 _PRECISION_SUBFOLDERS = {"fp32": "onnx_update", "int8": "onnx_int8"}
@@ -374,6 +376,41 @@ class TtsService:
         rate = int(getattr(engine, "sample_rate", SAMPLE_RATE))
         seconds = len(audio) / float(rate)
         return _to_wav(audio, rate), seconds
+
+    def warmup(self, *, synthesize: bool = False) -> bool:
+        """Load the TTS engine into RAM ahead of time.
+
+        ``synthesize=True`` also runs one tiny inference so ONNX graph setup and
+        voice resolution are paid at startup instead of the first read.
+        """
+        if not self.package_installed():
+            logger.warning("vieneu chưa cài — không nạp trước TTS")
+            return False
+        if self._engine is not None:
+            return True
+        try:
+            self._ensure_engine()
+        except TtsUnavailable as exc:
+            logger.warning("không nạp được TTS: %s", exc)
+            return False
+        logger.info("TTS model đã nạp vào RAM (%.1f giây)", self._load_seconds)
+        if synthesize:
+            try:
+                self.synthesize("Xin chào.", self._resolve_voice(None))
+                logger.info("TTS đã chạy thử một câu — sẵn sàng đọc ngay")
+            except Exception as exc:  # noqa: BLE001 - warmup must never block startup
+                logger.warning("chạy thử TTS thất bại: %s", exc)
+        return True
+
+    def preload_async(self, *, synthesize: bool = False) -> threading.Thread:
+        thread = threading.Thread(
+            target=self.warmup,
+            kwargs={"synthesize": synthesize},
+            daemon=True,
+            name="tts-preload",
+        )
+        thread.start()
+        return thread
 
     # ------------------------------------------------------- long-form stream
     @property

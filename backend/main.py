@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import socket
 import sys
 import threading
@@ -170,6 +171,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--settings", default=str(SETTINGS_PATH),
                    help="settings file (default: settings.json in the project root)")
     p.add_argument("--no-browser", action="store_true", help="do not open the browser")
+    p.add_argument("--no-tts-preload", action="store_true",
+                   help="không nạp trước model VieNeu vào RAM khi khởi động")
     return p.parse_args()
 
 
@@ -225,7 +228,12 @@ def main() -> int:
     bus = EventBus()
     pipeline = LivePipeline(engine, bus, settings)
     replay = ReplayService(pipeline.decode, settings, SAMPLES_DIR)
-    app = create_app(settings, pipeline, replay, bus)
+
+    tts = TtsService()
+    if not args.no_tts_preload:
+        print("Preloading TTS model (VieNeu)...")
+        tts.preload_async(synthesize=os.environ.get("TTS_PRELOAD_INFER") == "1")
+    app = create_app(settings, pipeline, replay, bus, tts=tts)
 
     port = free_port(args.port)
     url = f"http://{args.host}:{port}/"

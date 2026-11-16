@@ -73,6 +73,12 @@ hoặc với câu vừa nhận trong cùng tệp.
 
 ## Giọng đọc
 
+Khi khởi động `python run.py`, model VieNeu được **nạp trước vào RAM** ở luồng
+nền (~10–15 giây, log `TTS model đã nạp vào RAM`), nên lần bấm “Đọc” đầu tiên
+không còn chờ nạp. Tắt bằng `--no-tts-preload`; muốn chạy thử luôn một câu lúc
+khởi động đặt `TTS_PRELOAD_INFER=1`. Trạng thái: `GET /tts/voices` →
+`status.loaded`, `status.load_seconds`.
+
 | Method | Path | Ghi chú |
 |---|---|---|
 | GET | `/tts/voices` | danh sách giọng, `max_chars`, `max_words`, status |

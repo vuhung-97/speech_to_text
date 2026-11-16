@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 
-import { useApp } from "../context/AppContext";
+import { useToast } from "../app/ToastProvider";
 
 export default function Toast() {
-  const { toast } = useApp();
+  const { toast } = useToast();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {

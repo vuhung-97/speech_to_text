@@ -3,13 +3,16 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const TARGET_RATE = 16_000;
-const WS_PATH = `/ws/audio?sample_rate=${TARGET_RATE}`;
-const WORKLET_URL = "/worklets/pcm-processor.js";
+import {
+  MIC_RATE,
+  PACKET_SECONDS,
+  WS_AUDIO_PATH,
+  WORKLET_URL,
+} from "./constants";
 
 function socketUrl() {
   const scheme = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${scheme}//${window.location.host}${WS_PATH}`;
+  return `${scheme}//${window.location.host}${WS_AUDIO_PATH}`;
 }
 
 export function useMic({ onEvent } = {}) {
@@ -100,12 +103,17 @@ export function useMic({ onEvent } = {}) {
           /* malformed frame */
         }
       };
-      ws.onclose = () => {
-        if (refs.current.ws === ws) {
-          refs.current = {};
-          setState("error");
-          setError("mất kết nối tới máy chủ nhận dạng");
-        }
+      ws.onclose = (event) => {
+        if (refs.current.ws !== ws) return;
+        refs.current = {};
+        setState("error");
+        const reasons = {
+          1003: "định dạng audio không được hỗ trợ",
+          1008: "origin của trang bị máy chủ từ chối",
+          1012: "cài đặt vừa thay đổi — bấm Nghe lại",
+          1013: "máy chủ đang bận (đủ phiên) — thử lại sau",
+        };
+        setError(reasons[event.code] || "mất kết nối tới máy chủ nhận dạng");
       };
 
       try {
@@ -143,7 +151,7 @@ export function useMic({ onEvent } = {}) {
 
         let context;
         try {
-          context = new AudioContext({ sampleRate: TARGET_RATE });
+          context = new AudioContext({ sampleRate: MIC_RATE });
         } catch {
           context = new AudioContext();
         }
@@ -152,7 +160,7 @@ export function useMic({ onEvent } = {}) {
 
         const source = context.createMediaStreamSource(stream);
         const node = new AudioWorkletNode(context, "pcm-processor", {
-          processorOptions: { targetRate: TARGET_RATE },
+          processorOptions: { targetRate: MIC_RATE, packetSeconds: PACKET_SECONDS },
         });
         const mute = context.createGain();
         mute.gain.value = 0;

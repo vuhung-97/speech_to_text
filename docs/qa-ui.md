@@ -33,8 +33,12 @@ Mục nào lỗi thì ghi lại màn hình + bước tái hiện.
 - [ ] Trong lúc loa đọc, nói vào mic → không có transcript mới (track đã dừng).
 - [ ] Mở trang từ **máy thứ hai trong LAN qua HTTPS** → mic của máy đó hoạt động;
       mic laptop chạy server không sáng.
+- [ ] Chọn đúng micro trong panel; nếu thanh level phẳng khi nói, thử micro khác
+      (jack combo “Microphone with Headphone (Intel…)” chỉ hoạt động khi cắm tai nghe).
 - [ ] DevTools → Network: để yên 5 phút **không** thấy `GET /api/state` mỗi 2 s
       (chỉ ~1 lần/60 s watchdog); ẩn tab thì không có request.
+- [ ] Đổi cài đặt khi đang nghe → mic dừng và báo “cài đặt vừa thay đổi — bấm Nghe lại”.
+- [ ] Mở phiên thứ 9 (nếu thử) → báo máy chủ đang bận (giới hạn 8 phiên).
 - [ ] Sau câu đầu tiên, URL thành `/?session=…`; `F5` vẫn còn hội thoại.
 - [ ] Câu trả lời chưa khớp hiện badge "Chưa có đáp án", text fallback, và ghi
       vào "Kho câu hỏi → chưa trả lời".

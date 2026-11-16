@@ -9,11 +9,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useSpeechStream } from "./useSpeechStream";
-
-const GRACE_MS = 2_000;
-const INITIAL_GRACE_MS = 4_000; // time to start speaking after pressing Nghe
-const HARD_LIMIT_MS = 12_000; // a question session never lasts longer than this
-const SPEECH_LEVEL = 0.05; // client RMS above this counts as "still talking"
+import {
+  GRACE_MS,
+  HARD_LIMIT_MS,
+  INITIAL_GRACE_MS,
+  SPEECH_LEVEL,
+} from "../mic/constants";
 
 export function useListen({ onText } = {}) {
   const stream = useSpeechStream();

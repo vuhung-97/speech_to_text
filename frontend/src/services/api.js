@@ -7,14 +7,8 @@ export const getState = () => http.get("/api/state");
 export const getSettings = () => http.get("/api/settings");
 export const postSettings = (change) => http.post("/api/settings", change ?? {});
 export const resetSettings = () => http.post("/api/settings/reset");
-export const getDevices = () => http.get("/api/devices");
 export const getSamples = () => http.get("/api/samples");
 export const replaySample = (name, segment) => http.post("/api/replay", { name, segment });
-export const setPaused = (paused) => http.post("/api/pause", { paused });
-
-export const setListening = (listening) =>
-  http.post("/api/v1/capture", { listening: Boolean(listening) });
-export const clearTranscript = () => http.post("/api/clear");
 
 export const getTtsVoices = () => http.get("/api/tts/voices");
 export const synthesizeSpeech = (text, voice) =>
@@ -27,15 +21,12 @@ export const uploadSample = (file) => {
 };
 
 // ---------------------------------------------------------------- Q&A (P3)
-export const askQuestion = (question, { sessionId = null, source = "voice" } = {}) =>
+export const askQuestion = (question, { sessionId = null, source = "voice", signal } = {}) =>
   http.post("/api/v1/qa/ask", {
     question,
     session_id: sessionId || null,
     source,
-  });
-
-export const detectQuestion = (text, parts = null) =>
-  http.post("/api/v1/qa/detect", parts ? { parts } : { text });
+  }, { signal });
 
 export const getUnanswered = (limit = 50) =>
   http.get(`/api/v1/qa/unanswered?limit=${limit}`);
@@ -43,8 +34,8 @@ export const getUnanswered = (limit = 50) =>
 export const getSessions = (limit = 50, offset = 0) =>
   http.get(`/api/v1/sessions?limit=${limit}&offset=${offset}`);
 
-export const getSession = (sessionId) =>
-  http.get(`/api/v1/sessions/${encodeURIComponent(sessionId)}`);
+export const getSession = (sessionId, options = {}) =>
+  http.get(`/api/v1/sessions/${encodeURIComponent(sessionId)}`, options);
 
 export const deleteSession = (sessionId) =>
   http.del(`/api/v1/sessions/${encodeURIComponent(sessionId)}`);

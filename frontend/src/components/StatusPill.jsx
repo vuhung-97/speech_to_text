@@ -1,4 +1,4 @@
-import { useApp } from "../context/AppContext";
+import { useLive } from "../features/dictation/LiveProvider";
 import { STATUS_LABELS } from "../utils/format";
 
 const DOT = {
@@ -10,7 +10,7 @@ const DOT = {
 };
 
 export default function StatusPill({ state: overrideState, label }) {
-  const { status } = useApp();
+  const { status } = useLive();
   const state = overrideState || status.state || "connecting";
   const text = label || STATUS_LABELS[state] || state;
   return (

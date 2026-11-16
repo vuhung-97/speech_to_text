@@ -7,10 +7,12 @@ import SettingsDrawer from "../components/SettingsDrawer";
 import StatusPill from "../components/StatusPill";
 import TranscriptView from "../components/TranscriptView";
 import TtsDrawer from "../components/TtsDrawer";
-import { useApp } from "../context/AppContext";
+import { useLive } from "../features/dictation/LiveProvider";
 import { useSpeechStream } from "../features/qa/useSpeechStream";
+import { useToast } from "../app/ToastProvider";
+import { MIC_STORAGE_KEY } from "../features/mic/constants";
 
-const MIC_KEY = "mic.device";
+const MIC_KEY = MIC_STORAGE_KEY;
 
 function Brand() {
   return (
@@ -40,7 +42,8 @@ function Brand() {
 }
 
 export default function DictationPage() {
-  const { engine, notify, status: serverStatus } = useApp();
+  const { engine, status: serverStatus } = useLive();
+  const { notify } = useToast();
   const stream = useSpeechStream();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [ttsOpen, setTtsOpen] = useState(false);

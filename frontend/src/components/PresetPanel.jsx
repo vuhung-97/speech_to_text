@@ -1,10 +1,12 @@
 import { useState } from "react";
 
-import { useApp } from "../context/AppContext";
+import { useSettings } from "../features/settings/SettingsProvider";
+import { useToast } from "../app/ToastProvider";
 import { loadPresets, savePresets } from "../utils/presets";
 
 export default function PresetPanel() {
-  const { settings, dirty, applyPatch, notify } = useApp();
+  const { settings, dirty, applyPatch } = useSettings();
+  const { notify } = useToast();
   const [presets, setPresets] = useState(loadPresets);
   const [name, setName] = useState("");
   const [selected, setSelected] = useState("");

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { useApp } from "../context/AppContext";
+import { useLive } from "../features/dictation/LiveProvider";
+import { useSettings } from "../features/settings/SettingsProvider";
 import { formatValue } from "../utils/format";
 import PresetPanel from "./PresetPanel";
 import ReplayPanel from "./ReplayPanel";
@@ -37,7 +38,7 @@ function EngineBadge({ engine }) {
 }
 
 function FieldRow({ field, devices }) {
-  const { settings, dirty, setField } = useApp();
+  const { settings, dirty, setField } = useSettings();
   const value =
     dirty[field.key] !== undefined ? dirty[field.key] : settings.values[field.key];
   const [draft, setDraft] = useState(value);
@@ -150,7 +151,8 @@ function FieldRow({ field, devices }) {
 }
 
 export default function SettingsDrawer({ open, onClose }) {
-  const { settings, dirty, pending, engine, applyDirty, resetSettings } = useApp();
+  const { settings, dirty, applyDirty, resetSettings } = useSettings();
+  const { pending, engine } = useLive();
 
   const dirtyCount = Object.keys(dirty).length;
 

@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 
-import { useApp } from "../context/AppContext";
+import { useLive } from "../features/dictation/LiveProvider";
 import CommandPalette from "../components/CommandPalette";
 import IconButton from "../components/ui/IconButton";
 import SettingsDrawer from "../components/SettingsDrawer";
@@ -49,7 +49,7 @@ function NavIcon({ name }) {
 }
 
 export default function AppShell({ title, subtitle, right = null, actions = null, children }) {
-  const { status } = useApp();
+  const { status } = useLive();
   const location = useLocation();
   const mainRef = useRef(null);
   const [settingsOpen, setSettingsOpen] = useState(false);

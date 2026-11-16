@@ -7,6 +7,7 @@ hoặc HTTPS). Server STT vẫn chỉ chạy một lần trên máy chủ.
 ## 1. Chuẩn bị
 
 - Máy chủ: `python run.py --host 0.0.0.0 --port 8765` (mở firewall cho cổng này).
+  Không cần `sounddevice` — mic do trình duyệt gửi qua `/ws/audio`.
 - Biết IP LAN của máy chủ: `ipconfig` → IPv4, ví dụ `192.168.1.20`.
 - KHÔNG cần cài gì trên điện thoại/máy khác — chỉ cần trình duyệt.
 

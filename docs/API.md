@@ -21,22 +21,26 @@ Mọi bảng đều có `tenant_id`, mọi query đều lọc theo tenant.
 | Method | Path | Body / query | Kết quả |
 |---|---|---|---|
 | POST | `/qa/ask` | `{question, session_id?, source?}` | `{session_id, question, answer:{id, turn_id, session_id, text, status, answered, entry_id, score, matched, candidates}}` |
-| POST | `/qa/detect` | `{text}` hoặc `{parts:[{text,ts}]}` | `{is_question, question}` |
 | GET | `/qa/unanswered` | `limit` | `{items:[{question_norm, asks, last_asked, sample}]}` |
 | POST | `/qa/answers/{id}/speech` | `{voice?}` | `{mode:"cached", url, seconds}` hoặc `{mode:"stream", text, voice}` |
+
+`/qa/detect`, `/capture`, `/devices`, `/pause`, `/clear` đã bị xoá: mic và câu
+hỏi thuộc về trình duyệt, không còn điều khiển thiết bị phía server.
 
 ## Mic (WebSocket)
 
 | Hướng | Nội dung |
 |---|---|
 | Kết nối | `ws(s)://<host>/ws/audio?sample_rate=16000` |
-| Client → Server | binary PCM16LE mono, 16 000 Hz, gói ~20 ms |
-| Server → Client | `{type:"ready",sample_rate,mode}` · `partial` · `final` · `level` · `queue` · `warning` · `error` |
+| Client → Server | binary PCM16LE mono, 16 000 Hz, gói ~20 ms, tối đa **64 KB/gói** |
+| Server → Client | `{type:"ready",sample_rate,mode,max_frame_bytes}` · `partial` · `final` · `level` · `queue` · `warning` · `error` · `settings_changed` |
+| Giới hạn | tối đa **8 phiên** đồng thời; vượt → đóng **1013** |
 | Đóng | gửi `{"type":"stop"}` hoặc đóng socket |
 
 Mỗi kết nối là một phiên nhận dạng độc lập (segmenter + event bus riêng), dùng
-chung một engine ONNX. Sample rate khác 16 000 → `error` và đóng.
-Không có endpoint `/capture` trong luồng web; mic thuộc về trình duyệt client.
+chung một engine ONNX. Sample rate khác 16 000 → đóng **1003**; origin khác host
+→ **1008**; cài đặt đổi → server gửi `settings_changed` rồi đóng để client mở
+phiên mới. Gói quá lớn bị bỏ và trả `warning`.
 
 `status`: `matched` (≥ ngưỡng), `near_miss` (cấu hình), `unanswered` (fallback +
 `candidates` top-3).
@@ -94,6 +98,7 @@ hoặc với câu vừa nhận trong cùng tệp.
 - Câu hỏi: ≤1000 ký tự; câu trả lời soạn sẵn: ≤2000 từ.
 - Audio tạm: `%TEMP%\stt_binh\tts\` (tự xoá khi huỷ/thoát), quota 512 MB.
 - Bản đọc lưu sẵn: `data/audio/` (LRU theo quota 512 MB), index trong `faq_audio`.
-- CSDL: `data/app.db` (SQLite WAL), schema version 3.
+- CSDL: `data/app.db` (SQLite WAL), schema version 4 (`faq_entries.question_norm`
+  + index phục vụ chống trùng trên toàn kho).
 - Embedding: `models/embed/model.onnx` + `tokenizer.json` (tải bằng
   `python tools/fetch_embed_model.py`); thiếu model → hashing fallback.

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { useApp } from "../context/AppContext";
+import { useToast } from "../app/ToastProvider";
 import * as api from "../services/api";
 
 export default function ReplayPanel() {
-  const { notify } = useApp();
+  const { notify } = useToast();
   const [samples, setSamples] = useState([]);
   const [selected, setSelected] = useState("");
   const [segment, setSegment] = useState(false);

@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { useApp } from "../context/AppContext";
+import { useToast } from "../app/ToastProvider";
 import { useSpeechPlayer } from "../features/tts/useSpeechPlayer";
+import { VOICE_STORAGE_KEY } from "../features/mic/constants";
 import * as api from "../services/api";
 
-const VOICE_KEY = "tts.voice";
+const VOICE_KEY = VOICE_STORAGE_KEY;
 const FALLBACK_MAX_CHARS = 1000;
 const FALLBACK_MAX_WORDS = 2000;
 
@@ -36,8 +37,8 @@ function countWords(value) {
 }
 
 export default function TtsDrawer({ open, onClose, text: presetText = "" }) {
-  const { fullText, notify } = useApp();
-  const sourceText = presetText || fullText;
+  const { notify } = useToast();
+  const sourceText = presetText;
   const [voices, setVoices] = useState([]);
   const [voice, setVoice] = useState("");
   const [defaultVoice, setDefaultVoice] = useState("");

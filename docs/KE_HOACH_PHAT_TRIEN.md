@@ -134,6 +134,7 @@ Tổng ~23,5 ngày công.
 | P5 FAQ embedding | ✅ xong | `OnnxE5Embedder` (multilingual-e5-small, 384d, quantized 118 MB tại `models/embed/`), `HashingEmbedder` fallback, `SqliteFaqRepository` + `SqliteFaqMatcher` (ma trận RAM, lazy embed, cache theo signature), CRUD + import CSV + chống trùng 0.97 + reindex + stats, `/faq` admin UI |
 | P6 Gia cố | ✅ xong | `X-Request-ID` + log structured, audit log (schema v3) + `/audit`, prerender + cache bản đọc (`faq_audio`, LRU 512 MB) + `/qa/answers/{id}/speech`, panel hoạt động gần đây, `docs/API.md` |
 | P7 Mic client | ✅ xong | `WS /ws/audio` (mỗi kết nối một phiên, engine dùng chung + lock), `WebSocketMic`, AudioWorklet 16 kHz, `useMic`/`useSpeechStream`, bỏ poll 2 s (watchdog 60 s + event `settings`/`capture`), `docs/TRIEN_KHAI_LAN.md` |
+| P8 Hardening | ✅ xong | Sửa đóng WS không chặn event loop; giới hạn 8 phiên/64 KB frame/origin; `settings_changed`; schema v4 + `question_norm` (chống trùng toàn kho); prune job + TTL WAV; xoá toàn bộ mic server, `/capture`, `/detect`, `/devices`, `/pause`, `/clear`, facade `useApp`, state chết trong `LiveProvider`; tách `QaPage` thành hook + panel; SSOT hằng số mic |
 
 Đo thực tế trên máy phát triển (VieNeu v3 Turbo, ONNX CPU):
 

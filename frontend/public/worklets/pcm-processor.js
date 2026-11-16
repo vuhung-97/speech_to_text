@@ -12,7 +12,9 @@ class PcmProcessor extends AudioWorkletProcessor {
     super();
     this.targetRate = options?.processorOptions?.targetRate || TARGET_RATE;
     this.ratio = sampleRate / this.targetRate;
-    this.packet = Math.round(this.targetRate * PACKET_SECONDS);
+    this.packet = Math.round(
+      this.targetRate * (options?.processorOptions?.packetSeconds || PACKET_SECONDS),
+    );
     this.acc = new Float32Array(this.packet * 4);
     this.accLength = 0;
     this.pos = 0;

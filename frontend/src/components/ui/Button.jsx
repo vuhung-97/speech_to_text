@@ -3,7 +3,7 @@
 
 const BASE =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-control font-medium transition " +
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent " +
+  "active:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent " +
   "disabled:cursor-default disabled:opacity-45 sm:min-h-0";
 
 const VARIANTS = {

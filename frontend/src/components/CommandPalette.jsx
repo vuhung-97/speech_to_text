@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { useFocusTrap } from "./ui/useFocusTrap";
+
 const ITEMS = [
   { to: "/", label: "Hỏi đáp", hint: "Hỏi và nghe câu trả lời" },
   { to: "/sessions", label: "Phiên hội thoại", hint: "Lịch sử hỏi đáp" },
@@ -16,6 +18,8 @@ export default function CommandPalette({ open, onClose }) {
   const [query, setQuery] = useState("");
   const [index, setIndex] = useState(0);
   const inputRef = useRef(null);
+  const dialogRef = useRef(null);
+  useFocusTrap(dialogRef, open, onClose);
 
   const items = useMemo(() => {
     const value = query.trim().toLowerCase();
@@ -31,17 +35,12 @@ export default function CommandPalette({ open, onClose }) {
     if (!open) return;
     setQuery("");
     setIndex(0);
-    const timer = window.setTimeout(() => inputRef.current?.focus(), 20);
-    return () => window.clearTimeout(timer);
   }, [open]);
 
   useEffect(() => {
     if (!open) return undefined;
     const onKey = (event) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onClose();
-      } else if (event.key === "ArrowDown") {
+      if (event.key === "ArrowDown") {
         event.preventDefault();
         setIndex((current) => Math.min(current + 1, items.length - 1));
       } else if (event.key === "ArrowUp") {
@@ -67,10 +66,12 @@ export default function CommandPalette({ open, onClose }) {
       }}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="Điều hướng nhanh"
-        className="w-[min(520px,100%)] overflow-hidden rounded-card border border-line bg-surface-2 shadow-[0_40px_120px_-40px_#000]"
+        tabIndex={-1}
+        className="w-[min(520px,100%)] overflow-hidden rounded-card border border-line bg-surface-2 shadow-[0_40px_120px_-40px_#000] outline-none"
       >
         <input
           ref={inputRef}

@@ -2,13 +2,10 @@
 // One owner for Esc, focus trap and focus return keeps every drawer usable
 // with the keyboard without repeating the behaviour per screen.
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 
 import IconButton from "./IconButton";
-
-const FOCUSABLE =
-  'a[href], button:not([disabled]), textarea:not([disabled]), ' +
-  'input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+import { useFocusTrap } from "./useFocusTrap";
 
 function CloseIcon() {
   return (
@@ -40,60 +37,7 @@ export default function Drawer({
   children,
 }) {
   const panelRef = useRef(null);
-  const triggerRef = useRef(null);
-  const closeRef = useRef(onClose);
-
-  useEffect(() => {
-    closeRef.current = onClose;
-  }, [onClose]);
-
-  useEffect(() => {
-    if (!open) return undefined;
-
-    triggerRef.current = document.activeElement;
-    const panel = panelRef.current;
-
-    const onKey = (event) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        closeRef.current();
-        return;
-      }
-      if (event.key !== "Tab") return;
-
-      const items = Array.from(panel?.querySelectorAll(FOCUSABLE) || []);
-      if (!items.length) {
-        event.preventDefault();
-        panel?.focus();
-        return;
-      }
-      const first = items[0];
-      const last = items[items.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
-    document.addEventListener("keydown", onKey);
-    const timer = window.setTimeout(() => {
-      const target =
-        panel?.querySelector("[data-autofocus]") ||
-        panel?.querySelector(FOCUSABLE) ||
-        panel;
-      target?.focus();
-    }, 20);
-
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      window.clearTimeout(timer);
-      const trigger = triggerRef.current;
-      if (trigger instanceof HTMLElement && trigger.isConnected) trigger.focus();
-    };
-  }, [open]);
+  useFocusTrap(panelRef, open, onClose);
 
   return (
     <>

@@ -1,10 +1,11 @@
 // Catalogue admin state: entries, stats, unanswered worklist and audit.
 // Server access only; the page and its panels are presentational.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import * as api from "../../../services/api";
 import { messageFor } from "../../../services/errors";
+import { useDebouncedValue } from "../../../utils/useDebouncedValue";
 
 export const EMPTY_FORM = { question: "", answer: "", category: "" };
 
@@ -24,27 +25,34 @@ export function useFaqAdmin() {
   const [error, setError] = useState("");
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
+  const debouncedQuery = useDebouncedValue(query, 250);
+  // A slow response from an older query must never overwrite a newer one.
+  const requestRef = useRef(0);
 
   const load = useCallback(async () => {
+    const requestId = requestRef.current + 1;
+    requestRef.current = requestId;
     setLoading(true);
     try {
       const [list, summary, open, recent] = await Promise.all([
-        api.getFaqEntries({ q: query }),
+        api.getFaqEntries({ q: debouncedQuery }),
         api.getFaqStats(),
         api.getUnanswered(20),
         api.getAudit(10),
       ]);
+      if (requestId !== requestRef.current) return;
       setEntries(list.items || []);
       setStats(summary);
       setUnanswered(open.items || []);
       setAudit(recent.items || []);
       setError("");
     } catch (loadError) {
+      if (requestId !== requestRef.current) return;
       setError(messageFor(loadError));
     } finally {
-      setLoading(false);
+      if (requestId === requestRef.current) setLoading(false);
     }
-  }, [query]);
+  }, [debouncedQuery]);
 
   useEffect(() => {
     load();

@@ -5,6 +5,7 @@
 // half), converts to float32 and hands blocks to the player. No Blob is ever
 // created: a two-hour answer would be ~700 MB in the browser.
 
+import { API_V1 } from "../../services/api";
 import { ApiError } from "../../services/errors";
 import { requestStream } from "../../services/http";
 
@@ -31,7 +32,7 @@ function merge(left, right) {
 export async function streamSpeech(text, voice, handlers = {}) {
   const { onStart, onBlock, onProgress, onDone, signal } = handlers;
 
-  const response = await requestStream("/api/v1/tts/stream", {
+  const response = await requestStream(`${API_V1}/tts/stream`, {
     body: { text, voice: voice || null },
     headers: { Accept: "audio/L16" },
     signal,
@@ -87,4 +88,4 @@ export async function streamSpeech(text, voice, handlers = {}) {
 }
 
 export const ttsWavUrl = (sessionId) =>
-  `/api/v1/tts/sessions/${encodeURIComponent(sessionId)}.wav`;
+  `${API_V1}/tts/sessions/${encodeURIComponent(sessionId)}.wav`;

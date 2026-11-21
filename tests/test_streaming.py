@@ -484,16 +484,4 @@ def test_webapp() -> None:
               "replay, reset, SSE")
 
 
-if __name__ == "__main__":
-    test_segmenter()
-    test_gate_warm_after_pause()
-    test_local_agreement()
-    test_pipeline_accurate()
-    test_pipeline_realtime()
-    test_clear_drops_inflight()
-    test_engine_reload()
-    test_zipformer()
-    test_engine_registry()
-    test_replay()
-    test_webapp()
-    print("TEST_STREAMING_DONE")
+

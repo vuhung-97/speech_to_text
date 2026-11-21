@@ -11,6 +11,7 @@ import csv
 import io
 import threading
 from collections.abc import Sequence
+from typing import TypedDict
 
 import numpy as np
 
@@ -19,6 +20,27 @@ from ..domain.faq.normalize import normalize_question
 from ..domain.faq.rules import DUPLICATE_THRESHOLD, validate_entry
 from ..ports.embedding import Embedder
 from ..ports.faq import FaqIndex, FaqRepository
+
+
+class CsvImportReport(TypedDict):
+    """Shape returned by :meth:`FaqImportService.import_csv`."""
+
+    total: int
+    added: int
+    duplicates: list[dict[str, object]]
+    errors: list[dict[str, object]]
+
+
+class OutlineImportReport(TypedDict):
+    """Shape returned by :meth:`FaqImportService.import_outline`."""
+
+    total: int
+    added: int
+    updated: int
+    skipped: int
+    stale: int
+    errors: list[dict[str, object]]
+    changed: list[str]
 
 
 class FaqImportService:
@@ -34,9 +56,9 @@ class FaqImportService:
         self._lock = threading.Lock()
 
     # ------------------------------------------------------------------- CSV
-    def import_csv(self, tenant: str, content: str) -> dict[str, object]:
+    def import_csv(self, tenant: str, content: str) -> CsvImportReport:
         rows = list(csv.DictReader(io.StringIO((content or "").lstrip("\ufeff"))))
-        report: dict[str, object] = {
+        report: CsvImportReport = {
             "total": len(rows),
             "added": 0,
             "duplicates": [],
@@ -87,7 +109,7 @@ class FaqImportService:
 
     # --------------------------------------------------------------- outline
     def import_outline(self, tenant: str, entries: Sequence[FaqOutline],
-                       *, document: FaqDocument) -> dict[str, object]:
+                       *, document: FaqDocument) -> OutlineImportReport:
         """Upsert parsed question/answer pairs into one question set.
 
         The pair ``(document, question code)`` is the identity, with an
@@ -100,9 +122,9 @@ class FaqImportService:
             return self._import_outline(tenant, entries, document)
 
     def _import_outline(self, tenant: str, entries: Sequence[FaqOutline],
-                        document: FaqDocument) -> dict[str, object]:
+                        document: FaqDocument) -> OutlineImportReport:
         """Mutating core; callers hold ``_lock``."""
-        report: dict[str, object] = {
+        report: OutlineImportReport = {
             "total": len(entries),
             "added": 0,
             "updated": 0,
@@ -182,4 +204,4 @@ class FaqImportService:
         return score
 
 
-__all__ = ["FaqImportService"]
+__all__ = ["CsvImportReport", "FaqImportService", "OutlineImportReport"]

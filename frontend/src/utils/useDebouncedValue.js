@@ -1,0 +1,16 @@
+// Delay a fast-changing value (search boxes) until the user pauses typing.
+
+import { useEffect, useState } from "react";
+
+export function useDebouncedValue(value, delay = 250) {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebounced(value), delay);
+    return () => window.clearTimeout(timer);
+  }, [value, delay]);
+
+  return debounced;
+}
+
+export default useDebouncedValue;

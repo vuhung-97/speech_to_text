@@ -20,6 +20,17 @@ export const useSettings = () => useContext(SettingsContext);
 
 const EMPTY = { values: {}, fields: [], engines: [], warnings: [] };
 
+// One merge rule for every settings response (apply, reset, refresh).
+function mergeSettings(previous, result) {
+  return {
+    ...previous,
+    values: result.values ?? previous.values,
+    fields: result.fields ?? previous.fields,
+    engines: result.engines ?? previous.engines,
+    warnings: result.warnings ?? previous.warnings,
+  };
+}
+
 export function SettingsProvider({ children }) {
   const { notify } = useToast();
   const { snapshot } = useLive();
@@ -38,7 +49,8 @@ export function SettingsProvider({ children }) {
 
   const refreshSettings = useCallback(async () => {
     try {
-      setSettings(await api.getSettings());
+      const result = await api.getSettings();
+      setSettings((previous) => mergeSettings(previous, result));
     } catch (error) {
       notify(`Không tải được cài đặt: ${error.message}`);
     }
@@ -52,13 +64,7 @@ export function SettingsProvider({ children }) {
     async (change) => {
       try {
         const result = await api.postSettings(change);
-        setSettings((previous) => ({
-          ...previous,
-          values: result.values ?? previous.values,
-          fields: result.fields ?? previous.fields,
-          engines: result.engines ?? previous.engines,
-          warnings: result.warnings ?? previous.warnings,
-        }));
+        setSettings((previous) => mergeSettings(previous, result));
         const rejected = result.rejected || {};
         const keys = Object.keys(rejected);
         if (keys.length) {
@@ -97,13 +103,7 @@ export function SettingsProvider({ children }) {
   const resetSettings = useCallback(async () => {
     try {
       const result = await api.resetSettings();
-      setSettings((previous) => ({
-        ...previous,
-        values: result.values ?? previous.values,
-        fields: result.fields ?? previous.fields,
-        engines: result.engines ?? previous.engines,
-        warnings: result.warnings ?? previous.warnings,
-      }));
+      setSettings((previous) => mergeSettings(previous, result));
       setDirty({});
       notify("Đã khôi phục mặc định");
     } catch (error) {

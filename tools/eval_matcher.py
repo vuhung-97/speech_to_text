@@ -12,16 +12,14 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 import tempfile
-from pathlib import Path
 
-if hasattr(sys.stdout, "reconfigure"):
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+try:
+    from ._shared import bootstrap
+except ImportError:  # run as a script: python tools/eval_matcher.py
+    from _shared import bootstrap
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
+ROOT = bootstrap()
 
 from backend.adapters.embedding.onnx_e5 import build_embedder  # noqa: E402
 from backend.adapters.importer.docx_faq import parse_docx  # noqa: E402

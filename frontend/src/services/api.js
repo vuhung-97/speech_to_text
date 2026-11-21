@@ -3,6 +3,22 @@
 
 import * as http from "./http";
 
+// Versioned contract prefix, shared with the streaming player.
+export const API_V1 = "/api/v1";
+
+const v1 = (path) => `${API_V1}${path}`;
+
+const withQuery = (path, params) => {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === "" || value === null || value === undefined) continue;
+    search.set(key, String(value));
+  }
+  const query = search.toString();
+  return query ? `${path}?${query}` : path;
+};
+
+// ------------------------------------------------------------ legacy (/api)
 export const getState = () => http.get("/api/state");
 export const getSettings = () => http.get("/api/settings");
 export const postSettings = (change) => http.post("/api/settings", change ?? {});
@@ -20,81 +36,98 @@ export const uploadSample = (file) => {
   return http.requestForm("/api/samples", { form });
 };
 
-// ---------------------------------------------------------------- Q&A (P3)
-export const askQuestion = (question, { sessionId = null, source = "voice", documentId = null, signal } = {}) =>
-  http.post("/api/v1/qa/ask", {
-    question,
-    session_id: sessionId || null,
-    source,
-    document_id: documentId || null,
-  }, { signal });
+// ---------------------------------------------------------------- Q&A (v1)
+export const askQuestion = (
+  question,
+  { sessionId = null, source = "voice", documentId = null, signal } = {},
+) =>
+  http.post(
+    v1("/qa/ask"),
+    {
+      question,
+      session_id: sessionId || null,
+      source,
+      document_id: documentId || null,
+    },
+    { signal },
+  );
 
 export const getUnanswered = (limit = 50) =>
-  http.get(`/api/v1/qa/unanswered?limit=${limit}`);
+  http.get(withQuery(v1("/qa/unanswered"), { limit }));
 
 export const getSessions = (limit = 50, offset = 0) =>
-  http.get(`/api/v1/sessions?limit=${limit}&offset=${offset}`);
+  http.get(withQuery(v1("/sessions"), { limit, offset }));
 
 export const getSession = (sessionId, options = {}) =>
-  http.get(`/api/v1/sessions/${encodeURIComponent(sessionId)}`, options);
+  http.get(v1(`/sessions/${encodeURIComponent(sessionId)}`), options);
 
 export const deleteSession = (sessionId) =>
-  http.del(`/api/v1/sessions/${encodeURIComponent(sessionId)}`);
+  http.del(v1(`/sessions/${encodeURIComponent(sessionId)}`));
 
 // ------------------------------------------------------------ FAQ catalogue
-export const getFaqEntries = ({ q = "", category = "", active = "", documentId = "", limit = 100, offset = 0 } = {}) => {
-  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
-  if (q) params.set("q", q);
-  if (category) params.set("category", category);
-  if (documentId) params.set("document_id", documentId);
-  if (active !== "") params.set("active", String(active));
-  return http.get(`/api/v1/faq/entries?${params.toString()}`);
-};
+export const getFaqEntries = ({
+  q = "",
+  category = "",
+  active = "",
+  documentId = "",
+  limit = 100,
+  offset = 0,
+} = {}) =>
+  http.get(
+    withQuery(v1("/faq/entries"), {
+      limit,
+      offset,
+      q,
+      category,
+      document_id: documentId,
+      active,
+    }),
+  );
 
-export const createFaqEntry = (entry) => http.post("/api/v1/faq/entries", entry);
+export const createFaqEntry = (entry) => http.post(v1("/faq/entries"), entry);
 
 export const updateFaqEntry = (entryId, patch) =>
-  http.patch(`/api/v1/faq/entries/${encodeURIComponent(entryId)}`, patch);
+  http.patch(v1(`/faq/entries/${encodeURIComponent(entryId)}`), patch);
 
 export const deleteFaqEntry = (entryId) =>
-  http.del(`/api/v1/faq/entries/${encodeURIComponent(entryId)}`);
+  http.del(v1(`/faq/entries/${encodeURIComponent(entryId)}`));
 
 export const importFaqCsv = (file) => {
   const form = new FormData();
   form.append("file", file);
-  return http.requestForm("/api/v1/faq/import", { form });
+  return http.requestForm(v1("/faq/import"), { form });
 };
 
 // Outlines are parsed and embedded server-side; allow a longer timeout.
 export const importFaqDocx = (file) => {
   const form = new FormData();
   form.append("file", file);
-  return http.requestForm("/api/v1/faq/import-docx", { form, timeout: 120_000 });
+  return http.requestForm(v1("/faq/import-docx"), { form, timeout: 120_000 });
 };
 
-export const reindexFaq = () => http.post("/api/v1/faq/reindex");
+export const reindexFaq = () => http.post(v1("/faq/reindex"));
 
-export const getFaqStats = () => http.get("/api/v1/faq/stats");
+export const getFaqStats = () => http.get(v1("/faq/stats"));
 
-export const getFaqDocuments = () => http.get("/api/v1/faq/documents");
+export const getFaqDocuments = () => http.get(v1("/faq/documents"));
 
 export const renameFaqDocument = (documentId, name) =>
-  http.patch(`/api/v1/faq/documents/${encodeURIComponent(documentId)}`, { name });
+  http.patch(v1(`/faq/documents/${encodeURIComponent(documentId)}`), { name });
 
 export const deleteFaqDocument = (documentId) =>
-  http.del(`/api/v1/faq/documents/${encodeURIComponent(documentId)}`);
+  http.del(v1(`/faq/documents/${encodeURIComponent(documentId)}`));
 
 export const prerenderFaq = (entryId, voice) =>
-  http.post(`/api/v1/faq/entries/${encodeURIComponent(entryId)}/prerender`, {
+  http.post(v1(`/faq/entries/${encodeURIComponent(entryId)}/prerender`), {
     voice: voice || null,
   });
 
 export const getPrerender = (jobId) =>
-  http.get(`/api/v1/faq/prerender/${encodeURIComponent(jobId)}`);
+  http.get(v1(`/faq/prerender/${encodeURIComponent(jobId)}`));
 
 export const getAnswerSpeech = (answerId, voice) =>
-  http.post(`/api/v1/qa/answers/${encodeURIComponent(answerId)}/speech`, {
+  http.post(v1(`/qa/answers/${encodeURIComponent(answerId)}/speech`), {
     voice: voice || null,
   });
 
-export const getAudit = (limit = 30) => http.get(`/api/v1/audit?limit=${limit}`);
+export const getAudit = (limit = 30) => http.get(withQuery(v1("/audit"), { limit }));

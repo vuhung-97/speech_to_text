@@ -56,6 +56,37 @@ async function readJsonResponse(response) {
   return data ?? {};
 }
 
+// One request builder for JSON, multipart and streaming bodies. It only builds
+// and sends the request; each public helper decides how to read the response.
+async function send(path, {
+  method = "GET",
+  body,
+  form,
+  headers,
+  signal,
+  timeout,
+  accept = "application/json",
+} = {}) {
+  const isForm = form !== undefined;
+  const payload = isForm ? form : body === undefined ? undefined : JSON.stringify(body);
+
+  return fetchWithTimeout(
+    path,
+    {
+      method,
+      headers: {
+        ...JSON_HEADERS,
+        Accept: accept,
+        // Never set Content-Type for FormData: the browser owns the boundary.
+        ...(isForm || body === undefined ? {} : { "Content-Type": "application/json" }),
+        ...headers,
+      },
+      body: payload,
+    },
+    { signal, timeout },
+  );
+}
+
 export async function request(path, options = {}) {
   const {
     method = "GET",
@@ -65,19 +96,7 @@ export async function request(path, options = {}) {
     timeout = DEFAULT_TIMEOUT,
   } = options;
 
-  const response = await fetchWithTimeout(
-    path,
-    {
-      method,
-      headers: {
-        ...JSON_HEADERS,
-        ...(body === undefined ? {} : { "Content-Type": "application/json" }),
-        ...headers,
-      },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    },
-    { signal, timeout },
-  );
+  const response = await send(path, { method, body, headers, signal, timeout });
   return readJsonResponse(response);
 }
 
@@ -89,12 +108,7 @@ export const del = (path, options) => request(path, { ...options, method: "DELET
 export async function requestForm(path, options = {}) {
   const { method = "POST", form, signal, timeout = 30_000 } = options;
 
-  const response = await fetchWithTimeout(
-    path,
-    // Never set Content-Type for FormData: the browser owns the boundary.
-    { method, headers: { Accept: "application/json" }, body: form },
-    { signal, timeout },
-  );
+  const response = await send(path, { method, form, signal, timeout });
   return readJsonResponse(response);
 }
 
@@ -103,19 +117,14 @@ export async function requestForm(path, options = {}) {
 export async function requestStream(path, options = {}) {
   const { method = "POST", body, signal, timeout = 0, headers } = options;
 
-  const response = await fetchWithTimeout(
-    path,
-    {
-      method,
-      headers: {
-        Accept: "audio/*",
-        ...(body === undefined ? {} : { "Content-Type": "application/json" }),
-        ...headers,
-      },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    },
-    { signal, timeout },
-  );
+  const response = await send(path, {
+    method,
+    body,
+    headers,
+    signal,
+    timeout,
+    accept: "audio/*",
+  });
 
   if (!response.ok) {
     throw ApiError.fromResponse(response, await readJson(response));
@@ -126,19 +135,14 @@ export async function requestStream(path, options = {}) {
 export async function requestAudio(path, options = {}) {
   const { method = "POST", body, signal, timeout = 0, headers } = options;
 
-  const response = await fetchWithTimeout(
-    path,
-    {
-      method,
-      headers: {
-        Accept: "audio/*",
-        ...(body === undefined ? {} : { "Content-Type": "application/json" }),
-        ...headers,
-      },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    },
-    { signal, timeout },
-  );
+  const response = await send(path, {
+    method,
+    body,
+    headers,
+    signal,
+    timeout,
+    accept: "audio/*",
+  });
 
   if (!response.ok) {
     throw ApiError.fromResponse(response, await readJson(response));

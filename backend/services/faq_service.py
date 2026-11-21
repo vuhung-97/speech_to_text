@@ -16,7 +16,8 @@ from ..domain.faq.normalize import normalize_question
 from ..domain.faq.rules import validate_entry
 from ..ports.embedding import Embedder
 from ..ports.faq import FaqIndex, FaqRepository
-from .faq_import import FaqImportService
+from .faq_import import (CsvImportReport, FaqImportService,
+                         OutlineImportReport)
 
 
 class FaqService:
@@ -96,11 +97,11 @@ class FaqService:
         return payload
 
     # ------------------------------------------------------------------ import
-    def import_csv(self, tenant: str, content: str) -> dict[str, object]:
+    def import_csv(self, tenant: str, content: str) -> CsvImportReport:
         return self._imports.import_csv(tenant, content)
 
     def import_outline(self, tenant: str, entries: Sequence[FaqOutline],
-                       *, document: FaqDocument) -> dict[str, object]:
+                       *, document: FaqDocument) -> OutlineImportReport:
         return self._imports.import_outline(tenant, entries, document=document)
 
     # ----------------------------------------------------------------- helpers

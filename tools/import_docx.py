@@ -13,14 +13,14 @@ involved at any point.
 from __future__ import annotations
 
 import argparse
-import sys
 from pathlib import Path
 
-if hasattr(sys.stdout, "reconfigure"):
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+try:
+    from ._shared import bootstrap
+except ImportError:  # run as a script: python tools/import_docx.py
+    from _shared import bootstrap
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+bootstrap()
 
 from backend.adapters.embedding.onnx_e5 import build_embedder  # noqa: E402
 from backend.adapters.importer.docx_faq import parse_docx  # noqa: E402

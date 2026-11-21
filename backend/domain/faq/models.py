@@ -87,12 +87,6 @@ class FaqEntry:
     document_id: str = ""
     extra: dict[str, Any] = field(default_factory=dict)
 
-    @property
-    def words(self) -> int:
-        from ..text.limits import word_count
-
-        return word_count(self.answer)
-
 
 def score_percent(score: float) -> int:
     """Cosine score (0..1) as the integer percentage shown in the UI.

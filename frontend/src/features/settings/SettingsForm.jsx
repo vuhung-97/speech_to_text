@@ -42,6 +42,16 @@ export default function SettingsForm() {
   const { settings } = useSettings();
   const { pending, engine } = useLive();
 
+  // Known groups keep their order; a plugin that adds a new group still shows
+  // up at the end instead of being silently hidden.
+  const present = new Set(
+    (settings.fields || []).map((field) => field.group).filter(Boolean),
+  );
+  const groups = [
+    ...GROUPS.filter((group) => present.has(group)),
+    ...[...present].filter((group) => !GROUPS.includes(group)),
+  ];
+
   return (
     <div className="space-y-5">
       {settings.warnings?.length > 0 && (
@@ -57,8 +67,8 @@ export default function SettingsForm() {
         </ul>
       )}
 
-      {GROUPS.map((group) => {
-        const fields = settings.fields.filter(
+      {groups.map((group) => {
+        const fields = (settings.fields || []).filter(
           (field) =>
             field.group === group &&
             field.key !== "device" &&
@@ -68,7 +78,7 @@ export default function SettingsForm() {
         return (
           <section key={group} className="border-b border-white/5 pb-2 last:border-0">
             <h3 className="mb-2 flex items-center gap-2 text-[11px] font-semibold tracking-[0.09em] text-faint uppercase">
-              {GROUP_TITLES[group]}
+              {GROUP_TITLES[group] || group}
               {group === "engine" && <EngineBadge engine={engine} />}
             </h3>
             {fields.map((field) => (

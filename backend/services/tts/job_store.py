@@ -66,18 +66,25 @@ class TtsJobStore:
         self._bytes_per_second = int(sample_rate) * 2
         self._ttl = float(ttl_seconds)
         self._jobs: dict[str, SpeechJob] = {}
-        self._lock = threading.Lock()
+        # Re-entrant: ``create`` holds the lock while calling the quota helpers,
+        # which take it again. One lock owns both the registry and ``_active``.
+        self._lock = threading.RLock()
         self._active: SpeechJob | None = None
 
     # ------------------------------------------------------------------ reads
-    @property
-    def busy(self) -> bool:
+    def _busy_locked(self) -> bool:
         active = self._active
         return bool(active and not active.finalized and not active.cancelled.is_set())
 
     @property
+    def busy(self) -> bool:
+        with self._lock:
+            return self._busy_locked()
+
+    @property
     def active(self) -> SpeechJob | None:
-        return self._active
+        with self._lock:
+            return self._active
 
     def values(self) -> list[SpeechJob]:
         """Snapshot of every tracked job (used by tests and housekeeping)."""
@@ -85,63 +92,73 @@ class TtsJobStore:
             return list(self._jobs.values())
 
     def get(self, job_id: str) -> SpeechJob | None:
-        return self._jobs.get(job_id)
+        with self._lock:
+            return self._jobs.get(job_id)
 
     def status(self, job_id: str) -> dict[str, Any] | None:
-        job = self._jobs.get(job_id)
-        if job is None:
-            return None
-        done = job.seconds
+        with self._lock:
+            job = self._jobs.get(job_id)
+            if job is None:
+                return None
+            done = job.seconds
+            bytes_written = job.bytes
+            finalized = job.finalized
+            cancelled = job.cancelled.is_set()
         estimate = max(job.estimated_seconds, 0.001)
         return {
             "id": job.id,
             "seconds": round(done, 2),
             "estimated_seconds": round(job.estimated_seconds, 1),
-            "bytes": job.bytes,
+            "bytes": bytes_written,
             "sample_rate": TTS_SAMPLE_RATE,
-            "finalized": job.finalized,
-            "cancelled": job.cancelled.is_set(),
+            "finalized": finalized,
+            "cancelled": cancelled,
             "progress": round(min(1.0, done / estimate), 3),
         }
 
     def path(self, job_id: str) -> Path | None:
-        job = self._jobs.get(job_id)
-        if job is None or not job.finalized:
-            return None
-        return job.wav_path
+        with self._lock:
+            job = self._jobs.get(job_id)
+            if job is None or not job.finalized:
+                return None
+            return job.wav_path
 
     # ----------------------------------------------------------------- writes
     def create(self, text: str, voice: str | None,
                session_id: str | None = None) -> SpeechJob:
-        """Validate the disk budget and reserve a temp session for one job."""
-        if self.busy:
-            raise TtsBusy("đang đọc một văn bản khác — dừng lại rồi thử tiếp")
+        """Validate the disk budget and reserve a temp session for one job.
 
-        estimated = max(1.0, len(text) / CHARS_PER_SECOND)
-        needed = int(estimated * self._bytes_per_second)
-        self._prune_finished()
-        if needed > self._quota_bytes:
-            raise TtsStorageError(
-                "văn bản vượt quá hạn mức đĩa cho phép — giảm bớt độ dài")
-        self._evict_for_quota(needed)
-        if free_bytes(self._temp_root) < needed + DISK_HEADROOM_BYTES:
-            raise TtsStorageError(
-                "không đủ dung lượng đĩa cho văn bản này — giảm bớt độ dài")
-
-        session = TempSession(self._temp_root, session_id)
-        store = session.store("audio", TTS_SAMPLE_RATE)
-        job = SpeechJob(
-            id=session.id,
-            session=session,
-            store=store,
-            text=text,
-            voice=voice,
-            estimated_seconds=estimated,
-        )
+        The whole check-and-reserve is one critical section: two concurrent
+        requests must never both pass ``busy`` and start a second synthesis.
+        """
         with self._lock:
+            if self._busy_locked():
+                raise TtsBusy("đang đọc một văn bản khác — dừng lại rồi thử tiếp")
+
+            estimated = max(1.0, len(text) / CHARS_PER_SECOND)
+            needed = int(estimated * self._bytes_per_second)
+            self._prune_finished()
+            if needed > self._quota_bytes:
+                raise TtsStorageError(
+                    "văn bản vượt quá hạn mức đĩa cho phép — giảm bớt độ dài")
+            self._evict_for_quota(needed)
+            if free_bytes(self._temp_root) < needed + DISK_HEADROOM_BYTES:
+                raise TtsStorageError(
+                    "không đủ dung lượng đĩa cho văn bản này — giảm bớt độ dài")
+
+            session = TempSession(self._temp_root, session_id)
+            store = session.store("audio", TTS_SAMPLE_RATE)
+            job = SpeechJob(
+                id=session.id,
+                session=session,
+                store=store,
+                text=text,
+                voice=voice,
+                estimated_seconds=estimated,
+            )
             self._jobs[job.id] = job
             self._active = job
-        return job
+            return job
 
     def finish(self, job: SpeechJob, failed: bool) -> None:
         """Close a streamed job: drop it on failure, else keep the WAV."""
@@ -155,12 +172,14 @@ class TtsJobStore:
             job.finalized = True
 
     def cancel(self, job_id: str) -> bool:
-        job = self._jobs.get(job_id)
-        if job is None:
-            return False
-        job.cancelled.set()
-        job.store.fail(TtsCancelled("đã huỷ"))
-        if job.finalized:
+        with self._lock:
+            job = self._jobs.get(job_id)
+            if job is None:
+                return False
+            job.cancelled.set()
+            job.store.fail(TtsCancelled("đã huỷ"))
+            finalized = job.finalized
+        if finalized:
             self._drop_job(job)
         return True
 

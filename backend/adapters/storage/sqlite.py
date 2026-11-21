@@ -20,6 +20,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
+from ...domain.faq.models import score_percent
 from ...domain.faq.normalize import normalize_question
 from ...domain.faq.query import focus_question
 from ...domain.qa.models import (Answer, Question, SessionNotFound,
@@ -310,6 +311,39 @@ class Database:
                 )
 
 
+def _answer_payload(row: sqlite3.Row) -> dict[str, Any] | None:
+    """One saved answer in the same shape as the live ``ask`` response.
+
+    ``matched`` is rebuilt from the entry the answer points at, so reopening a
+    session shows the same evidence chip as the original response.
+    """
+    if row["answer_id"] is None:
+        return None
+    entry_id = row["entry_id"]
+    score = row["score"]
+    matched = None
+    if entry_id and row["matched_question"] is not None:
+        matched = {
+            "id": entry_id,
+            "question": row["matched_question"],
+            "category": row["matched_category"] or "",
+            "score": score,
+            "percent": score_percent(score or 0.0),
+        }
+    return {
+        "id": row["answer_id"],
+        "text": row["text"],
+        "status": row["status"],
+        "answered": row["status"] in ("matched", "near_miss"),
+        "entry_id": entry_id,
+        "score": score,
+        "seconds": row["seconds"],
+        "created_at": row["answered_at"],
+        "matched": matched,
+        "candidates": [],
+    }
+
+
 class SqliteSessionRepository:
     """Sessions, turns and answers with strict tenant scoping."""
 
@@ -359,9 +393,12 @@ class SqliteSessionRepository:
                 """
                 SELECT t.id AS turn_id, t.question, t.source, t.created_at AS asked_at,
                        a.id AS answer_id, a.text, a.status, a.entry_id, a.score,
-                       a.seconds, a.created_at AS answered_at
+                       a.seconds, a.created_at AS answered_at,
+                       e.question AS matched_question,
+                       e.category AS matched_category
                 FROM turns t
                 LEFT JOIN answers a ON a.turn_id = t.id
+                LEFT JOIN faq_entries e ON e.id = a.entry_id
                 WHERE t.session_id = ? AND t.tenant_id = ?
                 ORDER BY t.created_at ASC
                 """,
@@ -375,15 +412,7 @@ class SqliteSessionRepository:
                 "question": row["question"],
                 "source": row["source"],
                 "created_at": row["asked_at"],
-                "answer": None if row["answer_id"] is None else {
-                    "id": row["answer_id"],
-                    "text": row["text"],
-                    "status": row["status"],
-                    "entry_id": row["entry_id"],
-                    "score": row["score"],
-                    "seconds": row["seconds"],
-                    "created_at": row["answered_at"],
-                },
+                "answer": _answer_payload(row),
             }
             for row in rows
         ]

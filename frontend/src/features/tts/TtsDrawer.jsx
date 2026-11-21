@@ -3,6 +3,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "../../app/ToastProvider";
+import Alert from "../../components/ui/Alert";
+import { countWords } from "../../utils/format";
 import QuickResult from "./QuickResult";
 import StreamProgress from "./StreamProgress";
 import TtsTextForm from "./TtsTextForm";
@@ -31,11 +33,6 @@ function CloseIcon() {
       <path d="M18 6 6 18M6 6l12 12" />
     </svg>
   );
-}
-
-function countWords(value) {
-  const text = (value || "").trim();
-  return text ? text.split(/\s+/).length : 0;
 }
 
 export default function TtsDrawer({ open, onClose, text: presetText = "" }) {
@@ -195,16 +192,14 @@ export default function TtsDrawer({ open, onClose, text: presetText = "" }) {
 
         <div className="scroll-thin flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5">
           {!catalog.available && (
-            <p className="m-0 rounded-lg border border-err/35 bg-err/10 px-3 py-2 text-[12px] text-err">
-              {catalog.reason || "TTS chưa sẵn sàng."}
-            </p>
+            <Alert>{catalog.reason || "TTS chưa sẵn sàng."}</Alert>
           )}
 
           {needsDownload && (
-            <p className="m-0 rounded-lg border border-accent/35 bg-accent/10 px-3 py-2 text-[12px] text-accent">
+            <Alert tone="accent">
               Chưa đủ model trong <code>models/vieneu</code> — lần đọc đầu sẽ tải từ
               Hugging Face (cần mạng).
-            </p>
+            </Alert>
           )}
 
           <div
@@ -254,20 +249,16 @@ export default function TtsDrawer({ open, onClose, text: presetText = "" }) {
             <StreamProgress speech={speech} label={playerLabel} />
           )}
 
-          {quick.error && (
-            <p className="m-0 rounded-lg border border-err/35 bg-err/10 px-3 py-2 text-[12px] text-err">
-              {quick.error}
-            </p>
-          )}
+          {quick.error && <Alert>{quick.error}</Alert>}
 
           {mode === "quick" && <QuickResult audio={quick.audio} audioRef={quickAudioRef} />}
 
           {overLimit && (
-            <p className="m-0 rounded-lg border border-err/35 bg-err/10 px-3 py-2 text-[12px] text-err">
+            <Alert>
               {mode === "stream"
                 ? `Vượt ${catalog.maxWords} từ — hãy rút ngắn hoặc chia thành nhiều lần đọc.`
                 : `Vượt ${catalog.maxChars} ký tự — chuyển sang "Đọc ngay" để đọc văn bản dài.`}
-            </p>
+            </Alert>
           )}
         </div>
 

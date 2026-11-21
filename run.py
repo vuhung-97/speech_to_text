@@ -1,4 +1,4 @@
-"""Start the STT server (web UI + API). See backend/app.py for all options.
+"""Start the STT server (web UI + API). See backend/main.py for all options.
 
 Run:  python run.py
       python run.py --mode accurate --no-browser

@@ -37,15 +37,6 @@ SAMPLE_RATE = TTS_SAMPLE_RATE
 logger = logging.getLogger("stt_binh.tts")
 
 
-def _to_wav(audio: np.ndarray, sample_rate: int) -> bytes:
-    """Mono float32 in [-1, 1] -> a self-contained PCM16 WAV payload.
-
-    Converted block by block so the peak stays ~2.5× the waveform instead of
-    the ~5× of clip/copy/tobytes/getvalue chaining.
-    """
-    return to_wav_bytes(audio, sample_rate)
-
-
 class TtsService:
     """Lazy owner of the VieNeu engine, the voice catalog and WAV synthesis."""
 
@@ -164,7 +155,7 @@ class TtsService:
             raise ValueError("model không tạo được âm thanh cho văn bản này")
         rate = int(getattr(engine, "sample_rate", SAMPLE_RATE))
         seconds = len(audio) / float(rate)
-        return _to_wav(audio, rate), seconds
+        return to_wav_bytes(audio, rate), seconds
 
     def stream_pcm(self, text: str,
                    voice: str | None = None) -> Iterator[bytes]:

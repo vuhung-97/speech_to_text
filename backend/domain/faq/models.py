@@ -94,6 +94,15 @@ class FaqEntry:
         return word_count(self.answer)
 
 
+def score_percent(score: float) -> int:
+    """Cosine score (0..1) as the integer percentage shown in the UI.
+
+    One conversion point: the API, the session history and ``FaqMatch.percent``
+    must all render the same number for the same score.
+    """
+    return round(max(0.0, min(1.0, float(score))) * 100)
+
+
 @dataclass(frozen=True)
 class FaqMatch:
     """An entry plus the cosine similarity that selected it."""
@@ -103,7 +112,7 @@ class FaqMatch:
 
     @property
     def percent(self) -> int:
-        return round(max(0.0, min(1.0, self.score)) * 100)
+        return score_percent(self.score)
 
 
 @dataclass(frozen=True)
@@ -151,4 +160,5 @@ __all__ = [
     "FaqResult",
     "MAX_DOCUMENT_NAME_CHARS",
     "outline_fingerprint",
+    "score_percent",
 ]

@@ -13,5 +13,15 @@ export const LEVEL_SCALE = 220;
 
 export const MIC_STORAGE_KEY = "mic.device";
 
+export function readMicDevice() {
+  if (typeof window === "undefined") return "";
+  return window.localStorage.getItem(MIC_STORAGE_KEY) || "";
+}
+
+export function saveMicDevice(deviceId) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(MIC_STORAGE_KEY, deviceId || "");
+}
+
 export const WORKLET_URL = "/worklets/pcm-processor.js";
 export const WS_AUDIO_PATH = `/ws/audio?sample_rate=${MIC_RATE}`;

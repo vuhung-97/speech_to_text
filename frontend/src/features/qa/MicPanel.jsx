@@ -1,4 +1,6 @@
+import Alert from "../../components/ui/Alert";
 import Badge from "../../components/ui/Badge";
+import { countWords } from "../../utils/format";
 import PanelSection from "./PanelSection";
 
 export default function MicPanel({
@@ -17,7 +19,7 @@ export default function MicPanel({
       <div className="flex items-center justify-between text-[12px]">
         <span className={listen.active ? "text-accent" : "text-dim"}>{micLabel}</span>
         <Badge tone={listen.active ? "accent" : "neutral"}>
-          {liveText ? liveText.split(/\s+/).length : 0} từ
+          {countWords(liveText)} từ
         </Badge>
       </div>
 
@@ -47,21 +49,21 @@ export default function MicPanel({
       )}
 
       {silentMic && (
-        <p className="mt-2 mb-0 rounded-lg border border-accent/30 bg-accent/[0.08] px-2 py-1.5 text-[11px] leading-relaxed text-accent">
+        <Alert tone="note" size="sm" className="mt-2">
           Có gửi audio nhưng mức âm thanh gần 0: chọn micro khác trong danh sách,
           hoặc kiểm tra Windows → Sound → Input.
-        </p>
+        </Alert>
       )}
       {insecure && (
-        <p className="mt-2 mb-0 rounded-lg border border-err/35 bg-err/10 px-2 py-1.5 text-[11px] leading-relaxed text-err">
+        <Alert size="sm" className="mt-2">
           Trang không chạy HTTPS nên trình duyệt chặn micro. Dùng localhost hoặc
           cấu hình HTTPS cho LAN (xem docs/TRIEN_KHAI_LAN.md).
-        </p>
+        </Alert>
       )}
       {listen.notice && (
-        <p className="mt-2 mb-0 rounded-lg border border-accent/30 bg-accent/[0.08] px-2 py-1.5 text-[11px] leading-relaxed text-accent">
+        <Alert tone="note" size="sm" className="mt-2">
           {listen.notice}
-        </p>
+        </Alert>
       )}
 
       {listen.micState !== "live" && (

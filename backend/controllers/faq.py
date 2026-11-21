@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from ..domain.faq.models import (FaqDocument, FaqDocumentNotFound, FaqEntry,
                                  FaqEntryNotFound)
-from ..services.tts_service import TtsBusy
+from ..services.tts.errors import TtsBusy
 from ..utils.errors import ApiError, NotFoundError
 from .deps import (AuditDep, FaqAudioDep, FaqDocumentsDep, FaqServiceDep,
                    OutlineParserDep, TenantDep)

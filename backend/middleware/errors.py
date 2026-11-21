@@ -1,13 +1,22 @@
-"""Exception middleware: every failure becomes a JSON ``{ok, error}`` response."""
+"""Exception middleware: every failure becomes a JSON ``{ok, error}`` response.
+
+Client mistakes keep their message (``ApiError``/``ValueError``). Unexpected
+failures are logged with the traceback and answered with a generic message so
+internal paths, SQL and stack details never leak to the browser.
+"""
 
 from __future__ import annotations
 
-import traceback
+import logging
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from ..utils.errors import ApiError
+
+logger = logging.getLogger("stt_binh.http")
+
+INTERNAL_ERROR_TEXT = "máy chủ gặp lỗi không mong muốn"
 
 
 def register(app: FastAPI) -> None:
@@ -26,6 +35,9 @@ def register(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def _unhandled(request: Request, exc: Exception) -> JSONResponse:
-        traceback.print_exception(type(exc), exc, exc.__traceback__)
-        return JSONResponse({"ok": False, "error": str(exc) or exc.__class__.__name__},
+        logger.exception("unhandled error on %s %s", request.method, request.url.path)
+        return JSONResponse({"ok": False, "error": INTERNAL_ERROR_TEXT},
                             status_code=500)
+
+
+__all__ = ["INTERNAL_ERROR_TEXT", "register"]

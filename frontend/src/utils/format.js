@@ -16,14 +16,9 @@ export function formatValue(field, value) {
   return `${value}${unit}`;
 }
 
-export function joinTranscript(paragraphs, live) {
-  const parts = paragraphs.map((paragraph) => paragraph.text);
-  if (live.stable) parts.push(live.stable);
-  if (live.tentative) parts.push(live.tentative);
-  return parts.join(" ").replace(/\s+/g, " ").trim();
-}
-
-export function countWords(paragraphs, live) {
-  const text = joinTranscript(paragraphs, live);
-  return text ? text.split(/\s+/).length : 0;
+// One definition of "number of words" for every screen (dictation counter,
+// TTS limits, mic panel). Vietnamese text is whitespace separated.
+export function countWords(text) {
+  const value = (text || "").trim();
+  return value ? value.split(/\s+/).length : 0;
 }

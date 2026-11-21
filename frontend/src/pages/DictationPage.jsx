@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import LevelMeter from "../components/LevelMeter";
+import Alert from "../components/ui/Alert";
 import ControlsBar from "../components/ControlsBar";
 import SettingsDrawer from "../features/settings/SettingsDrawer";
 import StatusPill from "../components/StatusPill";
@@ -10,9 +11,8 @@ import TtsDrawer from "../features/tts/TtsDrawer";
 import { useLive } from "../features/dictation/LiveProvider";
 import { useSpeechStream } from "../features/mic/useSpeechStream";
 import { useToast } from "../app/ToastProvider";
-import { MIC_STORAGE_KEY } from "../features/mic/constants";
-
-const MIC_KEY = MIC_STORAGE_KEY;
+import { readMicDevice } from "../features/mic/constants";
+import { countWords } from "../utils/format";
 
 function Brand() {
   return (
@@ -72,8 +72,7 @@ export default function DictationPage() {
       await stream.stop();
       return;
     }
-    const deviceId = window.localStorage.getItem(MIC_KEY) || "";
-    await stream.start(deviceId);
+    await stream.start(readMicDevice());
   }, [connecting, listening, stream]);
 
   const clearAll = () => {
@@ -82,7 +81,7 @@ export default function DictationPage() {
   };
 
   const fullText = transcript.paragraphs.map((item) => item.text).join(" ").trim();
-  const words = fullText ? fullText.split(/\s+/).length : 0;
+  const words = countWords(fullText);
   const live = stream.live;
 
   const copy = async () => {
@@ -176,11 +175,7 @@ export default function DictationPage() {
           </div>
         </header>
 
-        {stream.error && (
-          <p className="m-0 rounded-lg border border-err/35 bg-err/10 px-3 py-2 text-[12px] text-err">
-            {stream.error}
-          </p>
-        )}
+        {stream.error && <Alert>{stream.error}</Alert>}
 
         <LevelMeter level={stream.level} speaking={listening && Boolean(live.stable || live.tentative)} />
 

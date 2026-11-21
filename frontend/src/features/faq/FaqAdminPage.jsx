@@ -4,6 +4,7 @@
 import { useRef } from "react";
 
 import AppShell from "../../app/AppShell";
+import Alert from "../../components/ui/Alert";
 import Button from "../../components/ui/Button";
 import FaqDocumentsPanel from "./FaqDocumentsPanel";
 import FaqEntryForm from "./FaqEntryForm";
@@ -95,9 +96,7 @@ export default function FaqAdminPage() {
       <div className="scroll-thin min-h-0 flex-1 overflow-y-auto px-5 py-5">
         <div className="mx-auto max-w-[860px] space-y-4">
           {(admin.error || documents.error) && (
-            <p className="m-0 rounded-lg border border-err/35 bg-err/10 px-3 py-2 text-[12px] text-err">
-              {admin.error || documents.error}
-            </p>
+            <Alert>{admin.error || documents.error}</Alert>
           )}
 
           {admin.report && <FaqImportReport report={admin.report} />}

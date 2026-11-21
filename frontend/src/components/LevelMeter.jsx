@@ -3,6 +3,8 @@
 
 import { useEffect, useRef } from "react";
 
+import { levelRatio } from "../utils/level";
+
 export default function LevelMeter({ level = 0, speaking = false }) {
   const fill = useRef(null);
   const target = useRef(0);
@@ -13,7 +15,7 @@ export default function LevelMeter({ level = 0, speaking = false }) {
     let frame = 0;
     const tick = () => {
       shown.current += (target.current - shown.current) * 0.22;
-      const ratio = Math.min(1, Math.pow(Math.max(0, shown.current) * 13, 0.55));
+      const ratio = levelRatio(shown.current);
       if (fill.current) {
         fill.current.style.transform = `scaleX(${ratio.toFixed(3)})`;
       }

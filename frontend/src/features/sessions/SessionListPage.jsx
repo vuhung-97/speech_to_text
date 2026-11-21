@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import AppShell from "../../app/AppShell";
+import Alert from "../../components/ui/Alert";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import EmptyState from "../../components/ui/EmptyState";
@@ -75,11 +76,7 @@ export default function SessionListPage() {
       }
     >
       <div className="scroll-thin min-h-0 flex-1 overflow-y-auto px-5 py-5">
-        {error && (
-          <p className="mx-auto mb-3 max-w-[820px] rounded-lg border border-err/35 bg-err/10 px-3 py-2 text-[12px] text-err">
-            {error}
-          </p>
-        )}
+        {error && <Alert className="mx-auto mb-3 max-w-[820px]">{error}</Alert>}
 
         {!loading && !items.length && !error && (
           <div className="mx-auto max-w-[720px]">

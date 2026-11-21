@@ -98,6 +98,31 @@ export async function requestForm(path, options = {}) {
   return readJsonResponse(response);
 }
 
+// Streaming responses (PCM, SSE-like bodies) stay inside the transport too:
+// callers get the raw ``Response`` but never repeat fetch/error handling.
+export async function requestStream(path, options = {}) {
+  const { method = "POST", body, signal, timeout = 0, headers } = options;
+
+  const response = await fetchWithTimeout(
+    path,
+    {
+      method,
+      headers: {
+        Accept: "audio/*",
+        ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+        ...headers,
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    },
+    { signal, timeout },
+  );
+
+  if (!response.ok) {
+    throw ApiError.fromResponse(response, await readJson(response));
+  }
+  return response;
+}
+
 export async function requestAudio(path, options = {}) {
   const { method = "POST", body, signal, timeout = 0, headers } = options;
 

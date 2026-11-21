@@ -23,7 +23,6 @@ export function useListen({ onText } = {}) {
 
   const activeRef = useRef(false);
   const baselineRef = useRef(0);
-  const pendingRef = useRef([]);
   const graceRef = useRef(0);
   const hardRef = useRef(0);
   const onTextRef = useRef(onText);
@@ -55,10 +54,7 @@ export function useListen({ onText } = {}) {
 
   const deliver = useCallback((text) => {
     const value = (text || "").trim();
-    if (!value) return;
-    const callback = onTextRef.current;
-    if (callback) callback(value);
-    else pendingRef.current.push(value);
+    if (value) onTextRef.current?.(value);
   }, []);
 
   const finish = useCallback(async () => {
@@ -70,13 +66,6 @@ export function useListen({ onText } = {}) {
     const live = liveRef.current;
     const tail = `${live.stable || ""} ${live.tentative || ""}`.trim();
     await stopMicRef.current();
-
-    if (!onTextRef.current) {
-      // No consumer: keep the legacy "full transcript on stop" behaviour.
-      const heard = pendingRef.current.join(" ").trim();
-      pendingRef.current = [];
-      return heard || tail;
-    }
     deliver(tail);
     return tail;
   }, [clearTimers, deliver]);
@@ -95,7 +84,6 @@ export function useListen({ onText } = {}) {
   const start = useCallback(async (deviceId) => {
     if (activeRef.current) return;
     clearStreamRef.current();
-    pendingRef.current = [];
     baselineRef.current = lastFinalRef.current.seq;
     const opened = await startMicRef.current(deviceId);
     if (!opened) return;

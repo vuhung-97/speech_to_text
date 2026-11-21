@@ -5,6 +5,7 @@
 // being recognised and is read-only, so server updates never fight the caret.
 // Enter still submits: the screen stops the mic and appends the spoken tail.
 
+import Alert from "../../components/ui/Alert";
 import Button from "../../components/ui/Button";
 import { GRACE_MS } from "../mic/constants";
 
@@ -59,9 +60,9 @@ export default function Composer({
       className="shrink-0 border-t border-line bg-surface/70 px-5 py-3"
     >
       {error && (
-        <p className="mx-auto mb-2 max-w-[720px] rounded-lg border border-err/35 bg-err/10 px-3 py-1.5 text-[12px] text-err">
+        <Alert size="compact" className="mx-auto mb-2 max-w-[720px]">
           {error}
-        </p>
+        </Alert>
       )}
 
       <div className="mx-auto flex max-w-[720px] items-end gap-2">

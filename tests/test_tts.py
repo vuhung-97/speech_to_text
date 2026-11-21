@@ -21,11 +21,12 @@ from fastapi.testclient import TestClient
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from backend.config.paths import VIENEU_CUSTOM_VOICES
+from backend.domain.audio.pcm import to_wav_bytes
 from backend.main import create_app
-from backend.services.tts_service import (MAX_TTS_CHARS, TtsService, TtsUnavailable,
-                                          _to_wav)
+from backend.services.tts_service import (MAX_TTS_CHARS, TtsService,
+                                          TtsUnavailable)
 
-TINY_WAV = _to_wav(np.zeros(480, dtype=np.float32), 48_000)
+TINY_WAV = to_wav_bytes(np.zeros(480, dtype=np.float32), 48_000)
 
 
 class FakeTts:
@@ -72,7 +73,7 @@ def make_client(tts: FakeTts) -> TestClient:
 # --------------------------------------------------------------------------
 def test_wav_packaging() -> None:
     audio = (0.5 * np.sin(np.linspace(0, 20, 4_800))).astype(np.float32)
-    payload = _to_wav(audio, 48_000)
+    payload = to_wav_bytes(audio, 48_000)
     assert payload[:4] == b"RIFF"
 
     with wave.open(io.BytesIO(payload), "rb") as handle:
@@ -83,7 +84,7 @@ def test_wav_packaging() -> None:
 
 
 def test_wav_clips_out_of_range() -> None:
-    payload = _to_wav(np.array([-3.0, 0.0, 3.0], dtype=np.float32), 16_000)
+    payload = to_wav_bytes(np.array([-3.0, 0.0, 3.0], dtype=np.float32), 16_000)
     with wave.open(io.BytesIO(payload), "rb") as handle:
         pcm = np.frombuffer(handle.readframes(3), dtype="<i2")
     assert pcm[0] == -32767 and pcm[1] == 0 and pcm[2] == 32767

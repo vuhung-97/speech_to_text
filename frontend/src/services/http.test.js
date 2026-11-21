@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "./errors";
-import { request, requestAudio, requestForm } from "./http";
+import { request, requestAudio, requestForm, requestStream } from "./http";
 
 function jsonResponse(body, { status = 200 } = {}) {
   return new Response(JSON.stringify(body), {
@@ -72,6 +72,33 @@ describe("requestForm", () => {
 
     const [, init] = fetchMock.mock.calls[0];
     expect(init.headers["Content-Type"]).toBeUndefined();
+  });
+});
+
+describe("requestStream", () => {
+  it("returns the raw response so callers can read the body", async () => {
+    const response = new Response("pcm", {
+      status: 200,
+      headers: { "Content-Type": "audio/L16" },
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response));
+
+    const result = await requestStream("/api/v1/tts/stream", { body: { text: "x" } });
+
+    await expect(result.text()).resolves.toBe("pcm");
+  });
+
+  it("normalises a non-2xx response to ApiError", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(jsonResponse({ ok: false, error: "đang bận" }, { status: 409 })),
+    );
+
+    await expect(requestStream("/api/v1/tts/stream", { body: {} })).rejects.toMatchObject({
+      name: "ApiError",
+      status: 409,
+      message: "đang bận",
+    });
   });
 });
 

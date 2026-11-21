@@ -6,7 +6,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 
 import AppShell from "../../app/AppShell";
-import { LEVEL_SCALE, SILENT_LEVEL } from "../mic/constants";
+import Alert from "../../components/ui/Alert";
+import { SILENT_LEVEL } from "../mic/constants";
+import { levelRatio } from "../../utils/level";
 import { useFaqDocuments, DOCUMENT_FILTER_KEY } from "../faq/hooks/useFaqDocuments";
 import Composer from "./Composer";
 import DocumentPicker from "./DocumentPicker";
@@ -101,10 +103,7 @@ export default function QaPage() {
 
   const lastAnswer = turns[turns.length - 1]?.answer || null;
   const liveText = `${listen.live.stable || ""} ${listen.live.tentative || ""}`.trim();
-  const levelPercent = Math.min(
-    100,
-    Math.round(Math.sqrt(Math.max(0, listen.level)) * LEVEL_SCALE),
-  );
+  const levelPercent = Math.round(levelRatio(listen.level) * 100);
   const silentMic =
     listen.active && listen.packets > 0 && listen.level < SILENT_LEVEL;
   const insecure =
@@ -191,11 +190,7 @@ export default function QaPage() {
         }}
       />
 
-      {error && (
-        <p className="mx-5 mb-2 rounded-lg border border-err/35 bg-err/10 px-3 py-2 text-[12px] text-err">
-          {error}
-        </p>
-      )}
+      {error && <Alert className="mx-5 mb-2">{error}</Alert>}
 
       <Composer
         value={draft}

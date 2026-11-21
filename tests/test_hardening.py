@@ -65,6 +65,26 @@ def test_duplicate_detected_beyond_200_entries(tmp_path: Path) -> None:
         service.create("local", "  câu hỏi số 204?  ", "Đáp án khác.")
 
 
+def test_unhandled_error_does_not_leak_details() -> None:
+    from fastapi import FastAPI
+
+    from backend.middleware import errors
+
+    app = FastAPI()
+    errors.register(app)
+
+    @app.get("/boom")
+    def boom() -> None:
+        raise RuntimeError("internal path C:/secret and SQL detail")
+
+    with TestClient(app, raise_server_exceptions=False) as client:
+        response = client.get("/boom")
+
+    assert response.status_code == 500
+    assert response.json() == {"ok": False, "error": errors.INTERNAL_ERROR_TEXT}
+    assert "secret" not in response.text
+
+
 def test_oversized_frame_is_ignored(client: TestClient) -> None:
     with client.websocket_connect("/ws/audio?sample_rate=16000") as ws:
         assert ws.receive_json()["type"] == "ready"

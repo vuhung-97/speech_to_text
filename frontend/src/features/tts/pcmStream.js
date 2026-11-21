@@ -6,6 +6,7 @@
 // created: a two-hour answer would be ~700 MB in the browser.
 
 import { ApiError } from "../../services/errors";
+import { requestStream } from "../../services/http";
 
 const FALLBACK_SAMPLE_RATE = 48_000;
 
@@ -27,36 +28,14 @@ function merge(left, right) {
   return merged;
 }
 
-async function readError(response) {
-  try {
-    const data = await response.json();
-    return data?.error || `HTTP ${response.status}`;
-  } catch {
-    return `HTTP ${response.status}`;
-  }
-}
-
 export async function streamSpeech(text, voice, handlers = {}) {
   const { onStart, onBlock, onProgress, onDone, signal } = handlers;
 
-  let response;
-  try {
-    response = await fetch("/api/v1/tts/stream", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "audio/L16" },
-      body: JSON.stringify({ text, voice: voice || null }),
-      signal,
-    });
-  } catch (error) {
-    throw ApiError.fromNetwork(error);
-  }
-
-  if (!response.ok) {
-    throw new ApiError(await readError(response), {
-      status: response.status,
-      code: "tts-stream",
-    });
-  }
+  const response = await requestStream("/api/v1/tts/stream", {
+    body: { text, voice: voice || null },
+    headers: { Accept: "audio/L16" },
+    signal,
+  });
 
   const sampleRate =
     Number(response.headers.get("X-Sample-Rate")) || FALLBACK_SAMPLE_RATE;

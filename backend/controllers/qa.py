@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import quote
 
 from fastapi import APIRouter
 from pydantic import BaseModel
-from urllib.parse import quote
 
-from ..domain.faq.models import FaqMatch
+from ..domain.faq.models import FaqMatch, score_percent
 from ..domain.qa.models import Answer, SessionNotFound
 from ..services.qa_service import QaOutcome
 from ..utils.errors import ApiError, NotFoundError
@@ -36,7 +36,7 @@ def _match_json(match: FaqMatch | None) -> dict[str, Any] | None:
         "question": match.entry.question,
         "category": match.entry.category,
         "score": round(match.score, 4),
-        "percent": match.percent,
+        "percent": score_percent(match.score),
     }
 
 

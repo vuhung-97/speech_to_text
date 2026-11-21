@@ -20,7 +20,7 @@ from ..config.paths import AUDIO_CACHE_DIR
 from ..domain.faq.models import FaqEntryNotFound
 from ..ports.faq import FaqAudioRepository, FaqRepository
 from ..ports.speech import SpeechSynthesizer
-from ..services.tts_service import TtsBusy
+from .tts.errors import TtsBusy
 
 MAX_CACHE_MB = 512
 MAX_JOBS = 20
@@ -50,12 +50,14 @@ class FaqAudioService:
         self._dir = Path(cache_dir) if cache_dir else AUDIO_CACHE_DIR
         self._quota = max(1, int(quota_mb)) * 1024 * 1024
         self._jobs: dict[str, FaqAudioJob] = {}
-        self._lock = threading.Lock()
+        # Re-entrant: ``start`` holds it while inspecting the cache/jobs.
+        self._lock = threading.RLock()
         self._running = False
 
     # ------------------------------------------------------------------ cache
     def cached(self, entry_id: str, tenant: str, voice: str) -> dict[str, object] | None:
-        return self._cached_locked(entry_id, tenant, voice)
+        with self._lock:
+            return self._cached_locked(entry_id, tenant, voice)
 
     def _cached_locked(self, entry_id: str, tenant: str,
                        voice: str) -> dict[str, object] | None:
@@ -117,17 +119,18 @@ class FaqAudioService:
         return job
 
     def status(self, job_id: str) -> dict[str, object] | None:
-        job = self._jobs.get(job_id)
-        if job is None:
-            return None
-        return {
-            "id": job.id,
-            "entry_id": job.entry_id,
-            "voice": job.voice,
-            "status": job.status,
-            "seconds": round(job.seconds, 2),
-            "error": job.error,
-        }
+        with self._lock:
+            job = self._jobs.get(job_id)
+            if job is None:
+                return None
+            return {
+                "id": job.id,
+                "entry_id": job.entry_id,
+                "voice": job.voice,
+                "status": job.status,
+                "seconds": round(job.seconds, 2),
+                "error": job.error,
+            }
 
     def _run(self, job: FaqAudioJob, text: str) -> None:
         prepared = None
@@ -147,12 +150,14 @@ class FaqAudioService:
                 path=str(target), seconds=prepared.seconds,
                 bytes_=prepared.store.size_bytes,
             )
-            job.seconds = prepared.seconds
-            job.status = "done"
+            with self._lock:
+                job.seconds = prepared.seconds
+                job.status = "done"
             self._evict(job.tenant)
         except Exception as exc:  # noqa: BLE001 - reported through job status
-            job.status = "error"
-            job.error = str(exc) or exc.__class__.__name__
+            with self._lock:
+                job.status = "error"
+                job.error = str(exc) or exc.__class__.__name__
         finally:
             if prepared is not None:
                 self._tts.cancel(prepared.id)

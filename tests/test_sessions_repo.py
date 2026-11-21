@@ -9,8 +9,10 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from backend.adapters.retrieval.sqlite_faq import SqliteFaqRepository
 from backend.adapters.storage.sqlite import (Database, SqliteQueryLog,
                                              SqliteSessionRepository)
+from backend.domain.faq.models import FaqEntry
 from backend.domain.qa.models import (Answer, AnswerStatus, Question,
                                       SessionNotFound, TurnNotFound)
 
@@ -58,6 +60,33 @@ def test_session_lifecycle(tmp_path: Path) -> None:
     assert sessions.delete_session(session_id, "local") is True
     assert sessions.get_session(session_id, "local") is None
     assert sessions.delete_session(session_id, "local") is False
+
+
+def test_session_detail_keeps_match_evidence(tmp_path: Path) -> None:
+    """Reopening a session must show the same evidence as the live answer."""
+    database, sessions, _ = make(tmp_path)
+    entries = SqliteFaqRepository(database)
+    entry = entries.upsert(FaqEntry(id="", tenant_id="local",
+                                    question="Thủ đô Việt Nam là gì?",
+                                    answer="Hà Nội.", category="Địa lý"))
+
+    session_id = sessions.create_session("local")
+    turn_id = sessions.add_turn(session_id, "local", Question("thủ đô là gì"))
+    sessions.save_answer(turn_id, "local", Answer(
+        id="a1", turn_id=turn_id, text="Hà Nội.", status=AnswerStatus.MATCHED,
+        entry_id=entry.id, score=0.923))
+
+    detail = sessions.get_session(session_id, "local")
+    answer = detail["turns"][0]["answer"]
+    assert answer["answered"] is True
+    assert answer["candidates"] == []
+    assert answer["matched"] == {
+        "id": entry.id,
+        "question": "Thủ đô Việt Nam là gì?",
+        "category": "Địa lý",
+        "score": 0.923,
+        "percent": 92,
+    }
 
 
 def test_tenants_cannot_see_each_other(tmp_path: Path) -> None:

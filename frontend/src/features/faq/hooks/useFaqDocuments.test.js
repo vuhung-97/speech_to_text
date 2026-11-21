@@ -61,4 +61,25 @@ describe("useFaqDocuments", () => {
   it("exposes a single storage key for the Q&A filter", () => {
     expect(DOCUMENT_FILTER_KEY).toBe("qa.document");
   });
+
+  it("remembers the selected set and forgets it when it disappears", async () => {
+    window.localStorage.clear();
+    const { result } = renderHook(() => useFaqDocuments());
+    await waitFor(() => expect(result.current.documents).toHaveLength(2));
+    expect(result.current.selectedId).toBe("");
+
+    act(() => result.current.select("d1"));
+    expect(result.current.selectedId).toBe("d1");
+    expect(window.localStorage.getItem(DOCUMENT_FILTER_KEY)).toBe("d1");
+
+    api.getFaqDocuments.mockResolvedValue({
+      items: [{ id: "d2", name: "de_b.docx", entry_count: 5 }],
+    });
+    await act(async () => {
+      await result.current.load();
+    });
+
+    await waitFor(() => expect(result.current.selectedId).toBe(""));
+    expect(window.localStorage.getItem(DOCUMENT_FILTER_KEY)).toBe("");
+  });
 });

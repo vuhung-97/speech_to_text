@@ -9,7 +9,7 @@ import {
   FALLBACK_MAX_WORDS,
   readVoice,
   saveVoice,
-} from "./constants";
+} from "../../shared/tts/constants";
 
 export function useTtsCatalog(open) {
   const [voices, setVoices] = useState([]);

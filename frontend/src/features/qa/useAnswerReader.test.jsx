@@ -10,10 +10,10 @@ const speechMock = {
   status: "idle",
 };
 
-vi.mock("../tts/useSpeechPlayer", () => ({
+vi.mock("../../shared/playback/useSpeechPlayer", () => ({
   useSpeechPlayer: () => speechMock,
 }));
-vi.mock("../tts/constants", () => ({
+vi.mock("../../shared/tts/constants", () => ({
   readVoice: () => "giọng",
 }));
 vi.mock("../../services/api", () => ({

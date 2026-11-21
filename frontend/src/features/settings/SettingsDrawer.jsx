@@ -1,4 +1,4 @@
-import { useLive } from "../dictation/LiveProvider";
+import { useLive } from "../../shared/live/LiveProvider";
 import SettingsActions from "./SettingsActions";
 import SettingsForm from "./SettingsForm";
 

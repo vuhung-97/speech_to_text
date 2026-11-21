@@ -1,8 +1,7 @@
 // Settings route: the same schema-driven form as the drawer, inline for deep links.
 
 import AppShell from "../app/AppShell";
-import SettingsActions from "../features/settings/SettingsActions";
-import SettingsForm from "../features/settings/SettingsForm";
+import { SettingsActions, SettingsForm } from "../features/settings";
 
 export default function SettingsPage() {
   return (

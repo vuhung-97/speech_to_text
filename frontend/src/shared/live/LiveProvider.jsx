@@ -11,7 +11,7 @@ import {
   useState,
 } from "react";
 
-import { useToast } from "../../app/ToastProvider";
+import { useToast } from "../ui/ToastProvider";
 import * as api from "../../services/api";
 import { connectEvents } from "../../services/sse";
 

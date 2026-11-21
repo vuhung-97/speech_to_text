@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { readMicDevice, saveMicDevice } from "../mic/constants";
+import { readMicDevice, saveMicDevice } from "../../shared/mic/constants";
 
 // Browser input devices + the remembered choice. The server never lists
 // microphones any more: each client owns its own.

@@ -1,17 +1,17 @@
 // Reading drawer: voice catalog, text input and the two synthesis modes.
 // Data loading lives in useTtsCatalog/useQuickSynth; this file composes them.
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useToast } from "../../app/ToastProvider";
+import { useEffect, useRef } from "react";
+import { useToast } from "../../shared/ui/ToastProvider";
 import Alert from "../../components/ui/Alert";
-import { countWords } from "../../utils/format";
+import { useSpeechPlayer } from "../../shared/playback/useSpeechPlayer";
 import QuickResult from "./QuickResult";
 import StreamProgress from "./StreamProgress";
 import TtsTextForm from "./TtsTextForm";
 import VoicePicker from "./VoicePicker";
 import { useQuickSynth } from "./useQuickSynth";
-import { useSpeechPlayer } from "./useSpeechPlayer";
 import { useTtsCatalog } from "./useTtsCatalog";
+import { useTtsComposer } from "./useTtsComposer";
 
 const MODES = [
   { id: "stream", label: "Đọc ngay" },
@@ -37,10 +37,18 @@ function CloseIcon() {
 
 export default function TtsDrawer({ open, onClose, text: presetText = "" }) {
   const { notify } = useToast();
-  const sourceText = presetText;
   const catalog = useTtsCatalog(open);
-  const [mode, setMode] = useState("stream");
-  const [text, setText] = useState("");
+  const {
+    mode,
+    setMode,
+    text,
+    setText,
+    words,
+    limit,
+    charCount,
+    overLimit,
+    fillFromTranscript,
+  } = useTtsComposer(catalog);
 
   const speech = useSpeechPlayer();
   const { stop: stopSpeech } = speech;
@@ -68,34 +76,7 @@ export default function TtsDrawer({ open, onClose, text: presetText = "" }) {
     quick.setError("");
   };
 
-  const words = countWords(text);
-  const limit = mode === "stream" ? catalog.maxWords : catalog.maxChars;
-  const used = mode === "stream" ? words : text.length;
-  const overLimit = used > limit;
-  const charCount = text.length;
-
-  const useTranscript = () => {
-    if (!sourceText) {
-      notify("Chưa có nội dung nhận dạng để đọc");
-      return;
-    }
-    if (mode === "stream") {
-      const parts = sourceText.trim().split(/\s+/);
-      if (parts.length > catalog.maxWords) {
-        setText(parts.slice(0, catalog.maxWords).join(" "));
-        notify(`Transcript dài hơn ${catalog.maxWords} từ — đã cắt bớt`);
-      } else {
-        setText(sourceText);
-      }
-      return;
-    }
-    if (sourceText.length > catalog.maxChars) {
-      setText(sourceText.slice(0, catalog.maxChars));
-      notify(`Transcript dài hơn ${catalog.maxChars} ký tự — đã cắt bớt`);
-    } else {
-      setText(sourceText);
-    }
-  };
+  const useTranscript = () => fillFromTranscript(presetText, notify);
 
   const startStream = async () => {
     const value = text.trim();
@@ -130,13 +111,16 @@ export default function TtsDrawer({ open, onClose, text: presetText = "" }) {
   const busy = mode === "stream" ? speech.busy : quick.busy;
   const canSubmit = catalog.available && text.trim() && !overLimit && !busy;
 
-  const playerLabel = useMemo(() => {
-    if (speech.status === "loading") return "Đang tổng hợp…";
-    if (speech.status === "error") return speech.error;
-    if (speech.status === "done") return "Đã đọc xong";
-    if (speech.status === "playing") return "Đang đọc";
-    return "";
-  }, [speech.status, speech.error]);
+  const playerLabel =
+    speech.status === "loading"
+      ? "Đang tổng hợp…"
+      : speech.status === "error"
+        ? speech.error
+        : speech.status === "done"
+          ? "Đã đọc xong"
+          : speech.status === "playing"
+            ? "Đang đọc"
+            : "";
 
   return (
     <>

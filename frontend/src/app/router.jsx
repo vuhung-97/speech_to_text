@@ -3,10 +3,10 @@
 
 import { createBrowserRouter } from "react-router-dom";
 
-import FaqAdminPage from "../features/faq/FaqAdminPage";
-import QaPage from "../features/qa/QaPage";
-import SessionListPage from "../features/sessions/SessionListPage";
-import DictationPage from "../pages/DictationPage";
+import DictationPage from "../features/dictation";
+import FaqAdminPage from "../features/faq";
+import QaPage from "../features/qa";
+import SessionListPage from "../features/sessions";
 import NotFoundPage from "../pages/NotFoundPage";
 import SettingsPage from "../pages/SettingsPage";
 

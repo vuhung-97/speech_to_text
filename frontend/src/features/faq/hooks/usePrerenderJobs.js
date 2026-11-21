@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import * as api from "../../../services/api";
 import { messageFor } from "../../../services/errors";
-import { readVoice } from "../../tts/constants";
+import { readVoice } from "../../../shared/tts/constants";
 
 const POLL_MS = 1_500;
 

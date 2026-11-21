@@ -10,8 +10,8 @@ import {
   useState,
 } from "react";
 
-import { useToast } from "../../app/ToastProvider";
-import { useLive } from "../dictation/LiveProvider";
+import { useToast } from "../../shared/ui/ToastProvider";
+import { useLive } from "../../shared/live/LiveProvider";
 import * as api from "../../services/api";
 
 const SettingsContext = createContext(null);

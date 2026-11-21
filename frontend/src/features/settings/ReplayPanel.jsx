@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { useToast } from "../../app/ToastProvider";
+import { useToast } from "../../shared/ui/ToastProvider";
 import * as api from "../../services/api";
 
 export default function ReplayPanel() {

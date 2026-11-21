@@ -7,7 +7,7 @@
 
 import Alert from "../../components/ui/Alert";
 import Button from "../../components/ui/Button";
-import { GRACE_MS } from "../mic/constants";
+import { GRACE_MS } from "../../shared/mic/constants";
 
 function MicIcon() {
   return (

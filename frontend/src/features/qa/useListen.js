@@ -9,13 +9,13 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import { useSpeechStream } from "../mic/useSpeechStream";
+import { useSpeechStream } from "../../shared/mic/useSpeechStream";
 import {
   GRACE_MS,
   HARD_LIMIT_MS,
   INITIAL_GRACE_MS,
   SPEECH_LEVEL,
-} from "../mic/constants";
+} from "../../shared/mic/constants";
 
 export function useListen({ onText } = {}) {
   const stream = useSpeechStream();

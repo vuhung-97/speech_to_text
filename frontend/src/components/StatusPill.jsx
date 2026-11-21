@@ -1,4 +1,4 @@
-import { useLive } from "../features/dictation/LiveProvider";
+import { useLive } from "../shared/live/LiveProvider";
 import { STATUS_LABELS } from "../utils/format";
 
 const DOT = {

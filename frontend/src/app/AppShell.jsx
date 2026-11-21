@@ -6,10 +6,11 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 
-import { useLive } from "../features/dictation/LiveProvider";
+import { useLive } from "../shared/live/LiveProvider";
+import BrandMark from "../components/BrandMark";
 import CommandPalette from "../components/CommandPalette";
 import IconButton from "../components/ui/IconButton";
-import SettingsDrawer from "../features/settings/SettingsDrawer";
+import SettingsDrawer from "../features/settings";
 import StatusPill from "../components/StatusPill";
 
 const ICONS = {
@@ -81,21 +82,7 @@ export default function AppShell({ title, subtitle, right = null, actions = null
         aria-label="Điều hướng chính"
         className="flex w-[74px] shrink-0 flex-col items-center gap-1 border-r border-line bg-surface/70 py-4"
       >
-        <span className="mb-3 grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-accent to-accent-2 text-[#1a1206] shadow-accent">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-[18px] w-[18px]"
-            aria-hidden="true"
-          >
-            <rect x="9" y="2" width="6" height="12" rx="3" />
-            <path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4" />
-          </svg>
-        </span>
+        <BrandMark className="mb-3 h-9 w-9 shadow-accent" />
 
         {NAV.map((item) => (
           <NavLink

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { useToast } from "../app/ToastProvider";
+import { useToast } from "../shared/ui/ToastProvider";
 
 export default function Toast() {
   const { toast } = useToast();

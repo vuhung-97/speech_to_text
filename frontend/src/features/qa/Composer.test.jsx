@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { GRACE_MS } from "../mic/constants";
+import { GRACE_MS } from "../../shared/mic/constants";
 import Composer from "./Composer";
 
 const renderComposer = (overrides = {}) => {

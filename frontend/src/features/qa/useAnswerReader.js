@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import * as api from "../../services/api";
-import { readVoice } from "../tts/constants";
-import { beginPlayback, endPlayback, isCurrentPlayback } from "../tts/playbackChannel";
-import { useSpeechPlayer } from "../tts/useSpeechPlayer";
+import { beginPlayback, endPlayback, isCurrentPlayback } from "../../shared/playback/playbackChannel";
+import { useSpeechPlayer } from "../../shared/playback/useSpeechPlayer";
+import { readVoice } from "../../shared/tts/constants";
 
 // Reading an answer: cached WAV when available, otherwise the PCM stream.
 // One playback channel owns every audible source: starting a read stops
@@ -85,13 +85,22 @@ export function useAnswerReader({ onBeforeRead } = {}) {
     if (speech.status === "idle") setReadingId("");
   }, [speech.status]);
 
+  // The element's events are part of this feature, not of the screen.
+  const audioProps = {
+    onPlay: () => setAudioPlaying(true),
+    onPause: () => setAudioPlaying(false),
+    onEnded: () => {
+      setAudioPlaying(false);
+      setReadingId("");
+    },
+  };
+
   return {
     speech,
     readingId,
     audioPlaying,
-    setAudioPlaying,
-    setReadingId,
     audioRef,
+    audioProps,
     read,
     stop,
   };

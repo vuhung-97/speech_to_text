@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GRACE_MS } from "../mic/constants";
+import { GRACE_MS } from "../../shared/mic/constants";
 import { useListen } from "./useListen";
 
 const mockStream = {
@@ -19,7 +19,7 @@ const mockStream = {
   clear: vi.fn(),
 };
 
-vi.mock("../mic/useSpeechStream", () => ({
+vi.mock("../../shared/mic/useSpeechStream", () => ({
   useSpeechStream: () => mockStream,
 }));
 

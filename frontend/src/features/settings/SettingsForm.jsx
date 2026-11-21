@@ -1,7 +1,7 @@
 // Settings body shared by the drawer and the /settings route.
 // One responsibility: render the schema-driven form and its side panels.
 
-import { useLive } from "../dictation/LiveProvider";
+import { useLive } from "../../shared/live/LiveProvider";
 import FieldRow from "./FieldRow";
 import PresetPanel from "./PresetPanel";
 import ReplayPanel from "./ReplayPanel";

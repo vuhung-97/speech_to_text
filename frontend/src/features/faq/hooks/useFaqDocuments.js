@@ -8,8 +8,14 @@ import { messageFor } from "../../../services/errors";
 
 export const DOCUMENT_FILTER_KEY = "qa.document";
 
+function readSelected() {
+  if (typeof window === "undefined") return "";
+  return window.localStorage.getItem(DOCUMENT_FILTER_KEY) || "";
+}
+
 export function useFaqDocuments() {
   const [documents, setDocuments] = useState([]);
+  const [selectedId, setSelectedId] = useState(readSelected);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -29,6 +35,22 @@ export function useFaqDocuments() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // The Q&A filter is the same concept here: one owner for the key, the state
+  // and the "forget it once deleted" rule.
+  const select = useCallback((documentId) => {
+    const value = documentId || "";
+    setSelectedId(value);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(DOCUMENT_FILTER_KEY, value);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!selectedId || !documents.length) return;
+    if (documents.some((item) => item.id === selectedId)) return;
+    select("");
+  }, [documents, selectedId, select]);
 
   const rename = useCallback(
     async (documentId, name) => {
@@ -62,5 +84,14 @@ export function useFaqDocuments() {
     [load],
   );
 
-  return { documents, busy, error, load, rename, remove };
+  return {
+    documents,
+    selectedId,
+    select,
+    busy,
+    error,
+    load,
+    rename,
+    remove,
+  };
 }

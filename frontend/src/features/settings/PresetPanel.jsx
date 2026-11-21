@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { useToast } from "../../app/ToastProvider";
+import { useToast } from "../../shared/ui/ToastProvider";
 import { loadPresets, savePresets } from "../../utils/presets";
 import { useSettings } from "./SettingsProvider";
 

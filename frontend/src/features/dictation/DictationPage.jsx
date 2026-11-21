@@ -1,36 +1,27 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
-import LevelMeter from "../components/LevelMeter";
-import Alert from "../components/ui/Alert";
-import ControlsBar from "../components/ControlsBar";
-import SettingsDrawer from "../features/settings/SettingsDrawer";
-import StatusPill from "../components/StatusPill";
-import TranscriptView from "../components/TranscriptView";
-import TtsDrawer from "../features/tts/TtsDrawer";
-import { useLive } from "../features/dictation/LiveProvider";
-import { useSpeechStream } from "../features/mic/useSpeechStream";
-import { useToast } from "../app/ToastProvider";
-import { readMicDevice } from "../features/mic/constants";
-import { countWords } from "../utils/format";
+import LevelMeter from "../../components/LevelMeter";
+import ControlsBar from "../../components/ControlsBar";
+import StatusPill from "../../components/StatusPill";
+import TranscriptView from "../../components/TranscriptView";
+import Alert from "../../components/ui/Alert";
+import BrandMark from "../../components/BrandMark";
+import { useLive } from "../../shared/live/LiveProvider";
+import { useSpeechStream } from "../../shared/mic/useSpeechStream";
+import { readMicDevice } from "../../shared/mic/constants";
+import { useToast } from "../../shared/ui/ToastProvider";
+import SettingsDrawer from "../settings";
+import TtsDrawer from "../tts";
+import { useTranscript } from "./useTranscript";
 
 function Brand() {
   return (
     <div className="flex items-center gap-3">
-      <span className="grid h-[38px] w-[38px] place-items-center rounded-xl bg-gradient-to-br from-accent to-accent-2 text-[#1a1206] shadow-[0_10px_24px_-12px_rgba(255,138,61,0.9)]">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-[19px] w-[19px]"
-        >
-          <rect x="9" y="2" width="6" height="12" rx="3" />
-          <path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4" />
-        </svg>
-      </span>
+      <BrandMark
+        className="h-[38px] w-[38px] shadow-[0_10px_24px_-12px_rgba(255,138,61,0.9)]"
+        iconClassName="h-[19px] w-[19px]"
+      />
       <div>
         <h1 className="m-0 text-base font-semibold tracking-tight">Đọc chính tả</h1>
         <p className="m-0 mt-px text-[11.5px] tracking-[0.04em] text-faint uppercase max-sm:hidden">
@@ -47,25 +38,10 @@ export default function DictationPage() {
   const stream = useSpeechStream();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [ttsOpen, setTtsOpen] = useState(false);
-  const [transcript, setTranscript] = useState({ paragraphs: [], openId: null });
-  const lastSeq = useRef(0);
+  const { transcript, clear, fullText, words } = useTranscript(stream.lastFinal);
 
   const listening = stream.state === "live";
   const connecting = stream.state === "connecting";
-
-  useEffect(() => {
-    if (stream.lastFinal.seq <= lastSeq.current) return;
-    lastSeq.current = stream.lastFinal.seq;
-    const text = stream.lastFinal.text;
-    if (!text) return;
-    setTranscript((previous) => ({
-      paragraphs: [
-        ...previous.paragraphs,
-        { id: previous.paragraphs.length + 1, text },
-      ],
-      openId: null,
-    }));
-  }, [stream.lastFinal.seq, stream.lastFinal.text]);
 
   const toggle = useCallback(async () => {
     if (listening || connecting) {
@@ -76,12 +52,10 @@ export default function DictationPage() {
   }, [connecting, listening, stream]);
 
   const clearAll = () => {
-    setTranscript({ paragraphs: [], openId: null });
+    clear();
     stream.clear();
   };
 
-  const fullText = transcript.paragraphs.map((item) => item.text).join(" ").trim();
-  const words = countWords(fullText);
   const live = stream.live;
 
   const copy = async () => {

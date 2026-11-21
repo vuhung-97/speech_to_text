@@ -16,7 +16,6 @@ on a background thread and swap it atomically; capture settings reopen the mic.
 from __future__ import annotations
 
 import threading
-import time
 from collections import deque
 from collections.abc import Callable
 from typing import Any
@@ -29,6 +28,7 @@ from ..models.dto import CaptureStats
 from ..utils import priority
 from .engines import ASREngine, create_engine
 from .event_service import Event, EventBus
+from .pipeline import EngineReloader
 from .segmentation_service import (FinalAudio, LocalAgreement, UtteranceSegmenter,
                                    build_segmenter)
 
@@ -68,12 +68,8 @@ class LivePipeline:
         self._settings = settings
         self._values = settings.values()
         self._mic_factory = mic_factory
-        self._engine_factory = engine_factory or default_engine_factory
-        self._engine = engine
-        self._engine_info: dict[str, Any] = (
-            engine.describe() if hasattr(engine, "describe") else {})
-        self._engine_state = "ready"
-        self._reload_token = 0
+        self._reloader = EngineReloader(
+            engine, engine_factory or default_engine_factory, bus)
         self._transcribe_lock = transcribe_lock or threading.Lock()  # one model call at a time
 
         self._segmenter = build_segmenter(self._values)
@@ -152,7 +148,7 @@ class LivePipeline:
     def decode(self, audio: np.ndarray) -> tuple[str, float]:
         """Decode arbitrary audio with the current engine (used by replay)."""
         with self._transcribe_lock:
-            return self._engine.transcribe(audio)
+            return self._reloader.engine.transcribe(audio)
 
     # -------------------------------------------------------------- settings
     def apply(self, patch: dict[str, Any]) -> dict[str, Any]:
@@ -176,41 +172,12 @@ class LivePipeline:
             with self._cv:
                 self._finals = deque(list(self._finals)[-size:], maxlen=size)
         if effects["engine"]:
-            self._reload_engine(values)
+            self._reloader.reload(values)
         if effects["capture"]:
             self._restart_capture.set()
         self._bus.publish({"type": "settings", "values": values,
                            "warnings": self._settings.warnings()})
         return result
-
-    def _reload_engine(self, values: dict[str, Any]) -> None:
-        self._reload_token += 1
-        token = self._reload_token
-        self._engine_state = "loading"
-        self._bus.publish({"type": "engine", "state": "loading"})
-
-        def run() -> None:
-            priority.lowest_for_background()
-            t0 = time.perf_counter()
-            try:
-                new_engine = self._engine_factory(values)
-            except Exception as exc:
-                if token != self._reload_token:
-                    return
-                self._engine_state = "error"
-                self._bus.publish({"type": "engine", "state": "error",
-                                   "detail": str(exc).splitlines()[0] if str(exc) else "reload failed"})
-                return
-            if token != self._reload_token:
-                return  # a newer reload superseded this one
-            self._engine = new_engine
-            self._engine_info = (new_engine.describe() if hasattr(new_engine, "describe")
-                                 else {})
-            self._engine_state = "ready"
-            self._engine_info["reload_seconds"] = round(time.perf_counter() - t0, 2)
-            self._bus.publish({"type": "engine", "state": "ready", **self._engine_info})
-
-        threading.Thread(target=run, name="stt-reload", daemon=True).start()
 
     # ----------------------------------------------------------------- reads
     def status_event(self) -> Event:
@@ -221,7 +188,7 @@ class LivePipeline:
                 "rtf": self._rtf, "mode": self._values.get("mode")}
 
     def engine_info(self) -> dict[str, Any]:
-        return {**self._engine_info, "state": self._engine_state}
+        return self._reloader.info
 
     def capture_stats(self) -> CaptureStats:
         mic = self._mic
@@ -242,7 +209,7 @@ class LivePipeline:
 
     @property
     def engine(self):
-        return self._engine
+        return self._reloader.engine
 
     @property
     def settings(self):
@@ -355,7 +322,7 @@ class LivePipeline:
                 continue
             try:
                 with self._transcribe_lock:
-                    text, rtf = self._engine.transcribe(job.audio)
+                    text, rtf = self._reloader.engine.transcribe(job.audio)
             except Exception as exc:
                 self._bus.publish({"type": "error", "detail": f"decode failed: {exc}"})
                 continue

@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import os
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any
 
@@ -143,8 +143,7 @@ class Settings:
                     applied.append(key)
 
             self._warnings = self._build_warnings()
-            effects = {"engine": [k for k in applied if known[k].effect == "engine"],
-                       "capture": [k for k in applied if known[k].effect == "capture"]}
+            effects = _effects(known, applied)
             if applied:
                 self._save_locked()
             return {
@@ -178,10 +177,7 @@ class Settings:
             return {
                 "values": dict(self._values),
                 "applied": [field.key for field in self.fields()],
-                "effects": {
-                    "engine": sorted(k for k, f in known.items() if f.effect == "engine"),
-                    "capture": sorted(k for k, f in known.items() if f.effect == "capture"),
-                },
+                "effects": _effects(known, sorted(known)),
                 "rejected": {},
                 "warnings": list(self._warnings),
             }
@@ -243,6 +239,15 @@ class Settings:
         if spec is not None and not spec.available:
             warnings.append(f"Model '{spec.key}' chưa sẵn sàng: {spec.reason}")
         return warnings
+
+
+def _effects(known: dict[str, Field],
+             keys: Iterable[str]) -> dict[str, list[str]]:
+    """Split changed keys by what the pipeline must restart (one definition)."""
+    return {
+        "engine": [key for key in keys if known[key].effect == "engine"],
+        "capture": [key for key in keys if known[key].effect == "capture"],
+    }
 
 
 def _coerce(field: Field, raw: Any) -> tuple[Any, str | None]:

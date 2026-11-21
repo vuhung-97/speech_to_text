@@ -7,9 +7,10 @@ from typing import Annotated
 
 from fastapi import Depends, Header, Request
 
-from ..adapters.storage.sqlite import SqliteAuditLog, SqliteSessionRepository
 from ..config.settings import Settings
+from ..ports.audit import AuditLog
 from ..ports.faq import FaqOutlineParser, QueryLog
+from ..ports.sessions import SessionRepository
 from ..services.audio_sessions import AudioSessionHub
 from ..services.event_service import EventBus
 from ..services.faq_audio_service import FaqAudioService
@@ -49,7 +50,7 @@ def get_qa(request: Request) -> QaService:
     return request.app.state.qa
 
 
-def get_sessions(request: Request) -> SqliteSessionRepository:
+def get_sessions(request: Request) -> SessionRepository:
     return request.app.state.sessions
 
 
@@ -73,7 +74,7 @@ def get_outline_parser(request: Request) -> FaqOutlineParser:
     return request.app.state.outline_parser
 
 
-def get_audit(request: Request) -> SqliteAuditLog:
+def get_audit(request: Request) -> AuditLog:
     return request.app.state.audit
 
 
@@ -103,11 +104,11 @@ BusDep = Annotated[EventBus, Depends(get_bus)]
 TtsDep = Annotated[TtsService, Depends(get_tts)]
 TenantDep = Annotated[str, Depends(current_tenant)]
 QaDep = Annotated[QaService, Depends(get_qa)]
-SessionsRepoDep = Annotated[SqliteSessionRepository, Depends(get_sessions)]
+SessionsRepoDep = Annotated[SessionRepository, Depends(get_sessions)]
 QueryLogDep = Annotated[QueryLog, Depends(get_query_log)]
 FaqServiceDep = Annotated[FaqService, Depends(get_faq_service)]
 FaqAudioDep = Annotated[FaqAudioService, Depends(get_faq_audio)]
 FaqDocumentsDep = Annotated[FaqDocumentsService, Depends(get_faq_documents)]
 OutlineParserDep = Annotated[FaqOutlineParser, Depends(get_outline_parser)]
-AuditDep = Annotated[SqliteAuditLog, Depends(get_audit)]
+AuditDep = Annotated[AuditLog, Depends(get_audit)]
 AudioHubDep = Annotated[AudioSessionHub, Depends(get_audio_hub)]

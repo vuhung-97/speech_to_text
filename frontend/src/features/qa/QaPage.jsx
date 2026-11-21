@@ -127,8 +127,6 @@ export default function QaPage() {
       }
       right={right}
     >
-      <audio ref={reader.audioRef} className="hidden" {...reader.audioProps} />
-
       <Thread
         turns={turns}
         onExample={(example) => handleAsk(example, "typed")}

@@ -56,8 +56,22 @@ export function useSpeechPlayer() {
   const start = useCallback(
     async (text, voice) => {
       const controller = new AbortController();
-      const player = new PcmPlayer();
-      const key = beginPlayback(() => {
+      let sessionId = "";
+      let key = 0;
+      const player = new PcmPlayer({
+        // The claim is released only when the buffer actually finished
+        // playing, not when the last byte arrived: the tail must still be
+        // stopped by the next owner.
+        onDrained: () => {
+          if (!isCurrentPlayback(key)) return;
+          player.stop();
+          if (aliveRef.current) {
+            setState({ ...IDLE, status: "done", sessionId });
+          }
+          endPlayback(key);
+        },
+      });
+      key = beginPlayback(() => {
         controller.abort();
         player.stop();
       });
@@ -71,15 +85,21 @@ export function useSpeechPlayer() {
       } catch {
         /* resume can fail before a gesture; push() schedules once it can */
       }
-      if (!isCurrentPlayback(key)) return null;
+      if (!aliveRef.current || !isCurrentPlayback(key)) {
+        controller.abort();
+        player.stop();
+        endPlayback(key);
+        return null;
+      }
 
       setState({ ...IDLE, status: "loading" });
 
       try {
         const result = await streamSpeech(text, voice, {
           signal: controller.signal,
-          onStart: ({ sampleRate, estimated, sessionId }) => {
+          onStart: ({ sampleRate, estimated, sessionId: started }) => {
             if (!isCurrentPlayback(key)) return;
+            sessionId = started;
             player.setSampleRate(sampleRate);
             if (aliveRef.current) {
               setState({
@@ -92,23 +112,23 @@ export function useSpeechPlayer() {
             }
           },
           onBlock: (block) => {
-            if (isCurrentPlayback(key)) player.push(block);
+            if (!isCurrentPlayback(key)) return undefined;
+            // Awaiting this promise is the HTTP backpressure signal.
+            return player.push(block);
           },
           onProgress: ({ seconds }) => {
             if (isCurrentPlayback(key) && aliveRef.current) {
               setState((previous) => ({ ...previous, seconds }));
             }
           },
-          onDone: ({ sessionId }) => {
-            player.flush();
-            if (isCurrentPlayback(key) && aliveRef.current) {
-              setState((previous) => ({ ...previous, status: "done", sessionId }));
-            }
-            endPlayback(key);
+          onDone: ({ sessionId: finished }) => {
+            if (finished) sessionId = finished;
+            player.flush(); // "done" is set when the buffer actually drains
           },
         });
         return result;
       } catch (error) {
+        player.stop();
         if (!controller.signal.aborted && isCurrentPlayback(key) && aliveRef.current) {
           setState({ ...IDLE, status: "error", error: messageFor(error) });
         }

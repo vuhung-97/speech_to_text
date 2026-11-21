@@ -1,4 +1,4 @@
-import { act, fireEvent, render, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as api from "../../services/api";
@@ -24,7 +24,6 @@ function Harness() {
   const reader = useAnswerReader();
   return (
     <div>
-      <audio ref={reader.audioRef} />
       <button type="button" onClick={() => reader.read({ id: "a1", text: "đáp án một" })}>
         đọc A
       </button>
@@ -50,6 +49,9 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  // Unmount while the media spies are still installed; otherwise the hook's
+  // cleanup hits jsdom's "not implemented" pause/load.
+  cleanup();
   playSpy.mockRestore();
   pauseSpy.mockRestore();
   loadSpy.mockRestore();
@@ -104,6 +106,40 @@ describe("useAnswerReader", () => {
 
     fireEvent.click(view.getByText("đọc A"));
     await waitFor(() => expect(playSpy).toHaveBeenCalledTimes(1));
+
+    expect(speechMock.start).not.toHaveBeenCalled();
+  });
+
+  it("pauses cached audio when the screen unmounts", async () => {
+    api.getAnswerSpeech.mockResolvedValueOnce({ mode: "cached", url: "/wav/1" });
+    const view = render(<Harness />);
+
+    fireEvent.click(view.getByText("đọc A"));
+    await waitFor(() => expect(playSpy).toHaveBeenCalledTimes(1));
+
+    pauseSpy.mockClear();
+    view.unmount();
+
+    expect(pauseSpy).toHaveBeenCalled();
+  });
+
+  it("drops a late response after unmount instead of starting a stream", async () => {
+    let resolveFetch;
+    api.getAnswerSpeech.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveFetch = resolve;
+        }),
+    );
+    const view = render(<Harness />);
+
+    fireEvent.click(view.getByText("đọc A"));
+    await waitFor(() => expect(api.getAnswerSpeech).toHaveBeenCalledTimes(1));
+    view.unmount();
+
+    await act(async () => {
+      resolveFetch({ mode: "stream" });
+    });
 
     expect(speechMock.start).not.toHaveBeenCalled();
   });

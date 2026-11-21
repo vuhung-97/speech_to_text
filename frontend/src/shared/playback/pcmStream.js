@@ -70,7 +70,9 @@ export async function streamSpeech(text, voice, handlers = {}) {
       leftover = bytes.slice(even);
 
       receivedBytes += even;
-      onBlock?.(block, sampleRate);
+      // Await the consumer: when the player is full this stops reading the
+      // HTTP body and lets TCP backpressure pause the server.
+      await onBlock?.(block, sampleRate);
       onProgress?.({
         seconds: receivedBytes / 2 / sampleRate,
         estimated,

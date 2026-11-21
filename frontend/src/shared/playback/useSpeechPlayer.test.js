@@ -4,13 +4,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSpeechPlayer } from "./useSpeechPlayer";
 
 const players = [];
+const playback = vi.hoisted(() => ({ resumeImpl: () => Promise.resolve(undefined) }));
 
 vi.mock("./pcmPlayer", () => ({
-  PcmPlayer: vi.fn(function PcmPlayer() {
+  PcmPlayer: vi.fn(function PcmPlayer(options = {}) {
     const instance = {
-      resume: vi.fn().mockResolvedValue(undefined),
+      options,
+      resume: vi.fn(() => playback.resumeImpl()),
       setSampleRate: vi.fn(),
-      push: vi.fn(),
+      push: vi.fn().mockResolvedValue(undefined),
       flush: vi.fn(),
       stop: vi.fn(),
     };
@@ -39,6 +41,7 @@ beforeEach(() => {
   });
   players.length = 0;
   streamCalls.length = 0;
+  playback.resumeImpl = () => Promise.resolve(undefined);
 });
 
 describe("useSpeechPlayer", () => {
@@ -96,7 +99,30 @@ describe("useSpeechPlayer", () => {
     });
   });
 
-  it("reports done and frees the channel when the stream ends", async () => {
+  it("keeps the claim after the last byte so a new read stops the tail", async () => {
+    vi.mocked(streamSpeech).mockImplementation((text, voice, handlers) => {
+      handlers.onStart({ sampleRate: 48000, estimated: 20, sessionId: "s1" });
+      handlers.onBlock(new Float32Array(16));
+      handlers.onDone({ sessionId: "s1" });
+      return Promise.resolve({ sessionId: "s1" });
+    });
+    const { result } = renderHook(() => useSpeechPlayer());
+
+    await act(async () => {
+      await result.current.start("câu một", "Mai");
+    });
+    // The whole answer was received, but the client buffer is still playing.
+    expect(result.current.status).toBe("playing");
+
+    await act(async () => {
+      await result.current.start("câu hai", "Mai");
+    });
+
+    expect(players[0].stop).toHaveBeenCalled();
+    expect(players[1].stop).not.toHaveBeenCalled();
+  });
+
+  it("reports done when the buffer actually drains", async () => {
     vi.mocked(streamSpeech).mockImplementationOnce((text, voice, handlers) => {
       handlers.onStart({ sampleRate: 48000, estimated: 2, sessionId: "s1" });
       handlers.onBlock(new Float32Array(16));
@@ -108,9 +134,37 @@ describe("useSpeechPlayer", () => {
     await act(async () => {
       await result.current.start("ngắn", "Mai");
     });
+    expect(result.current.status).toBe("playing");
 
+    await act(async () => {
+      players[0].options.onDrained();
+    });
+
+    expect(players[0].stop).toHaveBeenCalled();
     expect(result.current.status).toBe("done");
     expect(result.current.sessionId).toBe("s1");
     expect(result.current.downloadUrl).toBe("/wav/s1");
+  });
+
+  it("does not start a stream after unmount while resume() is pending", async () => {
+    let resolveResume;
+    playback.resumeImpl = () =>
+      new Promise((resolve) => {
+        resolveResume = resolve;
+      });
+    const { result, unmount } = renderHook(() => useSpeechPlayer());
+
+    let pending;
+    act(() => {
+      pending = result.current.start("câu", "Mai");
+    });
+    unmount();
+
+    await act(async () => {
+      resolveResume();
+      await pending;
+    });
+
+    expect(streamSpeech).not.toHaveBeenCalled();
   });
 });

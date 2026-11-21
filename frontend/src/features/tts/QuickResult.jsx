@@ -1,26 +1,55 @@
+import { useCallback, useEffect, useRef } from "react";
+
+import { beginPlayback, endPlayback, isCurrentPlayback } from "../../shared/playback/playbackChannel";
+
 export default function QuickResult({ audio, audioRef }) {
   const keyRef = useRef(0);
 
-  // Register the finished WAV with the playback channel: any other source
-  // (or a new press) pauses it before playing.
+  const claim = useCallback(() => {
+    const element = audioRef?.current;
+    if (!element) return 0;
+    const key = beginPlayback(() => element.pause());
+    keyRef.current = key;
+    return key;
+  }, [audioRef]);
+
+  // Claim before starting: `autoPlay` would begin before the effect ran and
+  // could overlap whatever was already playing.
   useEffect(() => {
     const element = audioRef?.current;
     if (!audio || !element) return undefined;
-    const key = beginPlayback(() => {
-      element.pause();
+
+    claim();
+    const started = element.play();
+    started?.catch?.(() => {
+      /* autoplay blocked: controls remain available */
     });
-    keyRef.current = key;
+
     return () => {
-      endPlayback(key);
+      element.pause();
+      endPlayback(keyRef.current);
       keyRef.current = 0;
     };
-  }, [audio, audioRef]);
+  }, [audio, audioRef, claim]);
+
+  const handlePlay = () => {
+    // Manual play after another source took the channel: claim it back and
+    // stop the other source instead of layering two audios.
+    if (isCurrentPlayback(keyRef.current)) return;
+    claim();
+  };
 
   if (!audio) return null;
 
   return (
     <div className="rounded-xl border border-line bg-white/[0.03] p-3">
-      <audio ref={audioRef} controls autoPlay src={audio.url} className="w-full" />
+      <audio
+        ref={audioRef}
+        controls
+        src={audio.url}
+        className="w-full"
+        onPlay={handlePlay}
+      />
       <div className="mt-2 flex items-center justify-between text-[11.5px] text-faint">
         <span>
           {audio.seconds != null

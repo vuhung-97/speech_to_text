@@ -8,11 +8,13 @@ from __future__ import annotations
 
 import csv
 import io
+import threading
 from collections.abc import Sequence
 
 import numpy as np
 
-from ..domain.faq.models import FaqEntry, FaqEntryNotFound
+from ..domain.faq.models import (FaqDocument, FaqEntry, FaqEntryNotFound,
+                                 FaqOutline)
 from ..domain.faq.normalize import normalize_question
 from ..domain.faq.rules import DUPLICATE_THRESHOLD, validate_entry
 from ..ports.embedding import Embedder
@@ -25,6 +27,9 @@ class FaqService:
         self._repo = repository
         self._index = index
         self._embedder = embedder
+        # Two browser tabs uploading the same outline at once must not both
+        # decide "code not seen yet" and insert a duplicate.
+        self._import_lock = threading.Lock()
 
     # ------------------------------------------------------------------- CRUD
     def list(self, tenant: str, **filters) -> Sequence[FaqEntry]:
@@ -146,6 +151,81 @@ class FaqService:
 
         self._index.invalidate(tenant)
         return report
+
+    def import_outline(self, tenant: str, entries: Sequence[FaqOutline],
+                       *, document: FaqDocument) -> dict[str, object]:
+        """Upsert parsed question/answer pairs into one question set.
+
+        The pair ``(document, question code)`` is the identity, with an
+        exact-question fallback inside the same set for entries without codes.
+        Near-identical questions are *not* merged — the outline legitimately
+        repeats wording, and merging would silently drop answers. Entries of the
+        set whose codes left the file are switched off and reported as ``stale``.
+        """
+        with self._import_lock:
+            return self._import_outline(tenant, entries, document)
+
+    def _import_outline(self, tenant: str, entries: Sequence[FaqOutline],
+                        document: FaqDocument) -> dict[str, object]:
+        """Mutating core; callers hold ``_import_lock``."""
+        report: dict[str, object] = {
+            "total": len(entries),
+            "added": 0,
+            "updated": 0,
+            "skipped": 0,
+            "stale": 0,
+            "errors": [],
+            "changed": [],
+        }
+        kept_codes: set[str] = set()
+
+        for position, item in enumerate(entries, start=1):
+            if item.code:
+                kept_codes.add(item.code)
+            try:
+                clean_question, clean_answer, clean_category = validate_entry(
+                    item.question, item.answer, item.category)
+            except ValueError as exc:
+                report["errors"].append(
+                    {"row": position, "code": item.code, "error": str(exc)})
+                continue
+
+            target = self._import_target(tenant, document, item.code, clean_question)
+            if (target is not None and target.question == clean_question
+                    and target.answer == clean_answer):
+                report["skipped"] = int(report["skipped"]) + 1
+                continue
+
+            saved = self._repo.upsert(FaqEntry(
+                id=target.id if target else "",
+                tenant_id=tenant,
+                question=clean_question,
+                answer=clean_answer,
+                category=clean_category or (target.category if target else ""),
+                active=True,
+                source_file=document.name,
+                source_ref=item.code,
+                document_id=document.id,
+            ))
+            if target is None:
+                report["added"] = int(report["added"]) + 1
+            else:
+                report["updated"] = int(report["updated"]) + 1
+                report["changed"].append(saved.id)
+
+        report["stale"] = self._repo.deactivate_missing(
+            tenant, document.id, kept_codes)
+        self._index.invalidate(tenant)
+        return report
+
+    def _import_target(self, tenant: str, document: FaqDocument, code: str,
+                       question: str) -> FaqEntry | None:
+        if code:
+            by_source = self._repo.find_by_source(tenant, document.id, code)
+            if by_source is not None:
+                return by_source
+        return self._repo.find_by_norm_in_document(
+            tenant, document.id, normalize_question(question))
 
     # ----------------------------------------------------------------- helpers
     def _reject_exact_duplicate(self, tenant: str, question: str,

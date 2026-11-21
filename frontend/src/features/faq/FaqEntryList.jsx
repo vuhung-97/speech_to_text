@@ -40,7 +40,7 @@ export default function FaqEntryList({
     return (
       <EmptyState
         title="Kho đang trống"
-        hint={`Thêm câu hỏi ở trên, hoặc nhập CSV với 3 cột question, answer, category. Mẫu: ${SAMPLE_CSV.split("\n")[1]}`}
+        hint={`Thêm câu hỏi ở trên, hoặc nhập đề cương .docx (mỗi câu: dòng «Câu …», bảng câu hỏi/«Đáp án»), hoặc CSV 3 cột question, answer, category. Mẫu: ${SAMPLE_CSV.split("\n")[1]}`}
       />
     );
   }
@@ -62,6 +62,11 @@ export default function FaqEntryList({
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
+              {entry.source_ref && (
+                <Badge tone="neutral" title={entry.source_file || ""}>
+                  {entry.source_ref}
+                </Badge>
+              )}
               {entry.category && <Badge tone="dim">{entry.category}</Badge>}
               <Badge tone={entry.active ? "ok" : "neutral"}>
                 {entry.active ? "bật" : "tắt"}

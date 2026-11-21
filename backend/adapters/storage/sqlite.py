@@ -10,6 +10,7 @@ FastAPI thread pool) with WAL enabled and a busy timeout.
 
 from __future__ import annotations
 
+import hashlib
 import sqlite3
 import threading
 import time
@@ -20,10 +21,11 @@ from pathlib import Path
 from typing import Any
 
 from ...domain.faq.normalize import normalize_question
+from ...domain.faq.query import focus_question
 from ...domain.qa.models import (Answer, Question, SessionNotFound,
                                  TurnNotFound)
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 6
 
 _SCHEMA_V1 = """
 CREATE TABLE IF NOT EXISTS sessions (
@@ -128,9 +130,53 @@ CREATE INDEX IF NOT EXISTS idx_faq_entries_norm
     ON faq_entries(tenant_id, question_norm);
 """
 
+# V5: what the embedder actually sees plus provenance for re-imported files.
+# Each statement is applied separately (``_add_column``) because a previous run
+# may have been interrupted halfway through the migration.
+_SCHEMA_V5_COLUMNS = (
+    "ALTER TABLE faq_entries ADD COLUMN search_text TEXT",
+    "ALTER TABLE faq_entries ADD COLUMN source_file TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE faq_entries ADD COLUMN source_ref TEXT NOT NULL DEFAULT ''",
+)
+_SCHEMA_V5_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_faq_entries_source
+    ON faq_entries(tenant_id, source_file, source_ref);
+"""
+
+# V6: question sets (uploaded documents) own their entries.
+_SCHEMA_V6_TABLES = """
+CREATE TABLE IF NOT EXISTS faq_documents (
+    id           TEXT PRIMARY KEY,
+    tenant_id    TEXT NOT NULL,
+    name         TEXT NOT NULL,
+    content_hash TEXT NOT NULL DEFAULT '',
+    entry_count  INTEGER NOT NULL DEFAULT 0,
+    created_at   REAL NOT NULL,
+    updated_at   REAL NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_faq_documents_name
+    ON faq_documents(tenant_id, name);
+"""
+_SCHEMA_V6_COLUMNS = (
+    "ALTER TABLE faq_entries ADD COLUMN document_id TEXT NOT NULL DEFAULT ''",
+)
+_SCHEMA_V6_INDEX = """
+CREATE INDEX IF NOT EXISTS idx_faq_entries_document
+    ON faq_entries(tenant_id, document_id, source_ref);
+"""
+
 
 def _new_id() -> str:
     return uuid.uuid4().hex[:16]
+
+
+def _add_column(connection: sqlite3.Connection, statement: str) -> None:
+    """Apply one ``ALTER TABLE ADD COLUMN``; tolerate a half-finished migration."""
+    try:
+        connection.execute(statement)
+    except sqlite3.OperationalError as exc:
+        if "duplicate column name" not in str(exc).lower():
+            raise
 
 
 class Database:
@@ -197,6 +243,27 @@ class Database:
                             (normalize_question(row["question"]), row["id"]),
                         )
                     connection.execute("PRAGMA user_version = 4")
+                if version < 5:
+                    for statement in _SCHEMA_V5_COLUMNS:
+                        _add_column(connection, statement)
+                    connection.executescript(_SCHEMA_V5_INDEX)
+                    rows = connection.execute(
+                        "SELECT id, question, search_text FROM faq_entries"
+                    ).fetchall()
+                    for row in rows:
+                        search_text = focus_question(row["question"])
+                        connection.execute(
+                            "UPDATE faq_entries SET search_text = ? WHERE id = ?",
+                            (search_text, row["id"]),
+                        )
+                    connection.execute("PRAGMA user_version = 5")
+                if version < 6:
+                    connection.executescript(_SCHEMA_V6_TABLES)
+                    for statement in _SCHEMA_V6_COLUMNS:
+                        _add_column(connection, statement)
+                    connection.executescript(_SCHEMA_V6_INDEX)
+                    self._backfill_documents_v6(connection)
+                    connection.execute("PRAGMA user_version = 6")
                 connection.commit()
             finally:
                 connection.close()
@@ -209,6 +276,38 @@ class Database:
     def schema_version(self) -> int:
         with self.connect() as connection:
             return int(connection.execute("PRAGMA user_version").fetchone()[0])
+
+    def _backfill_documents_v6(self, connection: sqlite3.Connection) -> None:
+        """Group pre-existing rows per (tenant, source_file) into documents."""
+        rows = connection.execute(
+            "SELECT tenant_id, source_file FROM faq_entries"
+            " WHERE source_file != ''"
+            " GROUP BY tenant_id, source_file"
+        ).fetchall()
+        for row in rows:
+            tenant_id, source_file = row[0], row[1]
+            document_id = _new_id()
+            now = time.time()
+            entries = connection.execute(
+                "SELECT id, question, answer FROM faq_entries"
+                " WHERE tenant_id = ? AND source_file = ?"
+                " ORDER BY created_at ASC",
+                (tenant_id, source_file),
+            ).fetchall()
+            payload = "\n".join(
+                f"{item[1]}\u0000{item[2]}" for item in entries)
+            fingerprint = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+            connection.execute(
+                "INSERT INTO faq_documents (id, tenant_id, name, content_hash,"
+                " entry_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (document_id, tenant_id, source_file, fingerprint,
+                 len(entries), now, now),
+            )
+            for item in entries:
+                connection.execute(
+                    "UPDATE faq_entries SET document_id = ? WHERE id = ?",
+                    (document_id, item[0]),
+                )
 
 
 class SqliteSessionRepository:

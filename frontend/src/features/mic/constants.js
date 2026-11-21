@@ -4,7 +4,7 @@
 
 export const MIC_RATE = 16_000;
 export const PACKET_SECONDS = 0.02;
-export const GRACE_MS = 2_000;
+export const GRACE_MS = 1_500;
 export const INITIAL_GRACE_MS = 4_000;
 export const HARD_LIMIT_MS = 12_000;
 export const SPEECH_LEVEL = 0.05;

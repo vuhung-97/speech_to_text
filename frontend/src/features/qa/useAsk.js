@@ -54,7 +54,7 @@ export function useAsk(initialSessionId = "") {
   }, []);
 
   const ask = useCallback(
-    async (question, source = "voice") => {
+    async (question, source = "voice", documentId = "") => {
       const value = (question || "").trim();
       if (!value || inFlight.current) return null;
 
@@ -67,6 +67,7 @@ export function useAsk(initialSessionId = "") {
         const data = await api.askQuestion(value, {
           sessionId: sessionId || null,
           source,
+          documentId: documentId || null,
           signal: controller.signal,
         });
         if (!alive.current || controller.signal.aborted) return null;

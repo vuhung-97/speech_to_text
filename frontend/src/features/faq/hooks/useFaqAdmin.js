@@ -8,6 +8,10 @@ import { messageFor } from "../../../services/errors";
 
 export const EMPTY_FORM = { question: "", answer: "", category: "" };
 
+const DOCX_EXTENSION = /\.docx$/i;
+
+const isOutlineFile = (name) => DOCX_EXTENSION.test(name || "");
+
 export function useFaqAdmin() {
   const [entries, setEntries] = useState([]);
   const [stats, setStats] = useState({});
@@ -121,7 +125,9 @@ export function useFaqAdmin() {
       setError("");
       setReport(null);
       try {
-        const result = await api.importFaqCsv(file);
+        const result = isOutlineFile(file.name)
+          ? await api.importFaqDocx(file)
+          : await api.importFaqCsv(file);
         setReport(result);
         await load();
       } catch (importError) {

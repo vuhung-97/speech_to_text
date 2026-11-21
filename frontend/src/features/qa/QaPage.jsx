@@ -7,7 +7,9 @@ import { useParams, useSearchParams } from "react-router-dom";
 
 import AppShell from "../../app/AppShell";
 import { LEVEL_SCALE, SILENT_LEVEL } from "../mic/constants";
+import { useFaqDocuments, DOCUMENT_FILTER_KEY } from "../faq/hooks/useFaqDocuments";
 import Composer from "./Composer";
+import DocumentPicker from "./DocumentPicker";
 import MatchPanel from "./MatchPanel";
 import MicPanel from "./MicPanel";
 import ReadingPanel from "./ReadingPanel";
@@ -21,9 +23,13 @@ export default function QaPage() {
   const { id: routeId } = useParams();
   const [params, setParams] = useSearchParams();
   const [draft, setDraft] = useState("");
+  const [documentId, setDocumentId] = useState(
+    () => window.localStorage.getItem(DOCUMENT_FILTER_KEY) || "",
+  );
 
   const sessionId = routeId || params.get("session") || "";
   const { turns, busy, error, ask, load } = useAsk(sessionId);
+  const documents = useFaqDocuments();
   const listen = useListen({
     onText: (heard) =>
       setDraft((previous) =>
@@ -36,6 +42,17 @@ export default function QaPage() {
   useEffect(() => {
     if (sessionId) load(sessionId);
   }, [sessionId, load]);
+
+  // Keep the chosen set in localStorage and forget it once deleted.
+  useEffect(() => {
+    window.localStorage.setItem(DOCUMENT_FILTER_KEY, documentId);
+  }, [documentId]);
+
+  useEffect(() => {
+    if (!documentId) return;
+    if (documents.documents.some((document) => document.id === documentId)) return;
+    setDocumentId("");
+  }, [documentId, documents.documents]);
 
   // New questions keep the URL deep-linkable without remounting the screen.
   useEffect(() => {
@@ -50,20 +67,23 @@ export default function QaPage() {
 
   const handleAsk = useCallback(
     async (question, source) => {
-      const data = await ask(question, source);
+      const data = await ask(question, source, documentId);
       if (data) setDraft("");
       return data;
     },
-    [ask],
+    [ask, documentId],
   );
 
   const submitDraft = useCallback(
     async (question) => {
-      let value = question;
+      let value = question || "";
       if (listen.active) {
-        const heard = await listen.stop();
-        if (heard) value = `${value} ${heard}`.trim();
+        // The finalized sentences are already in the draft; stop() only returns
+        // the still-spoken tail so nothing gets submitted twice.
+        const tail = await listen.stop();
+        if (tail) value = `${value.trimEnd()} ${tail}`.trim();
       }
+      if (!value.trim()) return;
       await handleAsk(value, "typed");
     },
     [handleAsk, listen],
@@ -105,6 +125,12 @@ export default function QaPage() {
 
   const right = (
     <>
+      <DocumentPicker
+        documents={documents.documents}
+        value={documentId}
+        onChange={setDocumentId}
+        disabled={busy}
+      />
       <MicPanel
         micLabel={micLabel}
         listen={listen}
@@ -173,11 +199,11 @@ export default function QaPage() {
 
       <Composer
         value={draft}
+        live={liveText}
         onChange={setDraft}
         onSubmit={submitDraft}
         busy={busy}
         listening={listen.active}
-        preview={liveText}
         onToggleListen={toggleListen}
         error={listen.error}
       />

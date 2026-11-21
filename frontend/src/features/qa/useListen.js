@@ -1,12 +1,13 @@
 // "Nghe" is one deliberate press, not a background microphone.
 //
 // start(): open the browser mic + WebSocket session. Every finalized sentence is
-// collected; after two seconds without new speech the mic closes and the text is
-// handed over. The timer restarts on new finals and on live partial updates, so
-// continuing to speak extends the session. A 30 s hard limit protects against a
-// microphone left open by mistake.
+// handed to onText *immediately* (the input grows while you keep speaking);
+// after GRACE_MS without new speech the mic closes and only the unfinished tail
+// (live partial) is handed over. The timer restarts on new finals and on live
+// loudness, so continuing to speak extends the session. A hard limit protects
+// against a microphone left open by mistake.
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { useSpeechStream } from "../mic/useSpeechStream";
 import {
@@ -22,7 +23,7 @@ export function useListen({ onText } = {}) {
 
   const activeRef = useRef(false);
   const baselineRef = useRef(0);
-  const chunksRef = useRef([]);
+  const pendingRef = useRef([]);
   const graceRef = useRef(0);
   const hardRef = useRef(0);
   const onTextRef = useRef(onText);
@@ -52,21 +53,33 @@ export function useListen({ onText } = {}) {
     hardRef.current = 0;
   }, []);
 
+  const deliver = useCallback((text) => {
+    const value = (text || "").trim();
+    if (!value) return;
+    const callback = onTextRef.current;
+    if (callback) callback(value);
+    else pendingRef.current.push(value);
+  }, []);
+
   const finish = useCallback(async () => {
     if (!activeRef.current) return "";
     activeRef.current = false;
     clearTimers();
     setActive(false);
 
-    const heard = chunksRef.current.join(" ").trim();
-    chunksRef.current = [];
     const live = liveRef.current;
-    const text = heard || `${live.stable || ""} ${live.tentative || ""}`.trim();
-
+    const tail = `${live.stable || ""} ${live.tentative || ""}`.trim();
     await stopMicRef.current();
-    if (text) onTextRef.current?.(text);
-    return text;
-  }, [clearTimers]);
+
+    if (!onTextRef.current) {
+      // No consumer: keep the legacy "full transcript on stop" behaviour.
+      const heard = pendingRef.current.join(" ").trim();
+      pendingRef.current = [];
+      return heard || tail;
+    }
+    deliver(tail);
+    return tail;
+  }, [clearTimers, deliver]);
 
   useEffect(() => {
     finishRef.current = finish;
@@ -82,7 +95,7 @@ export function useListen({ onText } = {}) {
   const start = useCallback(async (deviceId) => {
     if (activeRef.current) return;
     clearStreamRef.current();
-    chunksRef.current = [];
+    pendingRef.current = [];
     baselineRef.current = lastFinalRef.current.seq;
     const opened = await startMicRef.current(deviceId);
     if (!opened) return;
@@ -100,13 +113,15 @@ export function useListen({ onText } = {}) {
   }, [armGrace]);
 
   // A finalized sentence belongs to this session only if it arrived after start.
-  useEffect(() => {
+  // useLayoutEffect so the input never shows a frame missing the just-finalized
+  // sentence (the partial was cleared by the same event that finalized it).
+  useLayoutEffect(() => {
     if (!active) return;
     if (stream.lastFinal.seq <= baselineRef.current) return;
     baselineRef.current = stream.lastFinal.seq;
-    if (stream.lastFinal.text) chunksRef.current.push(stream.lastFinal.text);
+    deliver(stream.lastFinal.text);
     armGrace();
-  }, [active, stream.lastFinal.seq, stream.lastFinal.text, armGrace]);
+  }, [active, stream.lastFinal.seq, stream.lastFinal.text, deliver, armGrace]);
 
   // Still talking? Use the client-side RMS, not the partial text: ambient noise
   // can keep producing drafts forever in realtime mode, while real speech is

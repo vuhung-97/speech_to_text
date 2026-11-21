@@ -20,7 +20,8 @@ from backend.services.qa_service import QaService
 class NullMatcher:
     """Test double: no catalogue in this phase."""
 
-    def match(self, question: str, tenant: str, k: int = 3) -> FaqResult:
+    def match(self, question: str, tenant: str, k: int = 3,
+              document_id: str | None = None) -> FaqResult:
         return FaqResult(matched=None, candidates=())
 
 
@@ -32,7 +33,8 @@ class FixedMatcher:
         self._answered = answered
         self.calls: list[tuple[str, str]] = []
 
-    def match(self, question: str, tenant: str, k: int = 3) -> FaqResult:
+    def match(self, question: str, tenant: str, k: int = 3,
+              document_id: str | None = None) -> FaqResult:
         self.calls.append((question, tenant))
         if self.score is None:
             return FaqResult(matched=None, candidates=())

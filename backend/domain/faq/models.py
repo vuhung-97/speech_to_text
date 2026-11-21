@@ -2,16 +2,63 @@
 
 from __future__ import annotations
 
+import hashlib
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
 
-DEFAULT_THRESHOLD = 0.88   # tuned on multilingual-e5-small: in-domain ≥0.89,
-DEFAULT_NEAR = 0.88        # off-topic ≤0.87, so no "answer with warning" band
+DEFAULT_THRESHOLD = 0.88   # tuned on multilingual-e5-small: in-domain ≥0.90,
+DEFAULT_NEAR = 0.86        # off-topic ≤0.82, so "near" is the answer floor
+
+MAX_DOCUMENT_NAME_CHARS = 120
 
 
 class FaqEntryNotFound(ValueError):
     """The requested entry does not exist in this tenant's catalogue."""
+
+
+class FaqDocumentNotFound(ValueError):
+    """The requested question set does not exist in this tenant's catalogue."""
+
+
+@dataclass(frozen=True)
+class FaqOutline:
+    """One question/answer pair read from an uploaded outline document.
+
+    Transport- and format-agnostic on purpose: the parser adapter produces these,
+    the catalogue service validates and stores them.
+    """
+
+    code: str
+    category: str
+    question: str
+    answer: str
+
+
+def outline_fingerprint(pairs: Sequence[FaqOutline]) -> str:
+    """Stable hash of the parsed content, independent of the file's bytes.
+
+    Word rewrites zip metadata every save, so hashing the upload would treat an
+    unchanged document as new. Hashing the extracted pairs recognises identical
+    content even after "save as" or a rename.
+    """
+    payload = "\n".join(
+        f"{pair.code}\u0000{pair.question}\u0000{pair.answer}" for pair in pairs)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+@dataclass(frozen=True)
+class FaqDocument:
+    """One uploaded question set owned by a tenant."""
+
+    id: str
+    tenant_id: str
+    name: str
+    content_hash: str = ""
+    entry_count: int = 0
+    created_at: float = 0.0
+    updated_at: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -28,6 +75,16 @@ class FaqEntry:
     embed_version: int = 0
     created_at: float = 0.0
     updated_at: float = 0.0
+    # Text actually embedded: the question stripped of outline wording. Empty
+    # means "derive from question", so rows written before this column keep working.
+    search_text: str = ""
+    # Provenance of imported entries (file + code inside that file). Used to
+    # update instead of duplicating on re-import; never embedded, never shown
+    # on the answer screen.
+    source_file: str = ""
+    source_ref: str = ""
+    # The question set this entry belongs to; empty for manually added rows.
+    document_id: str = ""
     extra: dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -85,8 +142,13 @@ class FaqResult:
 __all__ = [
     "DEFAULT_NEAR",
     "DEFAULT_THRESHOLD",
+    "FaqDocument",
+    "FaqDocumentNotFound",
     "FaqEntry",
     "FaqEntryNotFound",
     "FaqMatch",
+    "FaqOutline",
     "FaqResult",
+    "MAX_DOCUMENT_NAME_CHARS",
+    "outline_fingerprint",
 ]

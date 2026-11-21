@@ -24,11 +24,13 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from .adapters.embedding.onnx_e5 import build_embedder
+from .adapters.importer.docx_faq import parse_docx
 from .adapters.retrieval.sqlite_faq import (SqliteFaqMatcher,
                                             SqliteFaqRepository)
 from .adapters.retrieval.sqlite_faq_audio import SqliteFaqAudioRepository
 from .adapters.storage.sqlite import (Database, SqliteAuditLog, SqliteQueryLog,
                                       SqliteSessionRepository)
+from .adapters.storage.sqlite_faq_documents import SqliteFaqDocumentRepository
 from .config.paths import DB_PATH, DIST_DIR, SAMPLES_DIR, SETTINGS_PATH, TTS_TEMP_DIR
 from .config.settings import Settings
 from .middleware import errors, request_log
@@ -39,6 +41,7 @@ from .services.audio.temp_store import cleanup_stale_sessions
 from .services.engines import available_engines, create_engine
 from .services.event_service import EventBus
 from .services.faq_audio_service import FaqAudioService
+from .services.faq_documents import FaqDocumentsService
 from .services.faq_service import FaqService
 from .services.qa_service import QaService
 from .services.replay_service import ReplayService
@@ -119,6 +122,7 @@ def create_app(settings: Settings, pipeline: LivePipeline, replay: ReplayService
         embed_note = ""
     faq_repo = SqliteFaqRepository(database)
     faq_audio_repo = SqliteFaqAudioRepository(database)
+    faq_documents_repo = SqliteFaqDocumentRepository(database)
     faq_matcher = SqliteFaqMatcher(faq_repo, embedder)
     faq_service = FaqService(faq_repo, faq_matcher, embedder)
     app.state.embedder = embedder
@@ -126,6 +130,9 @@ def create_app(settings: Settings, pipeline: LivePipeline, replay: ReplayService
     app.state.faq_repo = faq_repo
     app.state.faq_matcher = faq_matcher
     app.state.faq_service = faq_service
+    app.state.faq_documents = FaqDocumentsService(
+        faq_documents_repo, faq_repo, faq_service, faq_matcher)
+    app.state.outline_parser = parse_docx
     app.state.audit = SqliteAuditLog(database)
     app.state.faq_audio = FaqAudioService(faq_audio_repo, faq_repo, app.state.tts,
                                          cache_dir=audio_cache_dir)

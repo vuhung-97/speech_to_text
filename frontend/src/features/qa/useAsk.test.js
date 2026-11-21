@@ -81,4 +81,22 @@ describe("useAsk", () => {
     expect(result.current.error).toBe("mất kết nối");
     expect(result.current.turns).toHaveLength(0);
   });
+
+  it("forwards the selected question set to the API", async () => {
+    api.askQuestion.mockResolvedValue({
+      session_id: "s",
+      question: "câu hỏi",
+      answer: answer(),
+    });
+    const { result } = renderHook(() => useAsk());
+
+    await act(async () => {
+      await result.current.ask("câu hỏi", "typed", "doc-9");
+    });
+
+    expect(api.askQuestion).toHaveBeenCalledWith(
+      "câu hỏi",
+      expect.objectContaining({ documentId: "doc-9", source: "typed" }),
+    );
+  });
 });

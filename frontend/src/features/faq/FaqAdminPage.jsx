@@ -1,18 +1,22 @@
-// Catalogue admin screen: composition of form, list and stats panels.
-// State lives in useFaqAdmin/usePrerenderJobs.
+// Catalogue admin screen: composition of form, list, stats and question sets.
+// State lives in useFaqAdmin/usePrerenderJobs/useFaqDocuments.
 
 import { useRef } from "react";
 
 import AppShell from "../../app/AppShell";
 import Button from "../../components/ui/Button";
+import FaqDocumentsPanel from "./FaqDocumentsPanel";
 import FaqEntryForm from "./FaqEntryForm";
 import FaqEntryList from "./FaqEntryList";
+import FaqImportReport from "./FaqImportReport";
 import FaqStatsPanel from "./FaqStatsPanel";
 import { useFaqAdmin } from "./hooks/useFaqAdmin";
+import { useFaqDocuments } from "./hooks/useFaqDocuments";
 import { usePrerenderJobs } from "./hooks/usePrerenderJobs";
 
 export default function FaqAdminPage() {
   const admin = useFaqAdmin();
+  const documents = useFaqDocuments();
   const fileRef = useRef(null);
   const { jobs, prerender } = usePrerenderJobs({
     onFinished: admin.load,
@@ -22,7 +26,20 @@ export default function FaqAdminPage() {
   const onImport = async (event) => {
     const file = event.target.files?.[0];
     if (file) await admin.importFile(file);
+    documents.load(); // refresh set names/counts after an outline upload
     if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const renameDocument = (document) => {
+    const name = window.prompt("Tên bộ đề:", document.name);
+    if (name && name.trim()) documents.rename(document.id, name.trim());
+  };
+
+  const removeDocument = (document) => {
+    if (!window.confirm(`Xoá bộ đề “${document.name}” cùng ${document.entry_count} câu?`)) {
+      return;
+    }
+    documents.remove(document.id);
   };
 
   return (
@@ -30,20 +47,28 @@ export default function FaqAdminPage() {
       title="Kho câu hỏi"
       subtitle="Cặp câu hỏi – câu trả lời soạn sẵn, khớp bằng embedding"
       right={
-        <FaqStatsPanel
-          stats={admin.stats}
-          unanswered={admin.unanswered}
-          audit={admin.audit}
-          onReindex={admin.reindex}
-          busy={admin.busy}
-        />
+        <>
+          <FaqStatsPanel
+            stats={admin.stats}
+            unanswered={admin.unanswered}
+            audit={admin.audit}
+            onReindex={admin.reindex}
+            busy={admin.busy}
+          />
+          <FaqDocumentsPanel
+            documents={documents.documents}
+            busy={documents.busy}
+            onRename={renameDocument}
+            onRemove={removeDocument}
+          />
+        </>
       }
       actions={
         <>
           <input
             ref={fileRef}
             type="file"
-            accept=".csv,text/csv"
+            accept=".csv,.docx,text/csv,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             onChange={onImport}
             className="hidden"
             id="faq-import"
@@ -54,7 +79,7 @@ export default function FaqAdminPage() {
             onClick={() => fileRef.current?.click()}
             disabled={admin.busy}
           >
-            Nhập CSV
+            Nhập câu hỏi
           </Button>
           <Button
             variant="secondary"
@@ -69,27 +94,13 @@ export default function FaqAdminPage() {
     >
       <div className="scroll-thin min-h-0 flex-1 overflow-y-auto px-5 py-5">
         <div className="mx-auto max-w-[860px] space-y-4">
-          {admin.error && (
+          {(admin.error || documents.error) && (
             <p className="m-0 rounded-lg border border-err/35 bg-err/10 px-3 py-2 text-[12px] text-err">
-              {admin.error}
+              {admin.error || documents.error}
             </p>
           )}
 
-          {admin.report && (
-            <div className="rounded-lg border border-ok/30 bg-ok/[0.08] px-3 py-2 text-[12px] text-ok">
-              Đã thêm {admin.report.added}/{admin.report.total} câu · trùng{" "}
-              {admin.report.duplicates?.length || 0} · lỗi{" "}
-              {admin.report.errors?.length || 0}
-              {!!admin.report.errors?.length && (
-                <span className="mt-1 block text-ok/80">
-                  {admin.report.errors
-                    .slice(0, 3)
-                    .map((item) => `dòng ${item.row}: ${item.error}`)
-                    .join(" · ")}
-                </span>
-              )}
-            </div>
-          )}
+          {admin.report && <FaqImportReport report={admin.report} />}
 
           <FaqEntryForm
             form={admin.form}

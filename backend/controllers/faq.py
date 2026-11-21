@@ -1,4 +1,4 @@
-"""FAQ administration API: CRUD, CSV import, reindex, stats."""
+"""FAQ administration API: CRUD, CSV/outline import, reindex, stats."""
 
 from __future__ import annotations
 
@@ -8,14 +8,17 @@ from fastapi import APIRouter, File, Request, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from ..domain.faq.models import FaqEntry, FaqEntryNotFound
+from ..domain.faq.models import (FaqDocument, FaqDocumentNotFound, FaqEntry,
+                                 FaqEntryNotFound)
 from ..services.tts_service import TtsBusy
 from ..utils.errors import ApiError, NotFoundError
-from .deps import AuditDep, FaqAudioDep, FaqServiceDep, TenantDep
+from .deps import (AuditDep, FaqAudioDep, FaqDocumentsDep, FaqServiceDep,
+                   OutlineParserDep, TenantDep)
 
 router = APIRouter(tags=["faq"])
 
 MAX_IMPORT_BYTES = 2 * 1024 * 1024
+MAX_DOCX_BYTES = 20 * 1024 * 1024
 
 
 class EntryRequest(BaseModel):
@@ -35,6 +38,10 @@ class PrerenderRequest(BaseModel):
     voice: str | None = None
 
 
+class RenameRequest(BaseModel):
+    name: str = ""
+
+
 def entry_json(entry: FaqEntry) -> dict[str, Any]:
     return {
         "id": entry.id,
@@ -44,15 +51,30 @@ def entry_json(entry: FaqEntry) -> dict[str, Any]:
         "active": entry.active,
         "updated_at": entry.updated_at,
         "created_at": entry.created_at,
+        "source_file": entry.source_file,
+        "source_ref": entry.source_ref,
+        "document_id": entry.document_id,
+    }
+
+
+def document_json(document: FaqDocument) -> dict[str, Any]:
+    return {
+        "id": document.id,
+        "name": document.name,
+        "entry_count": document.entry_count,
+        "content_hash": document.content_hash[:12],
+        "created_at": document.created_at,
+        "updated_at": document.updated_at,
     }
 
 
 @router.get("/faq/entries")
 def list_entries(faq: FaqServiceDep, tenant: TenantDep, q: str | None = None,
                  category: str | None = None, active: bool | None = None,
+                 document_id: str | None = None,
                  limit: int = 50, offset: int = 0) -> dict[str, Any]:
     items = faq.list(tenant, query=q, category=category, active=active,
-                     limit=limit, offset=offset)
+                     document_id=document_id or None, limit=limit, offset=offset)
     return {"ok": True, "items": [entry_json(item) for item in items]}
 
 
@@ -104,6 +126,62 @@ async def import_entries(tenant: TenantDep, faq: FaqServiceDep,
     audit.record(tenant=tenant, action="faq.import", target=file.filename or "",
                  detail=f"added={report.get('added')} errors={len(report.get('errors', []))}")
     return {"ok": True, **report}
+
+
+@router.post("/faq/import-docx")
+async def import_outline(tenant: TenantDep, docs: FaqDocumentsDep, audit: AuditDep,
+                         audio: FaqAudioDep, parser: OutlineParserDep,
+                         file: UploadFile = File(...)) -> dict[str, Any]:
+    """Import an outline ``.docx`` (same question/answer shape as cauhoi_dapan)."""
+    name = file.filename or ""
+    if not name.lower().endswith(".docx"):
+        raise ValueError("chỉ nhận tệp .docx (tệp .doc cũ cần lưu lại dạng .docx)")
+    raw = await file.read(MAX_DOCX_BYTES + 1)
+    if len(raw) > MAX_DOCX_BYTES:
+        raise ValueError("tệp .docx quá lớn (tối đa 20 MB)")
+
+    pairs = parser(raw)
+    report = docs.import_document(tenant, name, pairs)
+    for entry_id in report.get("changed", []):
+        audio.reset(str(entry_id), tenant)
+    audit.record(
+        tenant=tenant, action="faq.import_docx", target=name,
+        detail=(f"reason={report.get('reason')} added={report.get('added')} "
+                f"updated={report.get('updated')} stale={report.get('stale')} "
+                f"errors={len(report.get('errors', []))}"))
+    return report
+
+
+@router.get("/faq/documents")
+def list_documents(docs: FaqDocumentsDep, tenant: TenantDep) -> dict[str, Any]:
+    return {"ok": True,
+            "items": [document_json(item) for item in docs.list(tenant)]}
+
+
+@router.patch("/faq/documents/{document_id}")
+def rename_document(document_id: str, request: RenameRequest, docs: FaqDocumentsDep,
+                    audit: AuditDep, tenant: TenantDep) -> dict[str, Any]:
+    try:
+        document = docs.rename(document_id, tenant, request.name)
+    except FaqDocumentNotFound as exc:
+        raise NotFoundError(str(exc)) from exc
+    audit.record(tenant=tenant, action="faq.document.rename", target=document_id,
+                 detail=document.name)
+    return {"ok": True, "document": document_json(document)}
+
+
+@router.delete("/faq/documents/{document_id}")
+def delete_document(document_id: str, docs: FaqDocumentsDep, audit: AuditDep,
+                    audio: FaqAudioDep, tenant: TenantDep) -> dict[str, Any]:
+    try:
+        result = docs.delete(document_id, tenant)
+    except FaqDocumentNotFound as exc:
+        raise NotFoundError(str(exc)) from exc
+    for entry_id in result["entry_ids"]:
+        audio.reset(str(entry_id), tenant)
+    audit.record(tenant=tenant, action="faq.document.delete", target=document_id,
+                 detail=f"name={result['name']} entries={result['deleted_entries']}")
+    return {"ok": True, **result}
 
 
 @router.post("/faq/reindex")

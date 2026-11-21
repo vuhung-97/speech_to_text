@@ -2,22 +2,26 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import * as api from "../../services/api";
 import { readVoice } from "../tts/constants";
+import { beginPlayback, endPlayback, isCurrentPlayback } from "../tts/playbackChannel";
 import { useSpeechPlayer } from "../tts/useSpeechPlayer";
 
 // Reading an answer: cached WAV when available, otherwise the PCM stream.
-// The hook owns playback state; the screen only renders it.
+// One playback channel owns every audible source: starting a read stops
+// whatever is playing (stream or cached WAV) synchronously, and late responses
+// from an earlier click are discarded via the claim key.
 export function useAnswerReader({ onBeforeRead } = {}) {
   const [readingId, setReadingId] = useState("");
   const [audioPlaying, setAudioPlaying] = useState(false);
   const audioRef = useRef(null);
   const speech = useSpeechPlayer();
   const beforeRef = useRef(onBeforeRead);
+  const keyRef = useRef(0);
 
   useEffect(() => {
     beforeRef.current = onBeforeRead;
   }, [onBeforeRead]);
 
-  const stop = useCallback(() => {
+  const silence = useCallback(() => {
     speech.stop();
     const element = audioRef.current;
     if (element) {
@@ -29,28 +33,52 @@ export function useAnswerReader({ onBeforeRead } = {}) {
     setReadingId("");
   }, [speech]);
 
+  const stop = useCallback(() => {
+    silence();
+    if (keyRef.current) {
+      endPlayback(keyRef.current);
+      keyRef.current = 0;
+    }
+  }, [silence]);
+
   const read = useCallback(
     async (answer) => {
       if (!answer?.text) return;
+      // Claiming stops the previous source (stream or cached WAV) right now,
+      // before any await, so two reads never overlap.
+      const key = beginPlayback(silence);
+      keyRef.current = key;
       await beforeRef.current?.();
+      if (!isCurrentPlayback(key)) return;
+
       const voice = readVoice();
       setReadingId(answer.id);
+
+      let info = null;
       try {
-        const info = await api.getAnswerSpeech(answer.id, voice);
-        if (info.mode === "cached" && audioRef.current) {
-          speech.stop();
-          const element = audioRef.current;
-          element.src = info.url;
-          element.currentTime = 0;
-          await element.play();
-          return;
-        }
+        info = await api.getAnswerSpeech(answer.id, voice);
       } catch {
         /* no cache → stream below */
       }
+      if (!isCurrentPlayback(key)) return;
+
+      if (info?.mode === "cached" && audioRef.current) {
+        const element = audioRef.current;
+        element.src = info.url;
+        element.currentTime = 0;
+        try {
+          await element.play();
+        } catch {
+          // Autoplay rejected: stay silent instead of starting a second
+          // source on top of the cached one.
+          stop();
+        }
+        return;
+      }
+
       speech.start(answer.text, voice);
     },
-    [speech],
+    [speech, silence, stop],
   );
 
   useEffect(() => {

@@ -1,7 +1,12 @@
 // Composer: typing is the default. The mic opens only for a deliberate
 // "Nghe" press, and Enter sends while Shift+Enter adds a line.
+//
+// While listening, the input shows the committed text plus the live partial
+// being recognised and is read-only, so server updates never fight the caret.
+// Enter still submits: the screen stops the mic and appends the spoken tail.
 
 import Button from "../../components/ui/Button";
+import { GRACE_MS } from "../mic/constants";
 
 function MicIcon() {
   return (
@@ -21,17 +26,24 @@ function MicIcon() {
   );
 }
 
+function displayValue(value, live, listening) {
+  if (!listening || !live) return value;
+  return [value.trimEnd(), live.trim()].filter(Boolean).join(" ");
+}
+
 export default function Composer({
   value,
+  live = "",
   onChange,
   onSubmit,
   busy,
   listening,
-  preview = "",
   onToggleListen,
   error,
 }) {
-  const canSubmit = Boolean(value.trim()) && !busy;
+  const shown = displayValue(value, live, listening);
+  const canSubmit = Boolean(shown.trim()) && !busy;
+  const graceLabel = (GRACE_MS / 1000).toLocaleString("vi-VN");
 
   const submit = () => {
     if (!canSubmit) return;
@@ -52,13 +64,6 @@ export default function Composer({
         </p>
       )}
 
-      {listening && preview && (
-        <p className="mx-auto mb-2 max-w-[720px] truncate rounded-lg border border-line bg-white/[0.03] px-3 py-1.5 text-[12.5px] text-dim">
-          <span className="text-faint">Đang nghe: </span>
-          <span className="text-white">{preview}</span>
-        </p>
-      )}
-
       <div className="mx-auto flex max-w-[720px] items-end gap-2">
         <Button
           variant={listening ? "danger" : "secondary"}
@@ -74,7 +79,7 @@ export default function Composer({
         <label className="min-w-0 flex-1">
           <span className="sr-only">Câu hỏi</span>
           <textarea
-            value={value}
+            value={shown}
             onChange={(event) => onChange(event.target.value)}
             onKeyDown={(event) => {
               if (event.key !== "Enter" || event.shiftKey) return;
@@ -82,6 +87,7 @@ export default function Composer({
               event.preventDefault();
               submit();
             }}
+            readOnly={listening}
             autoFocus
             rows={1}
             placeholder={
@@ -98,9 +104,12 @@ export default function Composer({
         </Button>
       </div>
 
-      <p className="mx-auto mt-2 mb-0 max-w-[720px] text-[10.5px] text-faint">
+      <p
+        aria-live="polite"
+        className="mx-auto mt-2 mb-0 max-w-[720px] text-[10.5px] text-faint"
+      >
         {listening
-          ? "Mic đang mở · tự dừng sau 2 giây im lặng · bấm Dừng để cắt ngay."
+          ? `Mic đang mở · tự dừng sau ${graceLabel} giây im lặng · bấm Dừng để cắt ngay.`
           : "Mic tắt mặc định · Enter để hỏi · Shift+Enter để xuống dòng."}
       </p>
     </form>

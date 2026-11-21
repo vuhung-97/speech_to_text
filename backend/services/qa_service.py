@@ -40,6 +40,7 @@ class QaService:
         tenant: str,
         session_id: str | None = None,
         source: str = "voice",
+        document_id: str | None = None,
     ) -> QaOutcome:
         value = (question or "").strip()
         if not value:
@@ -52,7 +53,7 @@ class QaService:
         turn_id = self._sessions.add_turn(
             session, tenant, Question(text=value, session_id=session, source=source))
 
-        result = self._matcher.match(value, tenant)
+        result = self._matcher.match(value, tenant, document_id=document_id)
         if result.matched is not None:
             status = (AnswerStatus.MATCHED if result.accepted
                       else AnswerStatus.NEAR_MISS)

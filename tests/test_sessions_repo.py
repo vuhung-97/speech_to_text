@@ -26,7 +26,7 @@ def test_schema_is_created_lazily(tmp_path: Path) -> None:
     assert not path.exists()  # importing/constructing must not touch disk
     database.initialize()
     assert path.exists()
-    assert database.schema_version == 4
+    assert database.schema_version == 6
 
 
 def test_session_lifecycle(tmp_path: Path) -> None:

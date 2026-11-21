@@ -47,10 +47,19 @@ def test_paraphrase_matches(matcher: SqliteFaqMatcher) -> None:
 
 def test_off_topic_is_rejected(matcher: SqliteFaqMatcher) -> None:
     for question in ("Thời tiết hôm nay thế nào", "Hôm nay ăn gì",
-                     "Mấy giờ rồi", "Giá vàng hôm nay bao nhiêu"):
+                     "Giá vàng hôm nay bao nhiêu", "Cách nấu phở bò"):
         result = matcher.match(question, "local")
         assert result.matched is None, (question, result.best_score)
         assert result.candidates
+
+
+def test_boundary_question_is_answered_as_near_miss(matcher: SqliteFaqMatcher) -> None:
+    # "Mấy giờ rồi" is not the same question as office hours, but it lands just
+    # above the 0.86 floor: the UI answers with the warning chip instead of
+    # hiding the closest answer. Raising the floor would drop it silently.
+    result = matcher.match("Mấy giờ rồi", "local")
+    assert result.matched is not None
+    assert result.near_miss is True
 
 
 def test_exact_question_scores_highest(matcher: SqliteFaqMatcher) -> None:

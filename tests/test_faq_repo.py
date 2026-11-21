@@ -27,9 +27,9 @@ def entry(tenant: str = "local", question: str = "Câu hỏi?",
                     answer=answer, category=category)
 
 
-def test_schema_upgrades_to_v2(tmp_path: Path) -> None:
+def test_schema_upgrades_to_v5(tmp_path: Path) -> None:
     database, _ = make(tmp_path)
-    assert database.schema_version == 4
+    assert database.schema_version == 6
 
 
 def test_crud_and_tenant_scope(tmp_path: Path) -> None:
@@ -91,6 +91,78 @@ def test_upsert_invalidates_embedding(tmp_path: Path) -> None:
                          question="Đổi câu hỏi", answer="Đổi đáp"))
     assert repo.embeddings("local") == []
     assert len(repo.pending_embeddings("local", "fake", 1)) == 1
+
+
+def test_search_text_and_source_provenance(tmp_path: Path) -> None:
+    _, repo = make(tmp_path)
+    saved = repo.upsert(FaqEntry(
+        id="", tenant_id="local",
+        question="Đồng chí hãy trình bày khái niệm “Tự động hóa chỉ huy”?",
+        answer="Đáp án.", source_file="de_cuong.docx", source_ref="Câu I.1.1",
+        document_id="doc-1"))
+
+    assert saved.search_text == "tự động hóa chỉ huy"
+    stored = repo.find_by_source("local", "doc-1", "Câu I.1.1")
+    assert stored is not None and stored.id == saved.id
+    assert repo.find_by_source("local", "doc-2", "Câu I.1.1") is None
+
+    # A manual edit keeps the provenance it did not supply.
+    edited = repo.upsert(FaqEntry(id=saved.id, tenant_id="local",
+                                  question=saved.question, answer="Đáp án mới."))
+    assert edited.source_file == "de_cuong.docx"
+    assert edited.source_ref == "Câu I.1.1"
+    assert edited.document_id == "doc-1"
+
+
+def test_document_scoped_entry_management(tmp_path: Path) -> None:
+    _, repo = make(tmp_path)
+    first = repo.upsert(FaqEntry(id="", tenant_id="local", question="một?",
+                                 answer="a", source_ref="Câu 1", document_id="d1"))
+    repo.upsert(FaqEntry(id="", tenant_id="local", question="hai?",
+                         answer="b", source_ref="Câu 2", document_id="d1"))
+    repo.upsert(FaqEntry(id="", tenant_id="local", question="ba?",
+                         answer="c", source_ref="Câu 1", document_id="d2"))
+
+    assert repo.count_in_document("local", "d1") == 2
+    assert [item.question for item in repo.list("local", document_id="d2")] == ["ba?"]
+
+    turned_off = repo.deactivate_missing("local", "d1", {"Câu 1"})
+    assert turned_off == 1
+    assert repo.find_by_source("local", "d1", "Câu 2").active is False
+
+    second = repo.find_by_source("local", "d1", "Câu 2")
+    deleted = repo.delete_by_document("local", "d1")
+    assert sorted(deleted) == sorted([first.id, second.id])
+    assert repo.count_in_document("local", "d1") == 0
+    assert repo.count_in_document("local", "d2") == 1
+
+
+def test_v6_backfill_groups_entries_by_source_file(tmp_path: Path) -> None:
+    """Upgrading a v5 database turns (tenant, source_file) groups into documents."""
+    path = tmp_path / "app.db"
+    initial = Database(path)
+    repository = SqliteFaqRepository(initial)
+    saved = repository.upsert(FaqEntry(
+        id="", tenant_id="local", question="một?", answer="a.",
+        source_file="de_cuong.docx", source_ref="Câu I.1.1"))
+
+    # Rewind to the v5 shape: no documents table, no document_id column.
+    with initial.connect() as connection:
+        connection.execute("DROP INDEX IF EXISTS idx_faq_entries_document")
+        connection.execute("ALTER TABLE faq_entries DROP COLUMN document_id")
+        connection.execute("DROP TABLE faq_documents")
+        connection.execute("PRAGMA user_version = 5")
+
+    # A fresh connection migrates to v6 and backfills the document.
+    migrated_db = Database(path)
+    from backend.adapters.storage.sqlite_faq_documents import (
+        SqliteFaqDocumentRepository)
+    documents = SqliteFaqDocumentRepository(migrated_db).list("local")
+    assert len(documents) == 1
+    assert documents[0].name == "de_cuong.docx"
+
+    entry = SqliteFaqRepository(migrated_db).get(saved.id, "local")
+    assert entry.document_id == documents[0].id
 
 
 def test_signature_and_stats(tmp_path: Path) -> None:

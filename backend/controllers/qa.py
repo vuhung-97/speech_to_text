@@ -21,6 +21,7 @@ class AskRequest(BaseModel):
     question: str = ""
     session_id: str | None = None
     source: str = "voice"
+    document_id: str | None = None
 
 
 class SpeechRequest(BaseModel):
@@ -68,6 +69,7 @@ def ask(request: AskRequest, qa: QaDep, tenant: TenantDep) -> dict[str, Any]:
             tenant=tenant,
             session_id=request.session_id,
             source=request.source or "voice",
+            document_id=request.document_id or None,
         )
     except SessionNotFound as exc:
         raise ApiError(str(exc), status_code=404) from exc

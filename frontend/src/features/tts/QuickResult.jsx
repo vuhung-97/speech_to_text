@@ -1,9 +1,26 @@
-export default function QuickResult({ audio }) {
+export default function QuickResult({ audio, audioRef }) {
+  const keyRef = useRef(0);
+
+  // Register the finished WAV with the playback channel: any other source
+  // (or a new press) pauses it before playing.
+  useEffect(() => {
+    const element = audioRef?.current;
+    if (!audio || !element) return undefined;
+    const key = beginPlayback(() => {
+      element.pause();
+    });
+    keyRef.current = key;
+    return () => {
+      endPlayback(key);
+      keyRef.current = 0;
+    };
+  }, [audio, audioRef]);
+
   if (!audio) return null;
 
   return (
     <div className="rounded-xl border border-line bg-white/[0.03] p-3">
-      <audio controls autoPlay src={audio.url} className="w-full" />
+      <audio ref={audioRef} controls autoPlay src={audio.url} className="w-full" />
       <div className="mt-2 flex items-center justify-between text-[11.5px] text-faint">
         <span>
           {audio.seconds != null

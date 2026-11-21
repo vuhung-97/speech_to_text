@@ -29,6 +29,7 @@ sau khi cài. Lõi là **zipformer 30M int8 (sherpa-onnx)**, backend **FastAPI**
 - [Yêu cầu](#yêu-cầu)
 - [Cài đặt nhanh](#cài-đặt-nhanh)
 - [Sử dụng](#sử-dụng)
+- [Hỏi đáp theo đề cương](#hỏi-đáp-theo-đề-cương)
 - [Giao diện](#giao-diện)
 - [Kiến trúc](#kiến-trúc)
 - [Cấu hình](#cấu-hình)
@@ -56,6 +57,10 @@ sau khi cài. Lõi là **zipformer 30M int8 (sherpa-onnx)**, backend **FastAPI**
 - **Đọc văn bản (TTS)** — drawer **Đọc** dùng VieNeu-TTS v3 Turbo: 25 giọng preset,
   gộp cả giọng clone của app VieNeu, nghe trực tiếp hoặc tải WAV 48 kHz; chạy offline
   trên CPU (ONNX), model nạp lần đầu khi dùng.
+- **Hỏi đáp theo đề cương — không dùng LLM** — câu hỏi (nói hoặc gõ) được embed bằng
+  `multilingual-e5-small` (ONNX, 384 chiều), so cosine với câu hỏi trong kho rồi
+  rerank bằng BM25; câu trả lời là **nguyên văn đáp án** của câu hỏi khớp nhất.
+  Kho nạp từ `cauhoi_dapan.docx` (nút **Nhập câu hỏi** ở trang Kho câu hỏi, hoặc CLI).
 - **API + docs tự động** tại `/api/docs`, sự kiện realtime qua **SSE**.
 - **Plugin model** — thêm model mới bằng một file, không sửa code lõi.
 
@@ -133,6 +138,50 @@ python run.py --port 9000 --no-browser
 | `Esc` | Tạm dừng / tiếp tục (đóng drawer nếu đang mở) |
 | `Ctrl` + `,` | Mở / đóng cài đặt |
 
+## Hỏi đáp theo đề cương
+
+Luồng chạy (offline, **không có model sinh văn bản**):
+
+```text
+micro → STT → text người dùng nói
+      → focus_question()                      # bỏ «đồng chí hãy/trình bày/…», «là gì»
+      → embedding e5 (384d) → cosine với mọi câu hỏi trong kho
+      → BM25 rerank top-10                    # phân biệt «trạm chính» / «trạm vùng»
+      → đáp án nguyên văn của câu khớp nhất   # < 0.86: báo chưa có đáp án + 3 gợi ý
+```
+
+Điểm hiển thị là **cosine** (0.86 là sàn trả lời, 0.88 là mức "chắc chắn"); BM25 chỉ
+đổi thứ hạng nên không làm câu lạc đề vượt sàn. Mã câu (`Câu I.1.1`) chỉ lưu để nhập
+lại không nhân đôi — màn hình Hỏi đáp không hiện mã câu.
+
+### Nạp đề cương `.docx`
+
+Mỗi câu trong tệp gồm một dòng `Câu …` (vd `Câu I.1.1`) rồi một bảng 2 cột: hàng đầu
+là câu hỏi + điểm, hàng `Đáp án`, các hàng sau là đoạn đáp án + điểm. Parser dùng
+`zipfile`/XML của Python (không cần `python-docx`), bỏ cột điểm và tự chịu được ô gộp,
+bảng lồng trong content control, câu hỏi nằm cùng dòng `Câu 3: …`, hoặc tệp không có
+bảng (đáp án viết thành đoạn).
+
+```bash
+python tools/import_docx.py --file cauhoi_dapan.docx          # nạp + embedding ngay
+python tools/import_docx.py --file cauhoi_dapan.docx --dry-run # chỉ đếm câu
+```
+
+Hoặc mở **Kho câu hỏi → Nhập câu hỏi** và chọn tệp `.docx` (tối đa 20 MB). Mỗi tệp
+thành một **bộ đề** (bảng `faq_documents`): nạp lại tệp cùng tên sẽ cập nhật bộ đó,
+nạp lại đúng nội dung dưới tên khác thì bỏ qua, còn tệp mới nội dung mới thành bộ
+mới. Câu không còn trong tệp (so theo mã câu) bị **tắt** (`active=0`) và được báo ở
+mục `stale` — bấm Bật trong danh sách để khôi phục. Trang **Kho câu hỏi** có panel
+Bộ đề (đổi tên, xoá cả bộ), màn hình **Hỏi đáp** có dropdown để hỏi trong một bộ
+hoặc tất cả. Hai câu gần giống nhau trong đề cương (vd `I.1.7` và `I.1.8`) **không**
+bị gộp.
+
+Đo chất lượng tìm kiếm trên bộ câu hỏi vàng (`tools/eval/docx_queries.json`):
+
+```bash
+python tools/eval_matcher.py    # top-1 / top-3 / MRR + khoảng điểm trong/ngoài phạm vi
+```
+
 ## Giao diện
 
 | Nhận dạng trực tiếp | Bảng cài đặt |
@@ -153,10 +202,19 @@ speech_to_text/
 │   ├── routes/                     # bảng route duy nhất
 │   ├── middleware/                 # lỗi → JSON {ok, error}
 │   ├── models/                     # DTO: CaptureStats, ReplayResult…
+│   ├── domain/                     # value objects + luật thuần (faq, qa, text, audio)
+│   ├── ports/                      # hợp đồng: Embedder, FaqRepository, FaqIndex…
+│   ├── adapters/
+│   │   ├── embedding/              # e5 ONNX (fallback hashing)
+│   │   ├── retrieval/              # SQLite repo + cosine/BM25 matcher
+│   │   ├── importer/               # parser đề cương .docx (zip + XML)
+│   │   └── storage/                # schema SQLite + migration
 │   ├── services/
 │   │   ├── capture_service.py      # InputProber · Resampler · MicStream
 │   │   ├── segmentation_service.py # EnergyGate · UtteranceSegmenter · LocalAgreement
 │   │   ├── transcription_service.py# pipeline: 2 mode, reload nền, hàng đợi câu
+│   │   ├── faq_service.py          # CRUD + nhập CSV/.docx + dedupe + reindex
+│   │   ├── qa_service.py           # câu hỏi → kết quả khớp → lưu phiên/lịch sử
 │   │   ├── tts_service.py          # facade VieNeu TTS: lazy load, voices, WAV
 │   │   ├── tts/                    # engine_loader · voice_catalog · job_store
 │   │   ├── replay_service.py · event_service.py · device_service.py
@@ -213,6 +271,15 @@ Swagger UI: `http://127.0.0.1:8765/api/docs`
 | `POST /api/tts` | `{text, voice?}` → `audio/wav` 48 kHz (tối đa 1000 ký tự) |
 | `POST /api/pause` | `{paused: bool}` |
 | `POST /api/clear` | Xoá transcript |
+| `POST /api/v1/qa/ask` | `{question, session_id?, source?, document_id?}` → câu trả lời + điểm khớp |
+| `GET /api/v1/faq/entries` | Danh sách câu hỏi/đáp án (lọc `q`, `category`, `active`, `document_id`) |
+| `POST /api/v1/faq/import` | Nạp CSV (`multipart/form-data`, field `file`, ≤ 2 MB) |
+| `POST /api/v1/faq/import-docx` | Nạp đề cương `.docx` (field `file`, ≤ 20 MB), trả `added/updated/skipped/stale/errors` + bộ đề |
+| `GET /api/v1/faq/documents` | Danh sách bộ đề: tên, số câu, ngày cập nhật |
+| `PATCH /api/v1/faq/documents/{id}` | Đổi tên bộ đề `{name}` |
+| `DELETE /api/v1/faq/documents/{id}` | Xoá bộ đề cùng các câu của nó |
+| `POST /api/v1/faq/reindex` | Embedding lại toàn bộ kho |
+| `GET /api/v1/faq/stats` | Số câu, đã embedding, model, ngưỡng |
 
 ## Thêm model AI mới
 
@@ -281,6 +348,8 @@ python tests/test_settings.py     # schema động, clamp, effects, persistence
 python tests/test_streaming.py    # pipeline, engine registry, replay, FastAPI + SSE
 python tests/test_tts.py          # WAV, voice catalog, API (fake engine)
 VIENEU_SMOKE=1 python tests/test_tts.py   # synth thật (chậm, cần model TTS)
+python -m pytest tests            # toàn bộ backend (gồm test_docx_import)
+python tools/eval_matcher.py      # đo top-1/top-3 của bộ câu hỏi vàng
 python smoke_test.py              # zipformer + micro thật
 ```
 
@@ -305,6 +374,8 @@ npm run build                     # cập nhật frontend/dist
 | TTS không thấy model | cần `models/vieneu/vieneu/hf_cache/` (từ app VieNeu) hoặc mạng cho lần tải đầu |
 | TTS chậm/lần đầu lâu | model nạp ~10–20 s; đặt `VIENEU_PRECISION=int8` (CPU có VNNI) để nhanh hơn |
 | Giọng nhỏ bị bỏ | giảm `threshold` (~0.006–0.008) |
+| Nhập `.docx` báo "không đọc được câu hỏi/đáp án nào" | mỗi câu cần dòng `Câu …` và bảng có hàng `Đáp án` (hoặc các đoạn đáp án); tệp `.doc` cũ phải lưu lại thành `.docx` |
+| Hỏi đúng nội dung nhưng báo "Chưa có đáp án" | kiểm tra `GET /api/v1/faq/stats` đã embedding chưa (chạy `python tools/import_docx.py --file …`), và điểm khớp có dưới sàn 0.86 không |
 
 ## Đóng góp
 

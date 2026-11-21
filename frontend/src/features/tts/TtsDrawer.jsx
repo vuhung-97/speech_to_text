@@ -1,7 +1,7 @@
 // Reading drawer: voice catalog, text input and the two synthesis modes.
 // Data loading lives in useTtsCatalog/useQuickSynth; this file composes them.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "../../app/ToastProvider";
 import QuickResult from "./QuickResult";
 import StreamProgress from "./StreamProgress";
@@ -47,6 +47,7 @@ export default function TtsDrawer({ open, onClose, text: presetText = "" }) {
 
   const speech = useSpeechPlayer();
   const { stop: stopSpeech } = speech;
+  const quickAudioRef = useRef(null);
 
   const quick = useQuickSynth({
     onLoaded: () => catalog.setStatus((previous) => ({ ...previous, loaded: true })),
@@ -57,6 +58,7 @@ export default function TtsDrawer({ open, onClose, text: presetText = "" }) {
   useEffect(() => {
     if (!open) {
       stopSpeech();
+      quickAudioRef.current?.pause();
       releaseQuick();
     }
   }, [open, stopSpeech, releaseQuick]);
@@ -64,6 +66,7 @@ export default function TtsDrawer({ open, onClose, text: presetText = "" }) {
   const switchMode = (next) => {
     setMode(next);
     stopSpeech();
+    quickAudioRef.current?.pause();
     releaseQuick();
     quick.setError("");
   };
@@ -107,6 +110,7 @@ export default function TtsDrawer({ open, onClose, text: presetText = "" }) {
       notify(`Văn bản vượt giới hạn ${limit} ${mode === "stream" ? "từ" : "ký tự"}.`);
       return;
     }
+    quickAudioRef.current?.pause();
     releaseQuick();
     await speech.start(value, catalog.voice);
   };
@@ -117,6 +121,7 @@ export default function TtsDrawer({ open, onClose, text: presetText = "" }) {
       quick.setError("Nhập văn bản cần đọc trước đã.");
       return;
     }
+    stopSpeech();
     await quick.start(value, catalog.voice);
   };
 
@@ -255,7 +260,7 @@ export default function TtsDrawer({ open, onClose, text: presetText = "" }) {
             </p>
           )}
 
-          {mode === "quick" && <QuickResult audio={quick.audio} />}
+          {mode === "quick" && <QuickResult audio={quick.audio} audioRef={quickAudioRef} />}
 
           {overLimit && (
             <p className="m-0 rounded-lg border border-err/35 bg-err/10 px-3 py-2 text-[12px] text-err">

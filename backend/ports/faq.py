@@ -13,14 +13,19 @@ from typing import Protocol
 
 import numpy as np
 
-from ..domain.faq.models import FaqEntry, FaqResult
+from ..domain.faq.models import (FaqDocument, FaqEntry, FaqOutline,
+                                 FaqResult)
 
 
 class FaqMatcher(Protocol):
     """Find the curated question that best matches what the user just said."""
 
-    def match(self, question: str, tenant: str, k: int = 3) -> FaqResult:
-        """Return the best match (if any) plus ``k`` nearest candidates."""
+    def match(self, question: str, tenant: str, k: int = 3,
+              document_id: str | None = None) -> FaqResult:
+        """Return the best match (if any) plus ``k`` nearest candidates.
+
+        When ``document_id`` is given, only that question set is searched.
+        """
         ...
 
 
@@ -44,12 +49,26 @@ class FaqIndex(Protocol):
     def invalidate(self, tenant: str) -> None: ...
 
 
+class FaqOutlineParser(Protocol):
+    """Turn an uploaded outline document into ordered question/answer pairs."""
+
+    def __call__(self, data: bytes) -> Sequence[FaqOutline]:
+        """Raise ``ValueError`` when the file is not a readable outline."""
+        ...
+
+
 class FaqRepository(Protocol):
     """Tenant-scoped storage for curated entries and their vectors."""
 
     def get(self, entry_id: str, tenant: str) -> FaqEntry | None: ...
 
     def find_by_norm(self, tenant: str, norm: str) -> FaqEntry | None: ...
+
+    def find_by_norm_in_document(self, tenant: str, document_id: str,
+                                 norm: str) -> FaqEntry | None: ...
+
+    def find_by_source(self, tenant: str, document_id: str,
+                       source_ref: str) -> FaqEntry | None: ...
 
     def list(
         self,
@@ -58,6 +77,7 @@ class FaqRepository(Protocol):
         query: str | None = None,
         category: str | None = None,
         active: bool | None = None,
+        document_id: str | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> Sequence[FaqEntry]: ...
@@ -79,6 +99,33 @@ class FaqRepository(Protocol):
     def index_signature(self, tenant: str) -> tuple[int, float, int]: ...
 
     def stats(self, tenant: str) -> dict[str, object]: ...
+
+    def count_in_document(self, tenant: str, document_id: str) -> int: ...
+
+    def deactivate_missing(self, tenant: str, document_id: str,
+                           keep_refs: set[str]) -> int: ...
+
+    def delete_by_document(self, tenant: str, document_id: str) -> list[str]: ...
+
+
+class FaqDocumentRepository(Protocol):
+    """Tenant-scoped storage for uploaded question sets."""
+
+    def get(self, document_id: str, tenant: str) -> FaqDocument | None: ...
+
+    def list(self, tenant: str) -> Sequence[FaqDocument]: ...
+
+    def find_by_name(self, tenant: str, name: str) -> FaqDocument | None: ...
+
+    def find_by_hash(self, tenant: str, content_hash: str) -> FaqDocument | None: ...
+
+    def create(self, tenant: str, name: str, content_hash: str) -> FaqDocument: ...
+
+    def update(self, document_id: str, tenant: str, *, name: str | None = None,
+               content_hash: str | None = None,
+               entry_count: int | None = None) -> FaqDocument | None: ...
+
+    def delete(self, document_id: str, tenant: str) -> bool: ...
 
 
 class FaqAudioRepository(Protocol):
@@ -119,4 +166,12 @@ class QueryLog(Protocol):
         ...
 
 
-__all__ = ["FaqAudioRepository", "FaqIndex", "FaqMatcher", "FaqRepository", "QueryLog"]
+__all__ = [
+    "FaqAudioRepository",
+    "FaqDocumentRepository",
+    "FaqIndex",
+    "FaqMatcher",
+    "FaqOutlineParser",
+    "FaqRepository",
+    "QueryLog",
+]

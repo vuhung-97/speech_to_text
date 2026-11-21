@@ -15,6 +15,7 @@ from backend.adapters.retrieval.sqlite_faq import (SqliteFaqMatcher,
                                                    SqliteFaqRepository)
 from backend.adapters.storage.sqlite import Database
 from backend.domain.faq.models import FaqEntry
+from backend.domain.faq.query import focus_question
 
 
 class MapEmbedder:
@@ -25,11 +26,11 @@ class MapEmbedder:
     dim = 4
 
     def __init__(self, mapping: dict[str, list[float]]) -> None:
-        self.mapping = {key: np.asarray(value, dtype=np.float32)
+        self.mapping = {focus_question(key): np.asarray(value, dtype=np.float32)
                         for key, value in mapping.items()}
 
     def _vector(self, text: str) -> np.ndarray:
-        key = text.replace("passage: ", "").replace("query: ", "")
+        key = focus_question(text.replace("passage: ", "").replace("query: ", ""))
         vector = self.mapping.get(key)
         if vector is None:  # unknown text → orthogonal vector
             vector = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32)
@@ -49,9 +50,9 @@ def make(tmp_path: Path, embedder):
 
 
 def add(repo: SqliteFaqRepository, tenant: str, question: str,
-        answer: str = "Đáp án.") -> FaqEntry:
+        answer: str = "Đáp án.", document_id: str = "") -> FaqEntry:
     return repo.upsert(FaqEntry(id="", tenant_id=tenant, question=question,
-                                answer=answer))
+                                answer=answer, document_id=document_id))
 
 
 def test_lazy_embedding_and_exact_match(tmp_path: Path) -> None:
@@ -129,3 +130,33 @@ def test_candidates_are_ranked(tmp_path: Path) -> None:
     result = matcher.match("gần nhất", "local", k=2)
     names = [item.entry.question for item in result.candidates]
     assert names[:2] == ["thứ hai", "thứ ba"]
+
+
+def test_lexical_rerank_breaks_cosine_ties(tmp_path: Path) -> None:
+    """Near-identical questions share a vector; BM25 must pick the right wording."""
+    embedder = MapEmbedder({
+        "cấu trúc trạm chính": [1, 0, 0, 0],
+        "cấu trúc trạm vùng": [1, 0, 0, 0],
+    })
+    repo, matcher = make(tmp_path, embedder)
+    add(repo, "local", "cấu trúc trạm chính")
+    add(repo, "local", "cấu trúc trạm vùng")
+
+    result = matcher.match("cấu trúc trạm vùng", "local")
+    assert result.matched is not None
+    assert result.matched.entry.question == "cấu trúc trạm vùng"
+    assert result.matched.score == pytest.approx(1.0, abs=1e-5)
+
+
+def test_document_filter_limits_search(tmp_path: Path) -> None:
+    embedder = MapEmbedder({"câu chung": [1, 0, 0, 0]})
+    repo, matcher = make(tmp_path, embedder)
+    plain = add(repo, "local", "câu chung", "Đáp án chung.")
+    scoped = add(repo, "local", "câu chung", "Đáp án bộ đề.", document_id="d1")
+
+    result = matcher.match("câu chung", "local", document_id="d1")
+    assert result.matched is not None
+    assert result.matched.entry.id == scoped.id
+
+    assert matcher.match("câu chung", "local", document_id="khác").matched is None
+    assert matcher.match("câu chung", "local").matched.entry.id in {plain.id, scoped.id}

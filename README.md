@@ -73,8 +73,9 @@ sau khi cài. Lõi là **zipformer 30M int8 (sherpa-onnx)**, backend **FastAPI**
 | Micro | bất kỳ | cần quyền micro của desktop app |
 | GPU | không cần | model chạy CPU int8 |
 
-Repo đã kèm sẵn **model zipformer** (`models/sherpa/`) và **bản build frontend**
-(`frontend/dist/`), nên chỉ cần cài Python là chạy được.
+Repo đã kèm sẵn **model zipformer** (`models/sherpa/`). Bản build giao diện
+(`frontend/dist/`) không commit vào git: chạy `cd frontend && npm install && npm run build`
+một lần trước khi `python run.py`.
 
 TTS dùng package `vieneu` (đã nằm trong `requirements.txt`) và model **VieNeu-TTS v3 Turbo**
 trong `models/vieneu/`. Nếu thư mục này chưa có, lần đọc đầu tiên backend sẽ tải model từ
@@ -210,20 +211,24 @@ speech_to_text/
 │   │   ├── importer/               # parser đề cương .docx (zip + XML)
 │   │   └── storage/                # schema SQLite + migration
 │   ├── services/
-│   │   ├── capture_service.py      # InputProber · Resampler · MicStream
+│   │   ├── audio_sessions.py       # hub: mỗi WebSocket là một phiên, giới hạn 8
+│   │   ├── ws_mic.py               # PCM16 qua WebSocket → block 100 ms
 │   │   ├── segmentation_service.py # EnergyGate · UtteranceSegmenter · LocalAgreement
-│   │   ├── transcription_service.py# pipeline: 2 mode, reload nền, hàng đợi câu
-│   │   ├── faq_service.py          # CRUD + nhập CSV/.docx + dedupe + reindex
+│   │   ├── transcription_service.py# pipeline: 2 mode, hàng đợi câu
+│   │   ├── pipeline/               # engine_reloader (Đổi model nền, một token)
+│   │   ├── faq_service.py          # CRUD + index + thống kê
+│   │   ├── faq_import.py           # nhập CSV/.docx + dedupe
+│   │   ├── faq_documents.py        # bộ đề: tạo/đổi tên/xoá
 │   │   ├── qa_service.py           # câu hỏi → kết quả khớp → lưu phiên/lịch sử
 │   │   ├── tts_service.py          # facade VieNeu TTS: lazy load, voices, WAV
 │   │   ├── tts/                    # engine_loader · voice_catalog · job_store
-│   │   ├── replay_service.py · event_service.py · device_service.py
+│   │   ├── replay_service.py · event_service.py
 │   │   └── engines/                # ASREngine contract + registry + plugins
 │   └── utils/                      # priority thread, errors
 ├── frontend/                       # React 19 + Tailwind 4 (Vite)
 │   ├── public/
-│   ├── src/{pages,components,services,context,utils}
-│   └── dist/                       # bản build sẵn
+│   ├── src/{shared,features,pages,components,services,utils}
+│   └── dist/                       # tạo bằng npm run build (không commit)
 ├── models/sherpa/                  # zipformer-vi-30M int8
 ├── models/vieneu/                  # VieNeu-TTS v3 Turbo (cache HF + giọng clone)
 ├── samples/                        # file audio để replay (không commit)
@@ -358,7 +363,7 @@ Frontend (Vitest + jsdom):
 ```bash
 cd frontend
 npm test                          # hooks, HTTP client, PCM stream
-npm run build                     # cập nhật frontend/dist
+npm run build                     # tạo frontend/dist (không commit)
 ```
 
 ## Khắc phục sự cố

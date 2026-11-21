@@ -50,7 +50,7 @@ phiên mới. Gói quá lớn bị bỏ và trả `warning`.
 | Method | Path | Kết quả |
 |---|---|---|
 | GET | `/sessions?limit&offset` | danh sách phiên, mới nhất trước |
-| GET | `/sessions/{id}` | phiên + turns + answer |
+| GET | `/sessions/{id}` | phiên + turns + answer (kèm `matched` dựng lại từ kho; `candidates` chỉ có ở response `ask`) |
 | DELETE | `/sessions/{id}` | xoá (cascade turns/answers), ghi audit |
 
 ## Kho câu hỏi

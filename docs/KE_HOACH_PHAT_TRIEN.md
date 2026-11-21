@@ -44,12 +44,15 @@ backend/
 
 ```
 frontend/src/
-├─ app/           App.jsx, router.jsx, providers.jsx
-├─ features/      dictation, qa, tts, faq, sessions, settings
-├─ components/ui/ primitives + CommandPalette
-├─ services/      http.js, errors.js, sse.js
+├─ app/           App.jsx, router.jsx, providers.jsx, AppShell
+├─ shared/        mic, playback, live, tts, ui (dùng chung giữa các feature)
+├─ features/      dictation, qa, tts, faq, sessions, settings (mỗi feature có index.js)
+├─ components/ui/ primitives + CommandPalette + Alert/BrandMark
+├─ services/      http.js, errors.js, sse.js (nơi duy nhất gọi fetch)
 └─ styles/        tokens.css
 ```
+
+Feature chỉ import qua `index.js` của feature khác; phần dùng chung nằm ở `shared/`.
 
 Quy tắc: component không chứa business logic; không `fetch` ngoài `services/`;
 `domain/` không import FastAPI; RAG/embedding nằm sau port.

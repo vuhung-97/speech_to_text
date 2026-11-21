@@ -26,6 +26,7 @@ from fastapi.staticfiles import StaticFiles
 from .adapters.embedding.onnx_e5 import build_embedder
 from .adapters.retrieval.sqlite_faq import (SqliteFaqMatcher,
                                             SqliteFaqRepository)
+from .adapters.retrieval.sqlite_faq_audio import SqliteFaqAudioRepository
 from .adapters.storage.sqlite import (Database, SqliteAuditLog, SqliteQueryLog,
                                       SqliteSessionRepository)
 from .config.paths import DB_PATH, DIST_DIR, SAMPLES_DIR, SETTINGS_PATH, TTS_TEMP_DIR
@@ -117,6 +118,7 @@ def create_app(settings: Settings, pipeline: LivePipeline, replay: ReplayService
     else:
         embed_note = ""
     faq_repo = SqliteFaqRepository(database)
+    faq_audio_repo = SqliteFaqAudioRepository(database)
     faq_matcher = SqliteFaqMatcher(faq_repo, embedder)
     faq_service = FaqService(faq_repo, faq_matcher, embedder)
     app.state.embedder = embedder
@@ -125,7 +127,7 @@ def create_app(settings: Settings, pipeline: LivePipeline, replay: ReplayService
     app.state.faq_matcher = faq_matcher
     app.state.faq_service = faq_service
     app.state.audit = SqliteAuditLog(database)
-    app.state.faq_audio = FaqAudioService(faq_repo, app.state.tts,
+    app.state.faq_audio = FaqAudioService(faq_audio_repo, faq_repo, app.state.tts,
                                          cache_dir=audio_cache_dir)
     app.state.qa = qa or QaService(faq_matcher, sessions_repo, query_log)
 

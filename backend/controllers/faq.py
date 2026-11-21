@@ -8,7 +8,7 @@ from fastapi import APIRouter, File, Request, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from ..domain.faq.models import FaqEntry
+from ..domain.faq.models import FaqEntry, FaqEntryNotFound
 from ..services.tts_service import TtsBusy
 from ..utils.errors import ApiError, NotFoundError
 from .deps import AuditDep, FaqAudioDep, FaqServiceDep, TenantDep
@@ -72,10 +72,8 @@ def update_entry(entry_id: str, request: EntryPatch, faq: FaqServiceDep,
              if value is not None}
     try:
         entry = faq.update(entry_id, tenant, patch)
-    except ValueError as exc:
-        if "không tìm thấy" in str(exc):
-            raise NotFoundError(str(exc)) from exc
-        raise
+    except FaqEntryNotFound as exc:
+        raise NotFoundError(str(exc)) from exc
     audit.record(tenant=tenant, action="faq.update", target=entry_id,
                  detail=",".join(sorted(patch)))
     return {"ok": True, "entry": entry_json(entry)}
@@ -130,10 +128,8 @@ def prerender(entry_id: str, request: PrerenderRequest, audio: FaqAudioDep,
         job = audio.start(entry_id, tenant, request.voice)
     except TtsBusy as exc:
         raise ApiError(str(exc), status_code=409) from exc
-    except ValueError as exc:
-        if "không tìm thấy" in str(exc):
-            raise NotFoundError(str(exc)) from exc
-        raise
+    except FaqEntryNotFound as exc:
+        raise NotFoundError(str(exc)) from exc
     audit.record(tenant=tenant, action="faq.prerender", target=entry_id,
                  detail=job.voice)
     return {"ok": True, "job": audio.status(job.id)}

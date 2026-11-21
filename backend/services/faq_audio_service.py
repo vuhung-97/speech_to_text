@@ -16,9 +16,11 @@ import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from ..adapters.retrieval.sqlite_faq import SqliteFaqRepository
 from ..config.paths import AUDIO_CACHE_DIR
-from ..services.tts_service import TtsBusy, TtsService
+from ..domain.faq.models import FaqEntryNotFound
+from ..ports.faq import FaqAudioRepository, FaqRepository
+from ..ports.speech import SpeechSynthesizer
+from ..services.tts_service import TtsBusy
 
 MAX_CACHE_MB = 512
 MAX_JOBS = 20
@@ -38,10 +40,12 @@ class FaqAudioJob:
 
 
 class FaqAudioService:
-    def __init__(self, repository: SqliteFaqRepository, tts: TtsService,
+    def __init__(self, repository: FaqAudioRepository, entries: FaqRepository,
+                 tts: SpeechSynthesizer,
                  cache_dir: str | Path | None = None,
                  quota_mb: int = MAX_CACHE_MB) -> None:
         self._repo = repository
+        self._entries = entries
         self._tts = tts
         self._dir = Path(cache_dir) if cache_dir else AUDIO_CACHE_DIR
         self._quota = max(1, int(quota_mb)) * 1024 * 1024
@@ -82,9 +86,9 @@ class FaqAudioService:
 
     # --------------------------------------------------------------- prerender
     def start(self, entry_id: str, tenant: str, voice: str | None) -> FaqAudioJob:
-        entry = self._repo.get(entry_id, tenant)
+        entry = self._entries.get(entry_id, tenant)
         if entry is None:
-            raise ValueError("không tìm thấy câu hỏi")
+            raise FaqEntryNotFound("không tìm thấy câu hỏi")
         selected = self._tts.resolve_voice(voice)
         if selected is None:
             raise ValueError("chưa chọn được giọng đọc")

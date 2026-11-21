@@ -1,8 +1,8 @@
 import { useState } from "react";
 
-import { useSettings } from "../features/settings/SettingsProvider";
-import { useToast } from "../app/ToastProvider";
-import { loadPresets, savePresets } from "../utils/presets";
+import { useToast } from "../../app/ToastProvider";
+import { loadPresets, savePresets } from "../../utils/presets";
+import { useSettings } from "./SettingsProvider";
 
 export default function PresetPanel() {
   const { settings, dirty, applyPatch } = useSettings();

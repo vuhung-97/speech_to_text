@@ -24,10 +24,32 @@ class FaqMatcher(Protocol):
         ...
 
 
+class FaqIndex(Protocol):
+    """Search index used by the admin service: refresh, invalidate, describe."""
+
+    threshold: float
+    near_threshold: float
+
+    @property
+    def model_id(self) -> str: ...
+
+    @property
+    def version(self) -> int: ...
+
+    @property
+    def dim(self) -> int: ...
+
+    def ensure_index(self, tenant: str) -> tuple[Sequence[FaqEntry], np.ndarray]: ...
+
+    def invalidate(self, tenant: str) -> None: ...
+
+
 class FaqRepository(Protocol):
     """Tenant-scoped storage for curated entries and their vectors."""
 
     def get(self, entry_id: str, tenant: str) -> FaqEntry | None: ...
+
+    def find_by_norm(self, tenant: str, norm: str) -> FaqEntry | None: ...
 
     def list(
         self,
@@ -42,7 +64,7 @@ class FaqRepository(Protocol):
 
     def upsert(self, entry: FaqEntry) -> FaqEntry: ...
 
-    def delete(self, entry_id: str, tenant: str) -> None: ...
+    def delete(self, entry_id: str, tenant: str) -> bool: ...
 
     def all_active(self, tenant: str) -> Sequence[FaqEntry]: ...
 
@@ -57,6 +79,25 @@ class FaqRepository(Protocol):
     def index_signature(self, tenant: str) -> tuple[int, float, int]: ...
 
     def stats(self, tenant: str) -> dict[str, object]: ...
+
+
+class FaqAudioRepository(Protocol):
+    """Tenant-scoped cache of pre-rendered answer audio."""
+
+    def get_audio(self, entry_id: str, tenant: str,
+                  voice: str) -> dict[str, object] | None: ...
+
+    def put_audio(self, entry_id: str, tenant: str, *, voice: str,
+                  sample_rate: int, path: str, seconds: float,
+                  bytes_: int) -> None: ...
+
+    def delete_audio(self, entry_id: str, tenant: str,
+                     voice: str | None = None) -> None: ...
+
+    def audio_usage(self, tenant: str) -> int: ...
+
+    def oldest_audio(self, tenant: str,
+                     limit: int = 20) -> Sequence[dict[str, object]]: ...
 
 
 class QueryLog(Protocol):
@@ -78,4 +119,4 @@ class QueryLog(Protocol):
         ...
 
 
-__all__ = ["FaqMatcher", "FaqRepository", "QueryLog"]
+__all__ = ["FaqAudioRepository", "FaqIndex", "FaqMatcher", "FaqRepository", "QueryLog"]

@@ -65,15 +65,15 @@ def test_stream_writes_wav_and_returns_blocks(service: FakeTts, tmp_path: Path) 
     for block in service.synthesize_stream("Một đoạn văn bản ngắn.\n\nĐoạn thứ hai."):
         assert len(block) % 2 == 0
         total += len(block) // 2
-        if service._active is not None:
-            statuses.append(service.job_status(service._active.id))
+        if service._store.active is not None:
+            statuses.append(service.job_status(service._store.active.id))
 
     # two paragraphs → 3 s each plus a 0.35 s breath between them
     expected = 2 * 3 * SAMPLE_RATE + int(0.35 * SAMPLE_RATE)
     assert total == expected
     assert statuses and statuses[-1]["progress"] > 0
 
-    job = next(iter(service._jobs.values()))
+    job = next(iter(service._store.values()))
     assert job.finalized
     assert service.job_path(job.id) is not None
     assert job.wav_path.is_file()

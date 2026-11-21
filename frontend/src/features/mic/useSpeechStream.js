@@ -3,7 +3,7 @@
 
 import { useCallback, useState } from "react";
 
-import { useMic } from "../mic/useMic";
+import { useMic } from "./useMic";
 
 export function useSpeechStream() {
   const [live, setLive] = useState({ stable: "", tentative: "" });

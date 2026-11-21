@@ -9,7 +9,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { useLive } from "../features/dictation/LiveProvider";
 import CommandPalette from "../components/CommandPalette";
 import IconButton from "../components/ui/IconButton";
-import SettingsDrawer from "../components/SettingsDrawer";
+import SettingsDrawer from "../features/settings/SettingsDrawer";
 import StatusPill from "../components/StatusPill";
 
 const ICONS = {

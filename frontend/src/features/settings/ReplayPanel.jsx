@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { useToast } from "../app/ToastProvider";
-import * as api from "../services/api";
+import { useToast } from "../../app/ToastProvider";
+import * as api from "../../services/api";
 
 export default function ReplayPanel() {
   const { notify } = useToast();

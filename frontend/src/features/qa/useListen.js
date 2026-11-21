@@ -8,7 +8,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { useSpeechStream } from "./useSpeechStream";
+import { useSpeechStream } from "../mic/useSpeechStream";
 import {
   GRACE_MS,
   HARD_LIMIT_MS,

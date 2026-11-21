@@ -27,6 +27,35 @@ async function readJson(response) {
   }
 }
 
+// Shared transport: one abort controller, one timeout, one error shape.
+async function fetchWithTimeout(path, init, { signal, timeout = DEFAULT_TIMEOUT } = {}) {
+  const controller = new AbortController();
+  const unlink = linkSignal(signal, controller);
+  const timer = timeout
+    ? window.setTimeout(
+        () => controller.abort(new DOMException("timeout", "TimeoutError")),
+        timeout,
+      )
+    : 0;
+
+  try {
+    return await fetch(path, { ...init, signal: controller.signal });
+  } catch (error) {
+    throw ApiError.fromNetwork(error);
+  } finally {
+    window.clearTimeout(timer);
+    unlink();
+  }
+}
+
+async function readJsonResponse(response) {
+  const data = await readJson(response);
+  if (!response.ok || data?.ok === false) {
+    throw ApiError.fromResponse(response, data);
+  }
+  return data ?? {};
+}
+
 export async function request(path, options = {}) {
   const {
     method = "GET",
@@ -36,14 +65,9 @@ export async function request(path, options = {}) {
     timeout = DEFAULT_TIMEOUT,
   } = options;
 
-  const controller = new AbortController();
-  const unlink = linkSignal(signal, controller);
-  const timer = timeout
-    ? window.setTimeout(() => controller.abort(new DOMException("timeout", "TimeoutError")), timeout)
-    : 0;
-
-  try {
-    const response = await fetch(path, {
+  const response = await fetchWithTimeout(
+    path,
+    {
       method,
       headers: {
         ...JSON_HEADERS,
@@ -51,19 +75,10 @@ export async function request(path, options = {}) {
         ...headers,
       },
       body: body === undefined ? undefined : JSON.stringify(body),
-      signal: controller.signal,
-    });
-    const data = await readJson(response);
-    if (!response.ok || data?.ok === false) {
-      throw ApiError.fromResponse(response, data);
-    }
-    return data ?? {};
-  } catch (error) {
-    throw ApiError.fromNetwork(error);
-  } finally {
-    window.clearTimeout(timer);
-    unlink();
-  }
+    },
+    { signal, timeout },
+  );
+  return readJsonResponse(response);
 }
 
 export const get = (path, options) => request(path, options);
@@ -73,43 +88,22 @@ export const del = (path, options) => request(path, { ...options, method: "DELET
 
 export async function requestForm(path, options = {}) {
   const { method = "POST", form, signal, timeout = 30_000 } = options;
-  const controller = new AbortController();
-  const unlink = linkSignal(signal, controller);
-  const timer = timeout
-    ? window.setTimeout(() => controller.abort(new DOMException("timeout", "TimeoutError")), timeout)
-    : 0;
 
-  try {
+  const response = await fetchWithTimeout(
+    path,
     // Never set Content-Type for FormData: the browser owns the boundary.
-    const response = await fetch(path, {
-      method,
-      headers: { Accept: "application/json" },
-      body: form,
-      signal: controller.signal,
-    });
-    const data = await readJson(response);
-    if (!response.ok || data?.ok === false) {
-      throw ApiError.fromResponse(response, data);
-    }
-    return data ?? {};
-  } catch (error) {
-    throw ApiError.fromNetwork(error);
-  } finally {
-    window.clearTimeout(timer);
-    unlink();
-  }
+    { method, headers: { Accept: "application/json" }, body: form },
+    { signal, timeout },
+  );
+  return readJsonResponse(response);
 }
 
 export async function requestAudio(path, options = {}) {
   const { method = "POST", body, signal, timeout = 0, headers } = options;
-  const controller = new AbortController();
-  const unlink = linkSignal(signal, controller);
-  const timer = timeout
-    ? window.setTimeout(() => controller.abort(new DOMException("timeout", "TimeoutError")), timeout)
-    : 0;
 
-  try {
-    const response = await fetch(path, {
+  const response = await fetchWithTimeout(
+    path,
+    {
       method,
       headers: {
         Accept: "audio/*",
@@ -117,26 +111,26 @@ export async function requestAudio(path, options = {}) {
         ...headers,
       },
       body: body === undefined ? undefined : JSON.stringify(body),
-      signal: controller.signal,
+    },
+    { signal, timeout },
+  );
+
+  if (!response.ok) {
+    throw ApiError.fromResponse(response, await readJson(response));
+  }
+  if (!response.headers.get("content-type")?.includes("audio/")) {
+    throw new ApiError("Phản hồi không phải audio", {
+      status: response.status,
+      code: "bad-content-type",
     });
-    if (!response.ok) {
-      throw ApiError.fromResponse(response, await readJson(response));
-    }
-    if (!response.headers.get("content-type")?.includes("audio/")) {
-      throw new ApiError("Phản hồi không phải audio", {
-        status: response.status,
-        code: "bad-content-type",
-      });
-    }
+  }
+  try {
     return {
       blob: await response.blob(),
       seconds: Number(response.headers.get("X-Audio-Seconds")) || null,
     };
   } catch (error) {
     throw ApiError.fromNetwork(error);
-  } finally {
-    window.clearTimeout(timer);
-    unlink();
   }
 }
 

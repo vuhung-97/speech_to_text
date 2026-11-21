@@ -26,7 +26,7 @@ export function SettingsProvider({ children }) {
   const [settings, setSettings] = useState(EMPTY);
   const [dirty, setDirty] = useState({});
 
-  // The 2-second state poll already carries the authoritative values; mirror
+  // The live state stream (SSE) already carries the authoritative values; mirror
   // them so a change made from another tab shows up here too.
   useEffect(() => {
     setSettings((previous) => ({

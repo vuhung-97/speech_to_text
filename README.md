@@ -157,7 +157,8 @@ speech_to_text/
 │   │   ├── capture_service.py      # InputProber · Resampler · MicStream
 │   │   ├── segmentation_service.py # EnergyGate · UtteranceSegmenter · LocalAgreement
 │   │   ├── transcription_service.py# pipeline: 2 mode, reload nền, hàng đợi câu
-│   │   ├── tts_service.py          # VieNeu TTS: lazy load, voices, WAV
+│   │   ├── tts_service.py          # facade VieNeu TTS: lazy load, voices, WAV
+│   │   ├── tts/                    # engine_loader · voice_catalog · job_store
 │   │   ├── replay_service.py · event_service.py · device_service.py
 │   │   └── engines/                # ASREngine contract + registry + plugins
 │   └── utils/                      # priority thread, errors
@@ -281,6 +282,14 @@ python tests/test_streaming.py    # pipeline, engine registry, replay, FastAPI +
 python tests/test_tts.py          # WAV, voice catalog, API (fake engine)
 VIENEU_SMOKE=1 python tests/test_tts.py   # synth thật (chậm, cần model TTS)
 python smoke_test.py              # zipformer + micro thật
+```
+
+Frontend (Vitest + jsdom):
+
+```bash
+cd frontend
+npm test                          # hooks, HTTP client, PCM stream
+npm run build                     # cập nhật frontend/dist
 ```
 
 ## Khắc phục sự cố

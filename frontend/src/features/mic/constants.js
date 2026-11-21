@@ -1,4 +1,4 @@
-// Single source of truth for browser microphone and reading constants.
+// Single source of truth for browser microphone constants.
 // The worklet receives `packetSeconds` through processorOptions, so it never
 // duplicates these values.
 
@@ -12,7 +12,6 @@ export const SILENT_LEVEL = 0.002;
 export const LEVEL_SCALE = 220;
 
 export const MIC_STORAGE_KEY = "mic.device";
-export const VOICE_STORAGE_KEY = "tts.voice";
 
 export const WORKLET_URL = "/worklets/pcm-processor.js";
 export const WS_AUDIO_PATH = `/ws/audio?sample_rate=${MIC_RATE}`;

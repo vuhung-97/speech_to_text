@@ -177,8 +177,6 @@ export function useMic({ onEvent } = {}) {
           throw new Error("trình duyệt đang chặn âm thanh — bấm Nghe lại");
         }
         setSampleRate(context.sampleRate);
-        console.info("[mic] context", context.state, context.sampleRate,
-                     tracks[0]?.label || "micro mặc định");
 
         node.port.onmessage = (event) => {
           const payload = event.data;
@@ -188,7 +186,6 @@ export function useMic({ onEvent } = {}) {
               packetsRef.current += 1;
               if (packetsRef.current % 25 === 0) {
                 setPackets(packetsRef.current);
-                console.info("[mic] sent packets", packetsRef.current);
               }
             }
           } else if (payload.type === "level") {

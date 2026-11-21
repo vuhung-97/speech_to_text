@@ -19,12 +19,22 @@ from backend.services.faq_service import FaqService
 
 
 @pytest.fixture()
-def faq(tmp_path: Path):
+def catalogue(tmp_path: Path):
     database = Database(tmp_path / "app.db")
     repo = SqliteFaqRepository(database)
     embedder = HashingEmbedder()
     matcher = SqliteFaqMatcher(repo, embedder)
-    return FaqService(repo, matcher, embedder)
+    return FaqService(repo, matcher, embedder), matcher
+
+
+@pytest.fixture()
+def faq(catalogue) -> FaqService:
+    return catalogue[0]
+
+
+@pytest.fixture()
+def matcher(catalogue):
+    return catalogue[1]
 
 
 def test_create_validates_and_persists(faq: FaqService) -> None:
@@ -53,14 +63,14 @@ def test_duplicate_question_is_rejected(faq: FaqService) -> None:
         faq.create("local", "  Quy trình đăng ký?  ", "Khác.")
 
 
-def test_update_reembeds_and_matches_new_answer(faq: FaqService) -> None:
+def test_update_reembeds_and_matches_new_answer(faq: FaqService, matcher) -> None:
     entry = faq.create("local", "Thủ đô Việt Nam là gì?", "Hà Nội.")
-    assert faq._matcher.match("Thủ đô Việt Nam là gì", "local").matched
+    assert matcher.match("Thủ đô Việt Nam là gì", "local").matched
 
     updated = faq.update(entry.id, "local", {"answer": "Thủ đô là Hà Nội."})
     assert updated.answer == "Thủ đô là Hà Nội."
 
-    result = faq._matcher.match("Thủ đô Việt Nam là gì", "local")
+    result = matcher.match("Thủ đô Việt Nam là gì", "local")
     assert result.matched.entry.answer == "Thủ đô là Hà Nội."
 
 
@@ -69,11 +79,11 @@ def test_update_missing_entry_raises(faq: FaqService) -> None:
         faq.update("missing", "local", {"answer": "x"})
 
 
-def test_delete(faq: FaqService) -> None:
+def test_delete(faq: FaqService, matcher) -> None:
     entry = faq.create("local", "Câu hỏi?", "Đáp án.")
     assert faq.delete(entry.id, "local") is True
     assert faq.delete(entry.id, "local") is False
-    assert faq._matcher.match("Câu hỏi?", "local").matched is None
+    assert matcher.match("Câu hỏi?", "local").matched is None
 
 
 def test_import_csv_report(faq: FaqService) -> None:

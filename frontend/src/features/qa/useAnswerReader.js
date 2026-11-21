@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import * as api from "../../services/api";
-import { VOICE_STORAGE_KEY } from "../mic/constants";
+import { readVoice } from "../tts/constants";
 import { useSpeechPlayer } from "../tts/useSpeechPlayer";
 
 // Reading an answer: cached WAV when available, otherwise the PCM stream.
@@ -33,7 +33,7 @@ export function useAnswerReader({ onBeforeRead } = {}) {
     async (answer) => {
       if (!answer?.text) return;
       await beforeRef.current?.();
-      const voice = window.localStorage.getItem(VOICE_STORAGE_KEY) || "";
+      const voice = readVoice();
       setReadingId(answer.id);
       try {
         const info = await api.getAnswerSpeech(answer.id, voice);

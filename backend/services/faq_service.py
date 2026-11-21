@@ -12,20 +12,19 @@ from collections.abc import Sequence
 
 import numpy as np
 
-from ..domain.faq.models import FaqEntry
+from ..domain.faq.models import FaqEntry, FaqEntryNotFound
 from ..domain.faq.normalize import normalize_question
 from ..domain.faq.rules import DUPLICATE_THRESHOLD, validate_entry
 from ..ports.embedding import Embedder
-from ..ports.faq import FaqRepository
-from ..adapters.retrieval.sqlite_faq import SqliteFaqMatcher
+from ..ports.faq import FaqIndex, FaqRepository
 
 
 class FaqService:
-    def __init__(self, repository: FaqRepository, matcher: SqliteFaqMatcher,
+    def __init__(self, repository: FaqRepository, index: FaqIndex,
                  embedder: Embedder | None = None) -> None:
         self._repo = repository
-        self._matcher = matcher
-        self._embedder = embedder or getattr(matcher, "_embedder", None)
+        self._index = index
+        self._embedder = embedder
 
     # ------------------------------------------------------------------- CRUD
     def list(self, tenant: str, **filters) -> Sequence[FaqEntry]:
@@ -43,13 +42,13 @@ class FaqService:
             answer=clean_answer,
             category=clean_category,
         ))
-        self._matcher.invalidate(tenant)
+        self._index.invalidate(tenant)
         return entry
 
     def update(self, entry_id: str, tenant: str, patch: dict) -> FaqEntry:
         existing = self._repo.get(entry_id, tenant)
         if existing is None:
-            raise ValueError("không tìm thấy câu hỏi")
+            raise FaqEntryNotFound("không tìm thấy câu hỏi")
         question = patch.get("question", existing.question)
         answer = patch.get("answer", existing.answer)
         category = patch.get("category", existing.category)
@@ -66,33 +65,33 @@ class FaqService:
             category=clean_category,
             active=active,
         ))
-        self._matcher.invalidate(tenant)
+        self._index.invalidate(tenant)
         return updated
 
     def delete(self, entry_id: str, tenant: str) -> bool:
         deleted = self._repo.delete(entry_id, tenant)
-        self._matcher.invalidate(tenant)
+        self._index.invalidate(tenant)
         return deleted
 
     # ---------------------------------------------------------------- indexing
     def reindex(self, tenant: str) -> dict[str, object]:
-        self._matcher.invalidate(tenant)
-        entries, matrix = self._matcher.ensure_index(tenant)
+        self._index.invalidate(tenant)
+        entries, matrix = self._index.ensure_index(tenant)
         return {
             "indexed": len(entries),
-            "dim": int(matrix.shape[1]) if matrix.size else self._matcher.dim,
-            "model": self._matcher.model_id,
-            "version": self._matcher.version,
+            "dim": int(matrix.shape[1]) if matrix.size else self._index.dim,
+            "model": self._index.model_id,
+            "version": self._index.version,
         }
 
     def stats(self, tenant: str) -> dict[str, object]:
         payload = dict(self._repo.stats(tenant))
         payload.update({
-            "model": self._matcher.model_id,
-            "version": self._matcher.version,
-            "dim": self._matcher.dim,
-            "threshold": self._matcher.threshold,
-            "near_threshold": self._matcher.near_threshold,
+            "model": self._index.model_id,
+            "version": self._index.version,
+            "dim": self._index.dim,
+            "threshold": self._index.threshold,
+            "near_threshold": self._index.near_threshold,
         })
         return payload
 
@@ -108,7 +107,7 @@ class FaqService:
         if not rows:
             return report
 
-        entries, matrix = self._matcher.ensure_index(tenant)
+        entries, matrix = self._index.ensure_index(tenant)
         known = {normalize_question(entry.question) for entry in entries}
         accepted: list[np.ndarray] = []
 
@@ -145,7 +144,7 @@ class FaqService:
                 accepted.append(vector)
             report["added"] = int(report["added"]) + 1
 
-        self._matcher.invalidate(tenant)
+        self._index.invalidate(tenant)
         return report
 
     # ----------------------------------------------------------------- helpers

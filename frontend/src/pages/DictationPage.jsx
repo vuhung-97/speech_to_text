@@ -3,12 +3,12 @@ import { Link } from "react-router-dom";
 
 import LevelMeter from "../components/LevelMeter";
 import ControlsBar from "../components/ControlsBar";
-import SettingsDrawer from "../components/SettingsDrawer";
+import SettingsDrawer from "../features/settings/SettingsDrawer";
 import StatusPill from "../components/StatusPill";
 import TranscriptView from "../components/TranscriptView";
-import TtsDrawer from "../components/TtsDrawer";
+import TtsDrawer from "../features/tts/TtsDrawer";
 import { useLive } from "../features/dictation/LiveProvider";
-import { useSpeechStream } from "../features/qa/useSpeechStream";
+import { useSpeechStream } from "../features/mic/useSpeechStream";
 import { useToast } from "../app/ToastProvider";
 import { MIC_STORAGE_KEY } from "../features/mic/constants";
 

@@ -1,8 +1,10 @@
 """Offline Vietnamese text-to-speech via the optional ``vieneu`` SDK.
 
-One responsibility: turn text into a WAV payload plus its voice catalog. Model
-loading, local-cache discovery and serialisation live here; HTTP and the UI never
-touch the SDK directly.
+Public facade: turn text into a WAV payload plus its voice catalog, and run the
+long-form streaming job. Model discovery lives in
+:mod:`backend.services.tts.engine_loader`, the catalog in
+:mod:`backend.services.tts.voice_catalog`, and disk/quota bookkeeping in
+:mod:`backend.services.tts.job_store`. HTTP and the UI never touch the SDK.
 
 VieNeu-TTS v3 Turbo is 48 kHz and CPU/ONNX by default. The model files installed
 by the VieNeu desktop app are reused from ``models/vieneu/``; the Hugging Face
@@ -11,121 +13,28 @@ cache is pointed there so the feature works with no network after install.
 
 from __future__ import annotations
 
-import importlib.util
-import json
 import logging
-import os
 import threading
-import time
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterator
 
 import numpy as np
 
-from ..config.paths import (TTS_DISK_QUOTA_MB, TTS_TEMP_DIR, VIENEU_CUSTOM_VOICES,
-                            VIENEU_HF_CACHE)
+from ..config.constants import TTS_SAMPLE_RATE
+from ..config.paths import TTS_DISK_QUOTA_MB, TTS_TEMP_DIR, VIENEU_CUSTOM_VOICES, VIENEU_HF_CACHE
+from ..config.tts import requested_precision, requested_threads
 from ..domain.audio.pcm import silence_pcm, to_pcm16, to_wav_bytes
-from ..domain.text.limits import check_stream_text
+from ..domain.text.limits import MAX_TTS_CHARS, check_stream_text
 from ..domain.text.split import PARAGRAPH_GAP_SEC, split_paragraphs
-from .audio.temp_store import (TempAudioStore, TempSession, cleanup_stale_sessions,
-                               free_bytes)
+from .tts.engine_loader import TtsEngineLoader, package_installed
+from .tts.errors import (TtsBusy, TtsCancelled, TtsStorageError,
+                         TtsUnavailable)
+from .tts.job_store import SpeechJob, TtsJobStore
+from .tts.voice_catalog import VoiceCatalog
 
-MAX_TTS_CHARS = 1000
-SAMPLE_RATE = 48_000
-JOB_TTL_SECONDS = 1_800  # finished WAVs are removed after 30 minutes
+SAMPLE_RATE = TTS_SAMPLE_RATE
+
 logger = logging.getLogger("stt_binh.tts")
-BACKBONE_REPO = "pnnbao-ump/VieNeu-TTS-v3-Turbo"
-CODEC_REPO = "OpenMOSS-Team/MOSS-Audio-Tokenizer-Nano-ONNX"
-_PRECISION_SUBFOLDERS = {"fp32": "onnx_update", "int8": "onnx_int8"}
-_PRECISION_FALLBACK = ("fp32", "int8")
-
-_GRAPH_FILES = (
-    "vieneu_prefill.onnx",
-    "vieneu_decode_step.onnx",
-    "vieneu_acoustic_cached.onnx",
-    "vieneu_backbone_shared.data",
-    "vieneu_v3_heads.npz",
-    "config.json",
-    "tokenizer.json",
-)
-_CODEC_FILES = (
-    "moss_audio_tokenizer_decode_full.onnx",
-    "moss_audio_tokenizer_decode_shared.data",
-    "moss_audio_tokenizer_decode_step.onnx",
-    "codec_browser_onnx_meta.json",
-    "moss_audio_tokenizer_encode.onnx",
-    "moss_audio_tokenizer_encode.data",
-)
-
-
-class TtsUnavailable(RuntimeError):
-    """The optional TTS runtime or its model files are not installed."""
-
-
-class TtsBusy(RuntimeError):
-    """A long-form synthesis is already running (one at a time by design)."""
-
-
-class TtsStorageError(RuntimeError):
-    """Not enough free disk space for the requested audio."""
-
-
-class TtsCancelled(RuntimeError):
-    """The client cancelled a synthesis job."""
-
-
-@dataclass
-class SpeechJob:
-    """One long-form synthesis: its temp session, growth state and cancel flag."""
-
-    id: str
-    session: TempSession
-    store: TempAudioStore
-    text: str
-    voice: str | None
-    estimated_seconds: float
-    created_at: float = field(default_factory=time.time)
-    cancelled: threading.Event = field(default_factory=threading.Event)
-    started: bool = False
-    finalized: bool = False
-
-    @property
-    def wav_path(self) -> Path:
-        return self.store.path
-
-    @property
-    def seconds(self) -> float:
-        return self.store.seconds
-
-    @property
-    def bytes(self) -> int:
-        return self.store.size_bytes
-
-
-def _repo_dir(cache: Path, repo_id: str) -> Path:
-    return cache / f"models--{repo_id.replace('/', '--')}"
-
-
-def _snapshot_dir(cache: Path, repo_id: str) -> Path | None:
-    """Resolve the snapshot referenced by ``refs/main`` (else the newest one)."""
-    base = _repo_dir(cache, repo_id)
-    if not base.is_dir():
-        return None
-    snapshots = base / "snapshots"
-    ref = base / "refs" / "main"
-    if ref.is_file():
-        pinned = snapshots / ref.read_text(encoding="utf-8").strip()
-        if pinned.is_dir():
-            return pinned
-    candidates = [path for path in snapshots.iterdir() if path.is_dir()] if snapshots.is_dir() else []
-    if not candidates:
-        return None
-    return max(candidates, key=lambda path: path.stat().st_mtime)
-
-
-def _has_files(root: Path | None, names: tuple[str, ...]) -> bool:
-    return bool(root) and all((root / name).is_file() for name in names)
 
 
 def _to_wav(audio: np.ndarray, sample_rate: int) -> bytes:
@@ -135,12 +44,6 @@ def _to_wav(audio: np.ndarray, sample_rate: int) -> bytes:
     the ~5× of clip/copy/tobytes/getvalue chaining.
     """
     return to_wav_bytes(audio, sample_rate)
-
-
-def _voice_label(name: str, entry: dict[str, Any]) -> str:
-    description = str(entry.get("description") or "").strip()
-    label = f"{name} — {description}" if description else name
-    return f"⭐ {label}" if entry.get("featured") else label
 
 
 class TtsService:
@@ -157,27 +60,24 @@ class TtsService:
     ) -> None:
         self._cache_dir = Path(cache_dir) if cache_dir else VIENEU_HF_CACHE
         self._custom_voices = Path(custom_voices) if custom_voices else VIENEU_CUSTOM_VOICES
-        requested = (precision or os.environ.get("VIENEU_PRECISION") or "fp32").lower()
-        self._precision = requested if requested in _PRECISION_SUBFOLDERS else "fp32"
-        env_threads = os.environ.get("VIENEU_THREADS")
-        self._threads = int(threads if threads is not None else (env_threads or 0))
+        self._precision = requested_precision(precision)
+        self._threads = requested_threads(threads)
+
+        self._catalog = VoiceCatalog(self._custom_voices)
+        self._loader = TtsEngineLoader(
+            self._cache_dir, self._precision, self._threads,
+            self._catalog.read_custom_voices,
+        )
         self._engine: Any = None
         self._load_seconds = 0.0
         self._load_lock = threading.Lock()
         self._infer_lock = threading.Lock()
-
-        # long-form streaming state
-        self._temp_root = Path(temp_root) if temp_root else TTS_TEMP_DIR
-        self._quota_bytes = max(1, int(quota_mb)) * 1024 * 1024
-        self._bytes_per_second = SAMPLE_RATE * 2
-        self._jobs: dict[str, SpeechJob] = {}
-        self._jobs_lock = threading.Lock()
-        self._active: SpeechJob | None = None
+        self._store = TtsJobStore(temp_root or TTS_TEMP_DIR, quota_mb)
 
     # -- availability / catalog -------------------------------------------
     @staticmethod
     def package_installed() -> bool:
-        return importlib.util.find_spec("vieneu") is not None
+        return package_installed()
 
     def available(self) -> tuple[bool, str]:
         if not self.package_installed():
@@ -185,29 +85,15 @@ class TtsService:
         return True, ""
 
     def _local_model(self) -> tuple[Path | None, Path | None, bool]:
-        """Return ``(backbone_root, onnx_dir, offline)`` for the installed cache."""
-        root = _snapshot_dir(self._cache_dir, BACKBONE_REPO)
-        if root is None:
-            return None, None, False
-        onnx_dir = root / _PRECISION_SUBFOLDERS[self._precision]
-        if not _has_files(onnx_dir, _GRAPH_FILES):
-            for fallback in _PRECISION_FALLBACK:
-                candidate = root / _PRECISION_SUBFOLDERS[fallback]
-                if _has_files(candidate, _GRAPH_FILES):
-                    onnx_dir = candidate
-                    break
-            else:
-                return root, None, False
-        codec = _snapshot_dir(self._cache_dir, CODEC_REPO)
-        return root, onnx_dir, _has_files(codec, _CODEC_FILES)
+        return self._loader.local_model()
 
     def status(self) -> dict[str, Any]:
         ready, reason = self.available()
-        root, onnx_dir, offline = self._local_model() if ready else (None, None, False)
+        _root, onnx_dir, offline = self._local_model() if ready else (None, None, False)
         return {
             "available": ready,
             "reason": reason,
-            "local_model": _has_files(onnx_dir, _GRAPH_FILES),
+            "local_model": bool(onnx_dir),
             "offline": offline,
             "loaded": self._engine is not None,
             "load_seconds": round(self._load_seconds, 2),
@@ -220,71 +106,9 @@ class TtsService:
         """Return ``(voices, default_id)`` without loading the model."""
         if not self.package_installed():
             return [], ""
-        presets, default = self._read_presets()
-        entries: list[dict[str, Any]] = []
-        custom = self._read_custom_voices()
-
-        ordered = sorted(
-            presets.items(),
-            key=lambda item: (item[1].get("featured") is None, item[1].get("featured") or 0),
-        )
-        for name, entry in ordered:
-            entries.append({
-                "id": name,
-                "label": _voice_label(name, entry),
-                "gender": str(entry.get("gender") or ""),
-                "featured": bool(entry.get("featured")),
-                "custom": False,
-            })
-        for name, entry in custom.items():
-            entries.append({
-                "id": name,
-                "label": _voice_label(name, entry),
-                "gender": str(entry.get("gender") or ""),
-                "featured": False,
-                "custom": True,
-            })
-        if not default:
-            default = entries[0]["id"] if entries else ""
-        return entries, default
-
-    def _read_presets(self) -> tuple[dict[str, Any], str]:
-        spec = importlib.util.find_spec("vieneu")
-        if spec is None or not spec.origin:
-            return {}, ""
-        path = Path(spec.origin).parent / "assets" / "voices_v3_turbo.json"
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            return {}, ""
-        presets = data.get("presets")
-        return (presets if isinstance(presets, dict) else {}), str(data.get("default_voice") or "")
-
-    def _read_custom_voices(self) -> dict[str, dict[str, Any]]:
-        """Cloned voices saved by the VieNeu desktop app (speaker embedding + codes)."""
-        try:
-            data = json.loads(self._custom_voices.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            return {}
-        voices = data.get("voices")
-        if not isinstance(voices, dict):
-            return {}
-        return {
-            name: entry
-            for name, entry in voices.items()
-            if isinstance(entry, dict) and entry.get("speaker_emb")
-        }
+        return self._catalog.voices()
 
     # -- synthesis ---------------------------------------------------------
-    def _prepare_environment(self, offline: bool) -> None:
-        # Must run before ``vieneu``/``huggingface_hub`` are imported: the hub reads
-        # its cache location at import time.
-        if self._cache_dir.is_dir():
-            os.environ["HF_HUB_CACHE"] = str(self._cache_dir)
-        if offline:
-            os.environ["HF_HUB_OFFLINE"] = "1"
-        os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
-
     def _ensure_engine(self) -> Any:
         if self._engine is not None:
             return self._engine
@@ -294,49 +118,10 @@ class TtsService:
         with self._load_lock:
             if self._engine is not None:
                 return self._engine
-            root, onnx_dir, offline = self._local_model()
-            self._prepare_environment(offline)
-
-            from vieneu import Vieneu
-
-            started = time.perf_counter()
-            kwargs: dict[str, Any] = {
-                "backend": "onnx",
-                "precision": self._precision,
-                "threads": self._threads,
-            }
-            if root is not None and onnx_dir is not None:
-                kwargs.update(backbone_repo=str(root), onnx_dir=str(onnx_dir))
-            else:
-                kwargs["backbone_repo"] = BACKBONE_REPO
-            try:
-                engine = Vieneu(**kwargs)
-            except Exception as exc:  # missing/incomplete model, hub offline, bad ONNX…
-                raise TtsUnavailable(f"không nạp được model TTS: {exc}") from exc
-            self._inject_custom_voices(engine)
+            engine, seconds = self._loader.create()
             self._engine = engine
-            self._load_seconds = time.perf_counter() - started
+            self._load_seconds = seconds
             return engine
-
-    def _inject_custom_voices(self, engine: Any) -> None:
-        """Merge app-cloned voices into the SDK catalog (built-ins keep precedence)."""
-        presets = getattr(engine, "_preset_voices", None)
-        if not isinstance(presets, dict):
-            return
-        for name, entry in self._read_custom_voices().items():
-            embedding = entry.get("speaker_emb") if isinstance(entry, dict) else None
-            if not embedding or name in presets:
-                continue
-            codes = entry.get("codes")
-            presets[name] = {
-                "description": str(entry.get("description") or "giọng clone"),
-                "gender": str(entry.get("gender") or ""),
-                "style": "tu_nhien",
-                "featured": None,
-                "aliases": [],
-                "speaker_emb": np.asarray(embedding, dtype=np.float32),
-                "codes": np.asarray(codes, dtype=np.int64) if codes else None,
-            }
 
     def _resolve_voice(self, voice: str | None) -> str | None:
         presets, default = self.voices()
@@ -347,6 +132,10 @@ class TtsService:
     def resolve_voice(self, voice: str | None = None) -> str | None:
         """Public wrapper used by callers that need the cache key (P6)."""
         return self._resolve_voice(voice)
+
+    @property
+    def sample_rate(self) -> int:
+        return SAMPLE_RATE
 
     def synthesize(self, text: str, voice: str | None = None) -> tuple[bytes, float]:
         """Short path: synthesize ``text`` into ``(wav_bytes, audio_seconds)``.
@@ -376,6 +165,11 @@ class TtsService:
         rate = int(getattr(engine, "sample_rate", SAMPLE_RATE))
         seconds = len(audio) / float(rate)
         return _to_wav(audio, rate), seconds
+
+    def stream_pcm(self, text: str,
+                   voice: str | None = None) -> Iterator[bytes]:
+        """One-shot streaming entry point required by ``SpeechSynthesizer``."""
+        yield from self.synthesize_stream(text, voice)
 
     def warmup(self, *, synthesize: bool = False) -> bool:
         """Load the TTS engine into RAM ahead of time.
@@ -415,8 +209,7 @@ class TtsService:
     # ------------------------------------------------------- long-form stream
     @property
     def busy(self) -> bool:
-        active = self._active
-        return bool(active and not active.finalized and not active.cancelled.is_set())
+        return self._store.busy
 
     def prepare_stream(
         self, text: str, voice: str | None = None, session_id: str | None = None,
@@ -430,35 +223,10 @@ class TtsService:
         ready, reason = self.available()
         if not ready:
             raise TtsUnavailable(reason)
-        if self.busy:
+        if self._store.busy:
             raise TtsBusy("đang đọc một văn bản khác — dừng lại rồi thử tiếp")
         selected = self._resolve_voice(voice)
-
-        estimated = max(1.0, len(value) / 11.7)  # ~11.7 chars/second of speech
-        needed = int(estimated * self._bytes_per_second)
-        self._prune_finished()
-        if needed > self._quota_bytes:
-            raise TtsStorageError(
-                "văn bản vượt quá hạn mức đĩa cho phép — giảm bớt độ dài")
-        self._evict_for_quota(needed)
-        if free_bytes(self._temp_root) < needed + 64 * 1024 * 1024:
-            raise TtsStorageError(
-                "không đủ dung lượng đĩa cho văn bản này — giảm bớt độ dài")
-
-        session = TempSession(self._temp_root, session_id)
-        store = session.store("audio", SAMPLE_RATE)
-        job = SpeechJob(
-            id=session.id,
-            session=session,
-            store=store,
-            text=value,
-            voice=selected,
-            estimated_seconds=estimated,
-        )
-        with self._jobs_lock:
-            self._jobs[job.id] = job
-            self._active = job
-        return job
+        return self._store.create(value, selected, session_id)
 
     def stream_job(self, job: SpeechJob) -> Iterator[bytes]:
         """Yield PCM16 blocks while writing them to the job's WAV file.
@@ -505,14 +273,7 @@ class TtsService:
             job.store.fail(exc)
             raise
         finally:
-            with self._jobs_lock:
-                if self._active is job:
-                    self._active = None
-            if failed or job.cancelled.is_set():
-                self._drop_job(job)
-            elif not job.finalized:
-                job.store.finalize()
-                job.finalized = True
+            self._store.finish(job, failed)
 
     def synthesize_stream(self, text: str,
                           voice: str | None = None) -> Iterator[bytes]:
@@ -520,79 +281,17 @@ class TtsService:
         yield from self.stream_job(self.prepare_stream(text, voice))
 
     def cancel(self, job_id: str) -> bool:
-        job = self._jobs.get(job_id)
-        if job is None:
-            return False
-        job.cancelled.set()
-        job.store.fail(TtsCancelled("đã huỷ"))
-        if job.finalized:
-            self._drop_job(job)
-        return True
+        return self._store.cancel(job_id)
 
     def job_status(self, job_id: str) -> dict[str, Any] | None:
-        job = self._jobs.get(job_id)
-        if job is None:
-            return None
-        done = job.seconds
-        estimate = max(job.estimated_seconds, 0.001)
-        return {
-            "id": job.id,
-            "seconds": round(done, 2),
-            "estimated_seconds": round(job.estimated_seconds, 1),
-            "bytes": job.bytes,
-            "sample_rate": SAMPLE_RATE,
-            "finalized": job.finalized,
-            "cancelled": job.cancelled.is_set(),
-            "progress": round(min(1.0, done / estimate), 3),
-        }
+        return self._store.status(job_id)
 
     def job_path(self, job_id: str) -> Path | None:
-        job = self._jobs.get(job_id)
-        if job is None or not job.finalized:
-            return None
-        return job.wav_path
+        return self._store.path(job_id)
 
     def shutdown(self) -> None:
         """Cancel every job and remove the whole temp tree (called on exit)."""
-        with self._jobs_lock:
-            jobs = list(self._jobs.values())
-            self._jobs.clear()
-            self._active = None
-        for job in jobs:
-            job.cancelled.set()
-            job.session.cleanup()
-        cleanup_stale_sessions(self._temp_root, max_age_hours=0)
-
-    # ------------------------------------------------------------------ quota
-    def _drop_job(self, job: SpeechJob) -> None:
-        with self._jobs_lock:
-            self._jobs.pop(job.id, None)
-            if self._active is job:
-                self._active = None
-        job.session.cleanup()
-
-    def _prune_finished(self) -> None:
-        """Drop finished jobs (and their temp WAVs) older than the TTL."""
-        cutoff = time.time() - JOB_TTL_SECONDS
-        with self._jobs_lock:
-            stale = [job for job in self._jobs.values()
-                     if job.finalized and job is not self._active
-                     and job.created_at < cutoff]
-        for job in stale:
-            self._drop_job(job)
-
-    def _evict_for_quota(self, needed: int) -> None:
-        """Delete the oldest finished jobs until ``needed`` bytes fit the quota."""
-        with self._jobs_lock:
-            jobs = sorted(self._jobs.values(), key=lambda item: item.created_at)
-        total = sum(job.bytes for job in jobs)
-        for job in jobs:
-            if total + needed <= self._quota_bytes:
-                break
-            if job is self._active or not job.finalized:
-                continue
-            total -= job.bytes
-            self._drop_job(job)
+        self._store.shutdown()
 
 
 __all__ = [

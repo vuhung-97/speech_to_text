@@ -10,6 +10,10 @@ DEFAULT_THRESHOLD = 0.88   # tuned on multilingual-e5-small: in-domain ≥0.89,
 DEFAULT_NEAR = 0.88        # off-topic ≤0.87, so no "answer with warning" band
 
 
+class FaqEntryNotFound(ValueError):
+    """The requested entry does not exist in this tenant's catalogue."""
+
+
 @dataclass(frozen=True)
 class FaqEntry:
     """One curated question/answer pair owned by a tenant."""
@@ -78,4 +82,11 @@ class FaqResult:
         return 0.0
 
 
-__all__ = ["DEFAULT_NEAR", "DEFAULT_THRESHOLD", "FaqEntry", "FaqMatch", "FaqResult"]
+__all__ = [
+    "DEFAULT_NEAR",
+    "DEFAULT_THRESHOLD",
+    "FaqEntry",
+    "FaqEntryNotFound",
+    "FaqMatch",
+    "FaqResult",
+]

@@ -81,7 +81,7 @@ export default function CommandPalette({ open, onClose }) {
           }}
           placeholder="Đi tới…"
           aria-label="Tìm màn hình"
-          className="w-full border-b border-line bg-transparent px-4 py-3 text-[13.5px] text-white outline-none placeholder:text-faint"
+          className="w-full border-b border-line bg-transparent px-4 py-3 text-[14px] text-white outline-none placeholder:text-faint focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent sm:text-[13.5px]"
         />
         <ul role="listbox" aria-label="Màn hình" className="m-0 max-h-[320px] list-none overflow-y-auto p-1.5">
           {items.map((item, position) => (
@@ -93,14 +93,14 @@ export default function CommandPalette({ open, onClose }) {
                   navigate(item.to);
                   onClose();
                 }}
-                className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left transition ${
+                className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0 ${
                   position === index
                     ? "bg-accent/15 text-white"
                     : "text-dim hover:bg-white/[0.05]"
                 }`}
               >
                 <span className="text-[13px]">{item.label}</span>
-                <span className="text-[11px] text-faint">{item.hint}</span>
+                <span className="text-[12px] text-faint">{item.hint}</span>
               </button>
             </li>
           ))}

@@ -1,4 +1,5 @@
 import Button from "../../components/ui/Button";
+import { FIELD_CLASS, FIELD_TEXT } from "../../components/ui/fieldStyles";
 
 export default function FaqEntryForm({ form, editing, busy, onChange, onSubmit, onCancel }) {
   const update = (key, value) => onChange({ [key]: value });
@@ -25,7 +26,7 @@ export default function FaqEntryForm({ form, editing, busy, onChange, onSubmit, 
           value={form.question}
           onChange={(event) => update("question", event.target.value)}
           placeholder="Thủ đô Việt Nam là gì?"
-          className="w-full rounded-control border border-line bg-white/[0.04] px-3 py-2 text-[13px] text-white outline-none placeholder:text-faint focus:border-accent/60"
+          className={`${FIELD_CLASS} w-full rounded-control px-3 py-2 ${FIELD_TEXT}`}
         />
       </label>
 
@@ -36,7 +37,7 @@ export default function FaqEntryForm({ form, editing, busy, onChange, onSubmit, 
           onChange={(event) => update("answer", event.target.value)}
           rows={3}
           placeholder="Câu trả lời nguyên văn sẽ được đọc lên."
-          className="w-full resize-y rounded-control border border-line bg-white/[0.04] px-3 py-2 text-[13px] leading-relaxed text-white outline-none placeholder:text-faint focus:border-accent/60"
+          className={`${FIELD_CLASS} w-full resize-y rounded-control px-3 py-2 leading-relaxed ${FIELD_TEXT}`}
         />
       </label>
 
@@ -47,7 +48,7 @@ export default function FaqEntryForm({ form, editing, busy, onChange, onSubmit, 
             value={form.category}
             onChange={(event) => update("category", event.target.value)}
             placeholder="địa lý, thủ tục, chung…"
-            className="w-full rounded-control border border-line bg-white/[0.04] px-3 py-2 text-[13px] text-white outline-none placeholder:text-faint focus:border-accent/60"
+            className={`${FIELD_CLASS} w-full rounded-control px-3 py-2 ${FIELD_TEXT}`}
           />
         </label>
         <Button type="submit" variant="primary" disabled={busy}>

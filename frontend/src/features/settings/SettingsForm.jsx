@@ -19,20 +19,20 @@ const GROUPS = ["mode", "engine", "vad", "stream"];
 function EngineBadge({ engine }) {
   if (engine.state === "loading") {
     return (
-      <span className="rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 text-[9.5px] tracking-wide text-accent normal-case">
+      <span className="rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 text-[12px] tracking-wide text-accent normal-case">
         đang nạp…
       </span>
     );
   }
   if (engine.state === "error") {
     return (
-      <span className="rounded-full border border-err/40 px-2 py-0.5 text-[9.5px] tracking-wide text-err normal-case">
+      <span className="rounded-full border border-err/40 px-2 py-0.5 text-[12px] tracking-wide text-err normal-case">
         lỗi nạp
       </span>
     );
   }
   return (
-    <span className="rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 text-[9.5px] tracking-wide text-accent normal-case">
+    <span className="rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 text-[12px] tracking-wide text-accent normal-case">
       cần nạp lại khi đổi
     </span>
   );
@@ -59,7 +59,7 @@ export default function SettingsForm() {
           {settings.warnings.map((warning) => (
             <li
               key={warning}
-              className="rounded-lg border border-accent/20 bg-accent/[0.08] px-2.5 py-1.5 text-[11.5px] leading-relaxed text-[#ffcf87]"
+              className="rounded-lg border border-accent/20 bg-accent/[0.08] px-2.5 py-1.5 text-[12px] leading-relaxed text-[#ffcf87]"
             >
               {warning}
             </li>
@@ -77,7 +77,7 @@ export default function SettingsForm() {
         if (!fields.length) return null;
         return (
           <section key={group} className="border-b border-white/5 pb-2 last:border-0">
-            <h3 className="mb-2 flex items-center gap-2 text-[11px] font-semibold tracking-[0.09em] text-faint uppercase">
+            <h3 className="mb-2 flex items-center gap-2 text-[12px] font-semibold tracking-[0.09em] text-faint uppercase">
               {GROUP_TITLES[group] || group}
               {group === "engine" && <EngineBadge engine={engine} />}
             </h3>
@@ -86,7 +86,7 @@ export default function SettingsForm() {
             ))}
 
             {group === "engine" && (
-              <div className="mb-2 rounded-lg border border-line bg-white/[0.02] px-2.5 py-1.5 text-[11.5px] leading-relaxed text-faint">
+              <div className="mb-2 rounded-lg border border-line bg-white/[0.02] px-2.5 py-1.5 text-[12px] leading-relaxed text-faint">
                 Micro được mở trong trình duyệt của từng người dùng và chỉ hoạt
                 động khi bấm <span className="text-white">Nghe</span>. Đổi thiết bị
                 mic ở trang Hỏi đáp.
@@ -94,9 +94,9 @@ export default function SettingsForm() {
             )}
 
             {group === "stream" && (
-              <div className="mb-2 flex items-center justify-between text-[11.5px] text-faint">
+              <div className="mb-2 flex items-center justify-between text-[12px] text-faint">
                 <span>Câu đang chờ</span>
-                <span className="font-mono text-[11px] text-dim">{pending}</span>
+                <span className="font-mono text-[12px] text-dim">{pending}</span>
               </div>
             )}
           </section>

@@ -6,6 +6,7 @@ import { useRef } from "react";
 import AppShell from "../../app/AppShell";
 import Alert from "../../components/ui/Alert";
 import Button from "../../components/ui/Button";
+import { FIELD_CLASS, FIELD_TEXT } from "../../components/ui/fieldStyles";
 import FaqDocumentsPanel from "./FaqDocumentsPanel";
 import FaqEntryForm from "./FaqEntryForm";
 import FaqEntryList from "./FaqEntryList";
@@ -117,10 +118,10 @@ export default function FaqAdminPage() {
                 value={admin.query}
                 onChange={(event) => admin.setQuery(event.target.value)}
                 placeholder="Tìm câu hỏi hoặc câu trả lời…"
-                className="w-full rounded-control border border-line bg-white/[0.03] px-3 py-2 text-[13px] text-white outline-none placeholder:text-faint focus:border-accent/60"
+                className={`${FIELD_CLASS} w-full rounded-control px-3 py-2 ${FIELD_TEXT}`}
               />
             </label>
-            <span className="text-[11.5px] text-faint">{admin.entries.length} câu</span>
+            <span className="text-[12px] text-faint">{admin.entries.length} câu</span>
           </div>
 
           <FaqEntryList

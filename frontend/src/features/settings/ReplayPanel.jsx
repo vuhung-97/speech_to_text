@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { useToast } from "../../shared/ui/ToastProvider";
+import { FIELD_CLASS, FIELD_TEXT } from "../../components/ui/fieldStyles";
 import * as api from "../../services/api";
 
 export default function ReplayPanel() {
@@ -72,13 +73,13 @@ export default function ReplayPanel() {
   return (
     <section>
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-[11px] font-semibold tracking-[0.09em] text-faint uppercase">
+        <h3 className="text-[12px] font-semibold tracking-[0.09em] text-faint uppercase">
           Thử nghiệm trên file
         </h3>
         <button
           type="button"
           onClick={refresh}
-          className="rounded-lg px-2 py-1 text-[11.5px] text-dim hover:bg-white/5 hover:text-white"
+          className="inline-flex min-h-11 items-center rounded-lg px-2 py-1 text-[12px] text-dim hover:bg-white/5 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
         >
           Làm mới
         </button>
@@ -89,7 +90,7 @@ export default function ReplayPanel() {
           aria-label="Chọn file audio"
           value={selected}
           onChange={(event) => setSelected(event.target.value)}
-          className="min-w-0 flex-1 rounded-lg border border-line bg-white/[0.04] px-2.5 py-1.5 text-[12.5px] text-white outline-none focus:border-accent/60"
+          className={`${FIELD_CLASS} min-h-11 min-w-0 flex-1 rounded-lg px-2.5 py-2 sm:min-h-0 ${FIELD_TEXT}`}
         >
           {samples.length === 0 && <option value="">— chưa có file —</option>}
           {samples.map((sample) => (
@@ -98,7 +99,7 @@ export default function ReplayPanel() {
             </option>
           ))}
         </select>
-        <label className="flex flex-none cursor-pointer items-center gap-1.5 text-[11.5px] text-dim">
+        <label className="flex min-h-11 flex-none cursor-pointer items-center gap-1.5 text-[12px] text-dim sm:min-h-0">
           <input
             type="checkbox"
             checked={segment}
@@ -113,7 +114,7 @@ export default function ReplayPanel() {
         type="button"
         onClick={run}
         disabled={busy}
-        className="mt-2 w-full rounded-lg border border-line bg-white/[0.045] px-3 py-1.5 text-[12.5px] text-white hover:bg-white/[0.085] disabled:opacity-50"
+        className="mt-2 min-h-11 w-full rounded-lg border border-line bg-white/[0.045] px-3 py-1.5 text-[12.5px] text-white hover:bg-white/[0.085] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50 sm:min-h-0"
       >
         {busy ? "Đang nhận dạng…" : "Chạy thử"}
       </button>
@@ -121,7 +122,7 @@ export default function ReplayPanel() {
       {result && (
         <div className="mt-2.5 rounded-xl border border-line bg-white/[0.025] px-3 py-2.5 text-[13px] leading-relaxed">
           <div>{result.text || "— (không có chữ)"}</div>
-          <div className="mt-1.5 font-mono text-[10.5px] tabular-nums text-dim">
+          <div className="mt-1.5 font-mono text-[12px] tabular-nums text-dim">
             {metrics}
           </div>
         </div>
@@ -138,7 +139,7 @@ export default function ReplayPanel() {
           setDragging(false);
           upload(event.dataTransfer.files?.[0]);
         }}
-        className={`mt-2.5 cursor-pointer rounded-xl border border-dashed p-3.5 text-center text-xs transition ${
+        className={`mt-2.5 cursor-pointer rounded-xl border border-dashed p-3.5 text-center text-[12px] transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent ${
           dragging
             ? "border-accent bg-accent/10 text-white"
             : "border-white/20 text-faint hover:border-white/35"
@@ -149,7 +150,7 @@ export default function ReplayPanel() {
           <input
             type="file"
             accept="audio/*,.wav,.mp3,.m4a,.flac,.ogg,.webm"
-            className="hidden"
+            className="sr-only"
             onChange={(event) => {
               upload(event.target.files?.[0]);
               event.target.value = "";

@@ -22,7 +22,7 @@ export default function TurnCard({ turn, ...answerProps }) {
       <div className="flex justify-end">
         <div className="max-w-[88%] rounded-card rounded-br-md border border-accent/25 bg-accent/10 px-4 py-2.5">
           <p className="m-0 text-[14px] leading-relaxed text-white">{question}</p>
-          <p className="m-0 mt-1 text-right text-[10.5px] text-faint">
+          <p className="m-0 mt-1 text-right text-[12px] text-faint">
             {turn.source === "typed" ? "gõ tay" : "giọng nói"} · {timeLabel(turn.created_at)}
           </p>
         </div>

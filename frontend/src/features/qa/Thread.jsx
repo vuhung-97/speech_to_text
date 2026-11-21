@@ -11,7 +11,24 @@ const EXAMPLES = [
   "Hồ sơ cần chuẩn bị giấy tờ gì?",
 ];
 
-export default function Thread({ turns, onExample, renderAnswerProps }) {
+function ThreadSkeleton() {
+  return (
+    <div
+      className="mx-auto flex max-w-[720px] flex-col gap-5"
+      aria-busy="true"
+      aria-label="Đang tải phiên hội thoại"
+    >
+      {[0, 1, 2].map((item) => (
+        <div key={item} className="animate-pulse space-y-2.5 motion-reduce:animate-none">
+          <div className="ml-auto h-10 w-2/3 rounded-card bg-white/[0.05]" />
+          <div className="h-16 rounded-card bg-white/[0.04]" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function Thread({ turns, loading = false, onExample, renderAnswerProps }) {
   const scroller = useRef(null);
   const pinned = useRef(true);
 
@@ -32,7 +49,9 @@ export default function Thread({ turns, onExample, renderAnswerProps }) {
       }}
       className="scroll-thin min-h-0 flex-1 overflow-y-auto px-5 py-5"
     >
-      {turns.length === 0 ? (
+      {loading && turns.length === 0 ? (
+        <ThreadSkeleton />
+      ) : turns.length === 0 ? (
         <div className="mx-auto max-w-[640px]">
           <EmptyState
             title="Hỏi bằng giọng nói hoặc gõ tay"
@@ -44,7 +63,7 @@ export default function Thread({ turns, onExample, renderAnswerProps }) {
                     key={example}
                     type="button"
                     onClick={() => onExample?.(example)}
-                    className="rounded-lg border border-line bg-white/[0.04] px-2.5 py-1.5 text-[12px] text-dim transition hover:bg-white/[0.08] hover:text-white"
+                    className="inline-flex min-h-11 items-center rounded-lg border border-line bg-white/[0.04] px-2.5 py-1.5 text-[12px] text-dim transition hover:bg-white/[0.08] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
                   >
                     {example}
                   </button>

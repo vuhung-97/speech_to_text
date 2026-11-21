@@ -14,7 +14,7 @@ export default function IconButton({
       aria-label={label}
       title={label}
       aria-pressed={active || undefined}
-      className={`grid h-9 w-9 place-items-center rounded-control border transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+      className={`grid h-11 w-11 place-items-center rounded-control border transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:h-9 sm:w-9 ${
         active
           ? "border-accent/40 bg-accent/15 text-accent"
           : "border-line bg-white/[0.03] text-dim hover:bg-white/[0.075] hover:text-white"

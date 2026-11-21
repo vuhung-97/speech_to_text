@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { useToast } from "../../shared/ui/ToastProvider";
+import { FIELD_CLASS, FIELD_TEXT } from "../../components/ui/fieldStyles";
 import { loadPresets, savePresets } from "../../utils/presets";
 import { useSettings } from "./SettingsProvider";
 
@@ -49,7 +50,7 @@ export default function PresetPanel() {
 
   return (
     <section>
-      <h3 className="mb-2 text-[11px] font-semibold tracking-[0.09em] text-faint uppercase">
+      <h3 className="mb-2 text-[12px] font-semibold tracking-[0.09em] text-faint uppercase">
         Preset
       </h3>
       <div className="flex items-center gap-2">
@@ -59,12 +60,12 @@ export default function PresetPanel() {
           onChange={(event) => setName(event.target.value)}
           placeholder="tên preset"
           aria-label="Tên preset"
-          className="min-w-0 flex-1 rounded-lg border border-line bg-white/[0.04] px-2.5 py-1.5 text-[12.5px] text-white outline-none placeholder:text-faint focus:border-accent/60"
+          className={`${FIELD_CLASS} min-h-11 min-w-0 flex-1 rounded-lg px-2.5 py-2 sm:min-h-0 ${FIELD_TEXT}`}
         />
         <button
           type="button"
           onClick={save}
-          className="flex-none rounded-lg border border-line bg-white/[0.045] px-3 py-1.5 text-[12.5px] text-white hover:bg-white/[0.085]"
+          className="inline-flex min-h-11 flex-none items-center rounded-lg border border-line bg-white/[0.045] px-3 py-1.5 text-[12.5px] text-white hover:bg-white/[0.085] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
         >
           Lưu
         </button>
@@ -74,7 +75,7 @@ export default function PresetPanel() {
           aria-label="Chọn preset"
           value={selected}
           onChange={(event) => setSelected(event.target.value)}
-          className="min-w-0 flex-1 rounded-lg border border-line bg-white/[0.04] px-2.5 py-1.5 text-[12.5px] text-white outline-none focus:border-accent/60"
+          className={`${FIELD_CLASS} min-h-11 min-w-0 flex-1 rounded-lg px-2.5 py-2 sm:min-h-0 ${FIELD_TEXT}`}
         >
           <option value="">— chọn —</option>
           {names.map((key) => (
@@ -86,14 +87,14 @@ export default function PresetPanel() {
         <button
           type="button"
           onClick={load}
-          className="flex-none rounded-lg border border-line bg-white/[0.045] px-3 py-1.5 text-[12.5px] text-white hover:bg-white/[0.085]"
+          className="inline-flex min-h-11 flex-none items-center rounded-lg border border-line bg-white/[0.045] px-3 py-1.5 text-[12.5px] text-white hover:bg-white/[0.085] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
         >
           Nạp
         </button>
         <button
           type="button"
           onClick={remove}
-          className="flex-none rounded-lg px-2 py-1.5 text-[12.5px] text-dim hover:bg-white/5 hover:text-white"
+          className="inline-flex min-h-11 flex-none items-center rounded-lg px-2 py-1.5 text-[12.5px] text-dim hover:bg-white/5 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
         >
           Xoá
         </button>

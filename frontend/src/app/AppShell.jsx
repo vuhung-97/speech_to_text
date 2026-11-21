@@ -90,7 +90,7 @@ export default function AppShell({ title, subtitle, right = null, actions = null
             to={item.to}
             end={item.end}
             className={({ isActive }) =>
-              `flex w-[62px] flex-col items-center gap-1 rounded-xl px-1 py-2 text-[10px] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+              `flex w-[62px] flex-col items-center gap-1 rounded-xl px-1 py-2 text-[12px] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
                 isActive
                   ? "bg-accent/15 text-accent"
                   : "text-faint hover:bg-white/[0.05] hover:text-white"
@@ -102,7 +102,7 @@ export default function AppShell({ title, subtitle, right = null, actions = null
           </NavLink>
         ))}
 
-        <span className="mt-auto text-[9px] tracking-[0.12em] text-faint/70">
+        <span className="mt-auto text-[12px] tracking-[0.08em] text-faint">
           BETA
         </span>
       </nav>
@@ -114,7 +114,7 @@ export default function AppShell({ title, subtitle, right = null, actions = null
               {title}
             </h1>
             {subtitle && (
-              <p className="m-0 truncate text-[11px] text-faint">{subtitle}</p>
+              <p className="m-0 truncate text-[12px] text-faint">{subtitle}</p>
             )}
           </div>
           <div className="flex items-center gap-2">

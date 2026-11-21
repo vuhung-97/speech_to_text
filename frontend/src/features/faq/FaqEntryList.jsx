@@ -26,6 +26,22 @@ function PrerenderButton({ job, disabled, onClick }) {
   );
 }
 
+function ListSkeleton() {
+  return (
+    <ul className="m-0 flex list-none flex-col gap-2 p-0" aria-busy="true">
+      {[0, 1, 2].map((item) => (
+        <li
+          key={item}
+          className="animate-pulse rounded-card border border-line bg-surface-2/60 px-4 py-3 motion-reduce:animate-none"
+        >
+          <div className="h-4 w-2/3 rounded bg-white/[0.06]" />
+          <div className="mt-2 h-3 w-full rounded bg-white/[0.04]" />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export default function FaqEntryList({
   entries,
   jobs,
@@ -36,6 +52,8 @@ export default function FaqEntryList({
   onPrerender,
   onRemove,
 }) {
+  if (loading && !entries.length) return <ListSkeleton />;
+
   if (!loading && !entries.length) {
     return (
       <EmptyState
@@ -61,7 +79,7 @@ export default function FaqEntryList({
                 {entry.answer}
               </p>
             </div>
-            <div className="flex shrink-0 items-center gap-1.5">
+            <div className="flex max-w-[45%] shrink-0 flex-wrap items-center justify-end gap-1.5">
               {entry.source_ref && (
                 <Badge tone="neutral" title={entry.source_file || ""}>
                   {entry.source_ref}

@@ -11,6 +11,7 @@ export function useAsk(initialSessionId = "") {
   const [title, setTitle] = useState("");
   const [turns, setTurns] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(Boolean(initialSessionId));
   const [error, setError] = useState("");
   const alive = useRef(true);
   const loadController = useRef(null);
@@ -33,10 +34,12 @@ export function useAsk(initialSessionId = "") {
       setTitle("");
       setTurns([]);
       setError("");
+      setLoading(false);
       return;
     }
     const controller = new AbortController();
     loadController.current = controller;
+    setLoading(true);
     try {
       const data = await api.getSession(id, { signal: controller.signal });
       if (!alive.current || controller.signal.aborted) return;
@@ -49,7 +52,10 @@ export function useAsk(initialSessionId = "") {
       setError(messageFor(loadError));
       setTurns([]);
     } finally {
-      if (loadController.current === controller) loadController.current = null;
+      if (loadController.current === controller) {
+        loadController.current = null;
+        if (alive.current) setLoading(false);
+      }
     }
   }, []);
 
@@ -97,5 +103,5 @@ export function useAsk(initialSessionId = "") {
     [sessionId],
   );
 
-  return { sessionId, title, turns, busy, error, ask, load, setError };
+  return { sessionId, title, turns, busy, loading, error, ask, load, setError };
 }

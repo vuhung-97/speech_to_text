@@ -50,7 +50,7 @@ export default function QuickResult({ audio, audioRef }) {
         className="w-full"
         onPlay={handlePlay}
       />
-      <div className="mt-2 flex items-center justify-between text-[11.5px] text-faint">
+      <div className="mt-2 flex items-center justify-between text-[12px] text-faint">
         <span>
           {audio.seconds != null
             ? `${audio.seconds.toFixed(1)} giây`
@@ -59,7 +59,7 @@ export default function QuickResult({ audio, audioRef }) {
         <a
           href={audio.url}
           download="vieneu-tts.wav"
-          className="rounded-md px-2 py-1 text-accent transition hover:bg-accent/10"
+          className="inline-flex min-h-11 items-center rounded-md px-2 py-1 text-accent transition hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
         >
           Tải WAV
         </a>

@@ -14,7 +14,7 @@ function timeLabel(value) {
 export default function FaqDocumentsPanel({ documents, busy, onRename, onRemove }) {
   return (
     <section className="mb-4 rounded-xl border border-line bg-white/[0.02] p-3">
-      <h2 className="m-0 mb-2 text-[11px] font-semibold tracking-[0.08em] text-faint uppercase">
+      <h2 className="m-0 mb-2 text-[12px] font-semibold tracking-[0.08em] text-faint uppercase">
         Bộ đề
       </h2>
       {documents.length === 0 ? (
@@ -30,7 +30,7 @@ export default function FaqDocumentsPanel({ documents, busy, onRename, onRemove 
             >
               <div className="min-w-0">
                 <p className="m-0 truncate text-[12.5px] text-white">{document.name}</p>
-                <p className="m-0 text-[10.5px] text-faint">
+                <p className="m-0 text-[12px] text-faint">
                   {document.entry_count} câu · {timeLabel(document.updated_at)}
                 </p>
               </div>
@@ -56,7 +56,7 @@ export default function FaqDocumentsPanel({ documents, busy, onRename, onRemove 
           ))}
         </ul>
       )}
-      <p className="mt-2 mb-0 text-[10.5px] leading-relaxed text-faint">
+      <p className="mt-2 mb-0 text-[12px] leading-relaxed text-faint">
         Nạp lại tệp cùng tên sẽ cập nhật bộ; câu không còn trong tệp bị tắt
         (vẫn khôi phục được).
       </p>

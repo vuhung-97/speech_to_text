@@ -10,7 +10,7 @@ export default function Badge({ tone = "dim", className = "", title, children })
   return (
     <span
       title={title}
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] leading-none ${TONES[tone] || TONES.dim} ${className}`}
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[12px] leading-none ${TONES[tone] || TONES.dim} ${className}`}
     >
       {children}
     </span>

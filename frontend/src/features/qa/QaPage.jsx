@@ -26,7 +26,7 @@ export default function QaPage() {
   const [draft, setDraft] = useState("");
 
   const sessionId = routeId || params.get("session") || "";
-  const { turns, busy, error, ask, load } = useAsk(sessionId);
+  const { turns, busy, loading, error, ask, load } = useAsk(sessionId);
   const documents = useFaqDocuments();
   const documentId = documents.selectedId;
   const listen = useListen({
@@ -129,6 +129,7 @@ export default function QaPage() {
     >
       <Thread
         turns={turns}
+        loading={loading}
         onExample={(example) => handleAsk(example, "typed")}
         renderAnswerProps={(turn) => {
           const isReading = reader.readingId === turn.answer?.id;

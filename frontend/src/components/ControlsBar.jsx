@@ -3,7 +3,7 @@
 
 function Button({ active = false, ghost = false, ...props }) {
   const base =
-    "rounded-xl px-4 py-2 text-[13.5px] font-medium transition hover:-translate-y-px active:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+    "inline-flex min-h-11 items-center rounded-xl px-4 py-2 text-[13.5px] font-medium transition hover:-translate-y-px active:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0";
   const tone = ghost
     ? "bg-transparent text-dim hover:bg-white/5 hover:text-white"
     : active
@@ -48,7 +48,7 @@ export default function ControlsBar({
         Xoá
       </Button>
       <span className="flex-1" />
-      <span className="font-mono text-[11.5px] tabular-nums text-faint max-sm:hidden">
+      <span className="font-mono text-[12px] tabular-nums text-faint max-sm:hidden">
         {meta}
       </span>
       {!fullText && <span className="sr-only">Chưa có nội dung</span>}

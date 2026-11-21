@@ -1,4 +1,7 @@
-"""Entry point: settings -> engine -> pipeline -> FastAPI app -> uvicorn.
+"""HTTP composition root: settings -> engine -> pipeline -> FastAPI app.
+
+The process bootstrap (CLI arguments, uvicorn, browser) lives in
+``backend.bootstrap``. Tests import :func:`create_app` from here directly.
 
 Run:  python run.py                (or: python -m backend.main)
       python run.py --mode accurate --no-browser

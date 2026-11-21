@@ -82,6 +82,30 @@ describe("useAsk", () => {
     expect(result.current.turns).toHaveLength(0);
   });
 
+  it("marks loading while a session is being fetched", async () => {
+    let resolveLoad;
+    api.getSession.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveLoad = resolve;
+        }),
+    );
+    const { result } = renderHook(() => useAsk());
+
+    let pending;
+    act(() => {
+      pending = result.current.load("session-1");
+    });
+    expect(result.current.loading).toBe(true);
+
+    await act(async () => {
+      resolveLoad({ id: "session-1", title: "", turns: [] });
+      await pending;
+    });
+
+    expect(result.current.loading).toBe(false);
+  });
+
   it("forwards the selected question set to the API", async () => {
     api.askQuestion.mockResolvedValue({
       session_id: "s",

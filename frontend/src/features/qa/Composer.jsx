@@ -7,6 +7,7 @@
 
 import Alert from "../../components/ui/Alert";
 import Button from "../../components/ui/Button";
+import { FIELD_CLASS, FIELD_TEXT } from "../../components/ui/fieldStyles";
 import { GRACE_MS } from "../../shared/mic/constants";
 
 function MicIcon() {
@@ -96,7 +97,7 @@ export default function Composer({
                 ? "Đang nghe… nói câu hỏi của bạn"
                 : "Nhập câu hỏi, hoặc bấm Nghe để nói…"
             }
-            className="max-h-[140px] min-h-[42px] w-full resize-y rounded-control border border-line bg-white/[0.03] px-3 py-2.5 text-[13.5px] leading-relaxed text-white outline-none placeholder:text-faint focus:border-accent/60"
+            className={`${FIELD_CLASS} max-h-[140px] min-h-11 w-full resize-y rounded-control px-3 py-2.5 leading-relaxed ${FIELD_TEXT}`}
           />
         </label>
 
@@ -107,7 +108,7 @@ export default function Composer({
 
       <p
         aria-live="polite"
-        className="mx-auto mt-2 mb-0 max-w-[720px] text-[10.5px] text-faint"
+        className="mx-auto mt-2 mb-0 max-w-[720px] text-[12px] text-faint"
       >
         {listening
           ? `Mic đang mở · tự dừng sau ${graceLabel} giây im lặng · bấm Dừng để cắt ngay.`

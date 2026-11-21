@@ -1,5 +1,6 @@
 import Alert from "../../components/ui/Alert";
 import Badge from "../../components/ui/Badge";
+import { FIELD_CLASS, FIELD_TEXT } from "../../components/ui/fieldStyles";
 import { countWords } from "../../utils/format";
 import PanelSection from "./PanelSection";
 
@@ -42,7 +43,7 @@ export default function MicPanel({
               style={{ width: `${levelPercent}%` }}
             />
           </div>
-          <p className="m-0 mt-1 truncate font-mono text-[10px] text-faint">
+          <p className="m-0 mt-1 truncate font-mono text-[12px] text-faint">
             {listen.deviceLabel || "micro mặc định"} · {listen.sampleRate || "?"} Hz
           </p>
         </div>
@@ -73,7 +74,7 @@ export default function MicPanel({
             value={device}
             onChange={(event) => onChooseMic?.(event.target.value)}
             disabled={listen.active}
-            className="w-full rounded-lg border border-line bg-white/[0.04] px-2 py-1 text-[11.5px] text-dim outline-none focus:border-accent/60"
+            className={`${FIELD_CLASS} min-h-11 w-full rounded-lg px-2 py-2 text-dim sm:min-h-0 ${FIELD_TEXT}`}
           >
             <option value="">Mic mặc định</option>
             {devices.map((item, index) => (

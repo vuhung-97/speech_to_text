@@ -1,3 +1,5 @@
+import { FIELD_CLASS, FIELD_TEXT } from "../../components/ui/fieldStyles";
+
 export default function VoicePicker({ voices, voice, onChange }) {
   return (
     <label className="block">
@@ -6,7 +8,7 @@ export default function VoicePicker({ voices, voice, onChange }) {
         value={voice}
         onChange={(event) => onChange(event.target.value)}
         disabled={!voices.length}
-        className="w-full rounded-lg border border-line bg-white/[0.04] px-2.5 py-2 text-[13px] text-white outline-none focus:border-accent/60 disabled:opacity-50"
+        className={`${FIELD_CLASS} w-full rounded-lg px-2.5 py-2 ${FIELD_TEXT}`}
       >
         {!voices.length && <option value="">Chưa có giọng</option>}
         {voices.map((item) => (

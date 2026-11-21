@@ -7,7 +7,7 @@ export default function StreamProgress({ speech, label }) {
         <span className={speech.status === "error" ? "text-err" : "text-white"}>
           {label}
         </span>
-        <span className="font-mono text-[11px] text-faint">
+        <span className="font-mono text-[12px] text-faint">
           {speech.seconds.toFixed(1)} s
           {speech.estimated ? ` / ~${Math.round(speech.estimated)} s` : ""}
         </span>
@@ -18,11 +18,11 @@ export default function StreamProgress({ speech, label }) {
           style={{ width: `${Math.round(speech.progress * 100)}%` }}
         />
       </div>
-      <div className="mt-2 flex items-center justify-between text-[11.5px]">
+      <div className="mt-2 flex items-center justify-between text-[12px]">
         <button
           type="button"
           onClick={speech.stop}
-          className="rounded-md px-2 py-1 text-dim transition hover:bg-white/[0.06] hover:text-white"
+          className="inline-flex min-h-11 items-center rounded-md px-2 py-1 text-dim transition hover:bg-white/[0.06] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
         >
           Dừng
         </button>
@@ -30,7 +30,7 @@ export default function StreamProgress({ speech, label }) {
           <a
             href={speech.downloadUrl}
             download
-            className="rounded-md px-2 py-1 text-accent transition hover:bg-accent/10"
+            className="inline-flex min-h-11 items-center rounded-md px-2 py-1 text-accent transition hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
           >
             Tải WAV
           </a>

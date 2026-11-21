@@ -13,7 +13,8 @@
 
   /* text */
   --color-dim: #93a0b1;
-  --color-faint: #5d6875;
+  /* ≥5.3:1 on surface, surface-2 and surface-3 (WCAG AA normal text). */
+  --color-faint: #8b97a8;
 
   /* brand + feedback */
   --color-accent: #ffb454;

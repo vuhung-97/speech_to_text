@@ -29,8 +29,10 @@ export default function AnswerCard({
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <Badge tone={status.tone}>{status.label}</Badge>
         {matched && (
-          <Badge tone="dim">
-            {matched.percent}% · {matched.question}
+          <Badge tone="dim" className="max-w-full">
+            <span className="min-w-0 truncate">
+              {matched.percent}% · {matched.question}
+            </span>
           </Badge>
         )}
         {answer.score != null && !matched && (
@@ -44,7 +46,7 @@ export default function AnswerCard({
 
       {answer.candidates?.length > 0 && (
         <div className="mt-3 rounded-xl border border-line bg-white/[0.02] p-2.5">
-          <p className="m-0 mb-1.5 text-[11px] uppercase tracking-[0.08em] text-faint">
+          <p className="m-0 mb-1.5 text-[12px] uppercase tracking-[0.08em] text-faint">
             Có phải bạn hỏi
           </p>
           <div className="flex flex-wrap gap-1.5">
@@ -53,10 +55,10 @@ export default function AnswerCard({
                 key={item.id}
                 type="button"
                 onClick={() => onPick?.(item.question)}
-                className="rounded-lg border border-line bg-white/[0.04] px-2.5 py-1 text-[12px] text-dim transition hover:bg-white/[0.08] hover:text-white"
+                className="min-h-11 rounded-lg border border-line bg-white/[0.04] px-2.5 py-1 text-[12px] text-dim transition hover:bg-white/[0.08] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
               >
                 {item.question}
-                <span className="ml-1.5 font-mono text-[10.5px] text-faint">
+                <span className="ml-1.5 font-mono text-[12px] text-faint">
                   {item.percent}%
                 </span>
               </button>
@@ -90,7 +92,7 @@ export default function AnswerCard({
 
         {active && (
           <>
-            <span className="font-mono text-[11px] text-faint">
+            <span className="font-mono text-[12px] text-faint">
               {seconds.toFixed(1)} s
               {estimated ? ` / ~${Math.round(estimated)} s` : ""}
             </span>
@@ -107,7 +109,7 @@ export default function AnswerCard({
           <a
             href={downloadUrl}
             download
-            className="ml-auto rounded-md px-2 py-1 text-[11.5px] text-accent transition hover:bg-accent/10"
+            className="ml-auto inline-flex min-h-11 items-center rounded-md px-2 py-1 text-[12px] text-accent transition hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
           >
             Tải WAV
           </a>

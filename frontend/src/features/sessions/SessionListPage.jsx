@@ -78,6 +78,17 @@ export default function SessionListPage() {
       <div className="scroll-thin min-h-0 flex-1 overflow-y-auto px-5 py-5">
         {error && <Alert className="mx-auto mb-3 max-w-[820px]">{error}</Alert>}
 
+        {loading && !items.length && (
+          <div className="mx-auto max-w-[820px] space-y-2" aria-busy="true">
+            {[0, 1, 2, 3].map((item) => (
+              <div
+                key={item}
+                className="h-16 animate-pulse rounded-card border border-line bg-surface-2/60 motion-reduce:animate-none"
+              />
+            ))}
+          </div>
+        )}
+
         {!loading && !items.length && !error && (
           <div className="mx-auto max-w-[720px]">
             <EmptyState
@@ -86,7 +97,7 @@ export default function SessionListPage() {
               action={
                 <Link
                   to="/"
-                  className="inline-flex rounded-control bg-gradient-to-br from-accent to-accent-2 px-3.5 py-2 text-[13px] font-semibold text-[#201505]"
+                  className="inline-flex min-h-11 items-center rounded-control bg-gradient-to-br from-accent to-accent-2 px-3.5 py-2 text-[13px] font-semibold text-[#201505] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
                 >
                   Hỏi câu đầu tiên
                 </Link>
@@ -102,12 +113,12 @@ export default function SessionListPage() {
                 <button
                   type="button"
                   onClick={() => navigate(`/sessions/${session.id}`)}
-                  className="min-w-0 flex-1 text-left"
+                  className="min-w-0 flex-1 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                 >
                   <p className="m-0 truncate text-[13.5px] text-white">
                     {session.first_question || session.title || "Phiên không tên"}
                   </p>
-                  <p className="m-0 mt-1 flex items-center gap-2 text-[11px] text-faint">
+                  <p className="m-0 mt-1 flex items-center gap-2 text-[12px] text-faint">
                     <span>{when(session.updated_at)}</span>
                     <span aria-hidden="true">·</span>
                     <span>{session.turns} lượt</span>

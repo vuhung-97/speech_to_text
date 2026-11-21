@@ -15,7 +15,7 @@ export default function ReadingPanel({ speech, audioPlaying }) {
               style={{ width: `${Math.round(speech.progress * 100)}%` }}
             />
           </div>
-          <p className="m-0 font-mono text-[10.5px] text-faint">
+          <p className="m-0 font-mono text-[12px] text-faint">
             {speech.seconds.toFixed(1)} s
             {speech.estimated ? ` / ~${Math.round(speech.estimated)} s` : ""}
           </p>

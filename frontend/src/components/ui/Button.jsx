@@ -2,9 +2,9 @@
 // strings; variants are the only visual decisions a screen makes.
 
 const BASE =
-  "inline-flex items-center justify-center gap-2 rounded-control font-medium transition " +
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-control font-medium transition " +
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent " +
-  "disabled:cursor-default disabled:opacity-45";
+  "disabled:cursor-default disabled:opacity-45 sm:min-h-0";
 
 const VARIANTS = {
   primary:

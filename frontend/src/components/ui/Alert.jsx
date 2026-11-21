@@ -10,7 +10,7 @@ const TONES = {
 const SIZES = {
   md: "px-3 py-2 text-[12px]",
   compact: "px-3 py-1.5 text-[12px]",
-  sm: "px-2 py-1.5 text-[11px] leading-relaxed",
+  sm: "px-2 py-1.5 text-[12px] leading-relaxed",
 };
 
 export default function Alert({

@@ -34,7 +34,7 @@ export default function MatchPanel({ lastAnswer, onPick }) {
               key={item.id}
               type="button"
               onClick={() => onPick?.(item.question)}
-              className="block w-full truncate rounded-lg px-2 py-1 text-left text-[11.5px] text-dim transition hover:bg-white/[0.06] hover:text-white"
+              className="block min-h-11 w-full truncate rounded-lg px-2 py-1 text-left text-[12px] text-dim transition hover:bg-white/[0.06] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
             >
               {item.question} · {item.percent}%
             </button>

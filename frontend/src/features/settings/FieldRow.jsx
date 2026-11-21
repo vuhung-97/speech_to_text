@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { FIELD_CLASS, FIELD_TEXT } from "../../components/ui/fieldStyles";
 import { formatValue } from "../../utils/format";
 import { useSettings } from "./SettingsProvider";
 
@@ -13,7 +14,7 @@ export default function FieldRow({ field, devices = [] }) {
   useEffect(() => setDraft(value), [value]);
 
   const hint = field.hint ? (
-    <p className="mt-1 mb-0 text-[11px] leading-relaxed text-faint">
+    <p className="mt-1 mb-0 text-[12px] leading-relaxed text-faint">
       {field.hint}
       {field.advanced ? " (nâng cao)" : ""}
     </p>
@@ -36,7 +37,7 @@ export default function FieldRow({ field, devices = [] }) {
         <select
           value={value}
           onChange={(event) => setField(field, event.target.value)}
-          className="w-full rounded-lg border border-line bg-white/[0.04] px-2.5 py-1.5 text-[12.5px] text-white outline-none focus:border-accent/60"
+          className={`${FIELD_CLASS} w-full rounded-lg px-2.5 py-1.5 ${FIELD_TEXT}`}
         >
           {options.map((option) => (
             <option key={option.value} value={option.value}>
@@ -60,15 +61,19 @@ export default function FieldRow({ field, devices = [] }) {
             aria-checked={Boolean(value)}
             aria-label={field.label}
             onClick={() => setField(field, !value)}
-            className={`relative h-[21px] w-[38px] flex-none rounded-full border transition ${
-              value ? "border-accent/50 bg-accent/15" : "border-line bg-white/5"
-            }`}
+            className="grid h-11 w-11 flex-none place-items-center rounded-full transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:h-9 sm:w-9"
           >
             <span
-              className={`absolute top-[2px] left-[2px] h-[15px] w-[15px] rounded-full transition ${
-                value ? "translate-x-[17px] bg-accent" : "bg-dim"
+              className={`relative h-[21px] w-[38px] rounded-full border transition ${
+                value ? "border-accent/50 bg-accent/15" : "border-line bg-white/5"
               }`}
-            />
+            >
+              <span
+                className={`absolute top-[2px] left-[2px] h-[15px] w-[15px] rounded-full transition ${
+                  value ? "translate-x-[17px] bg-accent" : "bg-dim"
+                }`}
+              />
+            </span>
           </button>
         </div>
         {hint}
@@ -81,7 +86,7 @@ export default function FieldRow({ field, devices = [] }) {
       <div className="mb-3">
         <div className="flex items-center justify-between gap-2">
           <label className="text-[13px] text-white">{field.label}</label>
-          <span className="font-mono text-[11px] tabular-nums text-dim">
+          <span className="font-mono text-[12px] tabular-nums text-dim">
             {formatValue(field, Number(draft))}
           </span>
         </div>
@@ -95,7 +100,7 @@ export default function FieldRow({ field, devices = [] }) {
           onPointerUp={() => setField(field, Number(draft))}
           onKeyUp={() => setField(field, Number(draft))}
           onBlur={() => setField(field, Number(draft))}
-          className="h-5 w-full"
+          className="h-11 w-full sm:h-5"
         />
         {hint}
       </div>
@@ -109,7 +114,7 @@ export default function FieldRow({ field, devices = [] }) {
         value={text}
         onChange={(event) => setText(event.target.value)}
         onBlur={() => setField(field, text.trim())}
-        className="min-h-[58px] w-full resize-y rounded-lg border border-line bg-white/[0.04] px-2.5 py-1.5 text-[12.5px] text-white outline-none focus:border-accent/60"
+        className={`${FIELD_CLASS} min-h-[58px] w-full resize-y rounded-lg px-2.5 py-1.5 ${FIELD_TEXT}`}
       />
       {hint}
     </div>

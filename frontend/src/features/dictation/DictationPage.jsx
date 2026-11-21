@@ -24,7 +24,7 @@ function Brand() {
       />
       <div>
         <h1 className="m-0 text-base font-semibold tracking-tight">Đọc chính tả</h1>
-        <p className="m-0 mt-px text-[11.5px] tracking-[0.04em] text-faint uppercase max-sm:hidden">
+        <p className="m-0 mt-px text-[12px] tracking-[0.04em] text-faint uppercase max-sm:hidden">
           mic trình duyệt · offline · realtime
         </p>
       </div>
@@ -106,7 +106,7 @@ export default function DictationPage() {
               to="/"
               aria-label="Về trang hỏi đáp"
               title="Về trang hỏi đáp"
-              className="grid h-9 w-9 place-items-center rounded-xl border border-line bg-white/[0.03] text-dim transition hover:bg-white/[0.075] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              className="grid h-11 w-11 place-items-center rounded-xl border border-line bg-white/[0.03] text-dim transition hover:bg-white/[0.075] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:h-9 sm:w-9"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -130,7 +130,7 @@ export default function DictationPage() {
               onClick={() => setDrawerOpen(true)}
               aria-label="Cài đặt"
               title="Cài đặt (Ctrl+Comma)"
-              className="grid h-9 w-9 place-items-center rounded-xl border border-line bg-white/[0.03] text-dim transition hover:bg-white/[0.075] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              className="grid h-11 w-11 place-items-center rounded-xl border border-line bg-white/[0.03] text-dim transition hover:bg-white/[0.075] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:h-9 sm:w-9"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -177,15 +177,15 @@ export default function DictationPage() {
 
         <p className="m-0 hidden text-center text-[12px] text-faint sm:block">
           Mic chạy trong trình duyệt · nghỉ ~0.6 giây để chốt câu ·{" "}
-          <kbd className="rounded border border-line bg-white/[0.04] px-1.5 py-px font-mono text-[10.5px] text-dim">
+          <kbd className="rounded border border-line bg-white/[0.04] px-1.5 py-px font-mono text-[12px] text-dim">
             Esc
           </kbd>{" "}
           bật / tắt mic ·{" "}
-          <kbd className="rounded border border-line bg-white/[0.04] px-1.5 py-px font-mono text-[10.5px] text-dim">
+          <kbd className="rounded border border-line bg-white/[0.04] px-1.5 py-px font-mono text-[12px] text-dim">
             Ctrl
           </kbd>
           +
-          <kbd className="rounded border border-line bg-white/[0.04] px-1.5 py-px font-mono text-[10.5px] text-dim">
+          <kbd className="rounded border border-line bg-white/[0.04] px-1.5 py-px font-mono text-[12px] text-dim">
             ,
           </kbd>{" "}
           cài đặt

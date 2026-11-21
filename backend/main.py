@@ -6,18 +6,11 @@ Run:  python run.py                (or: python -m backend.main)
 
 from __future__ import annotations
 
-import argparse
-import logging
-import os
-import socket
 import sys
 import threading
-import webbrowser
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
 
-import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
@@ -31,14 +24,13 @@ from .adapters.retrieval.sqlite_faq_audio import SqliteFaqAudioRepository
 from .adapters.storage.sqlite import (Database, SqliteAuditLog, SqliteQueryLog,
                                       SqliteSessionRepository)
 from .adapters.storage.sqlite_faq_documents import SqliteFaqDocumentRepository
-from .config.paths import DB_PATH, DIST_DIR, SAMPLES_DIR, SETTINGS_PATH, TTS_TEMP_DIR
+from .config.paths import DB_PATH, DIST_DIR, TTS_TEMP_DIR
 from .config.settings import Settings
 from .middleware import errors, request_log
 from .ports.embedding import Embedder
 from .routes import build_router
 from .services.audio_sessions import AudioSessionHub
 from .services.audio.temp_store import cleanup_stale_sessions
-from .services.engines import available_engines, create_engine
 from .services.event_service import EventBus
 from .services.faq_audio_service import FaqAudioService
 from .services.faq_documents import FaqDocumentsService
@@ -163,100 +155,7 @@ def create_app(settings: Settings, pipeline: LivePipeline, replay: ReplayService
     return app
 
 
-def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Offline Vietnamese STT with a web UI + API.")
-    p.add_argument("--cpu-threads", type=int, default=None,
-                   help="model CPU threads (default: settings.json -> 2)")
-    p.add_argument("--mode", default=None, choices=("accurate", "realtime"),
-                   help="accurate: one decode per sentence (default) | realtime: live draft")
-    p.add_argument("--silence-hang", type=float, default=None,
-                   help="seconds of silence that close a sentence")
-    p.add_argument("--threshold", type=float, default=None,
-                   help="absolute RMS speech floor")
-    p.add_argument("--decode-interval", type=float, default=None,
-                   help="seconds between draft decodes (realtime mode only)")
-    p.add_argument("--host", default="127.0.0.1", help="bind address")
-    p.add_argument("--port", type=int, default=8765, help="HTTP port")
-    p.add_argument("--settings", default=str(SETTINGS_PATH),
-                   help="settings file (default: settings.json in the project root)")
-    p.add_argument("--no-browser", action="store_true", help="do not open the browser")
-    p.add_argument("--no-tts-preload", action="store_true",
-                   help="không nạp trước model VieNeu vào RAM khi khởi động")
-    return p.parse_args()
-
-
-def free_port(preferred: int, span: int = 10) -> int:
-    for port in range(preferred, preferred + span):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            # NOTE: SO_REUSEADDR on Windows lets us bind a port that is already
-            # in use, which would defeat this probe - so don't set it here.
-            try:
-                sock.bind(("127.0.0.1", port))
-            except OSError:
-                continue
-            return port
-    raise RuntimeError(f"no free port in {preferred}..{preferred + span - 1}")
-
-
-def _load_engine(settings: Settings) -> Any:
-    values = settings.values()
-    try:
-        return create_engine(str(values["model"]), values)
-    except Exception as exc:
-        fallback = next((key for key, spec in available_engines().items() if spec.available),
-                        None)
-        if fallback is None:
-            raise RuntimeError(f"không có model nào dùng được: {exc}") from exc
-        print(f"! {exc} -> dùng '{fallback}' cho phiên này")
-        settings.apply_cli({"model": fallback})
-        return create_engine(fallback, settings.values())
-
-
-def main() -> int:
-    args = parse_args()
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s %(message)s",
-        datefmt="%H:%M:%S",
-    )
-
-    settings = Settings(args.settings, catalog=available_engines)
-    settings.apply_cli({
-        "cpu_threads": args.cpu_threads,
-        "mode": args.mode,
-        "silence_hang": args.silence_hang,
-        "threshold": args.threshold,
-        "decode_interval": args.decode_interval,
-    })
-    values = settings.values()
-    print(f"Mode: {values['mode']} | model: {values['model']} | "
-          f"threads: {values['cpu_threads']}")
-
-    print("Loading model...")
-    engine = _load_engine(settings)
-    bus = EventBus()
-    pipeline = LivePipeline(engine, bus, settings)
-    replay = ReplayService(pipeline.decode, settings, SAMPLES_DIR)
-
-    tts = TtsService()
-    if not args.no_tts_preload:
-        print("Preloading TTS model (VieNeu)...")
-        tts.preload_async(synthesize=os.environ.get("TTS_PRELOAD_INFER") == "1")
-    app = create_app(settings, pipeline, replay, bus, tts=tts)
-
-    port = free_port(args.port)
-    url = f"http://{args.host}:{port}/"
-    print(f"UI ready at {url}  (Ctrl+C to stop)")
-    print("API docs: /api/docs · settings: gear icon (Ctrl+Comma)")
-    if not args.no_browser:
-        webbrowser.open(url)
-
-    try:
-        uvicorn.run(app, host=args.host, port=port, log_level="warning")
-    except KeyboardInterrupt:
-        print("\nStopping...")
-    return 0
-
-
 if __name__ == "__main__":
+    from .bootstrap import main
+
     sys.exit(main())

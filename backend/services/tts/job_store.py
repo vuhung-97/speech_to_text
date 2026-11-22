@@ -125,9 +125,12 @@ class TtsJobStore:
 
     # ----------------------------------------------------------------- writes
     def create(self, text: str, voice: str | None,
-               session_id: str | None = None) -> SpeechJob:
+               session_id: str | None = None,
+               extra_seconds: float = 0.0) -> SpeechJob:
         """Validate the disk budget and reserve a temp session for one job.
 
+        ``extra_seconds`` accounts for the punctuation pauses the service
+        inserts, so the disk estimate and UI progress stay realistic.
         The whole check-and-reserve is one critical section: two concurrent
         requests must never both pass ``busy`` and start a second synthesis.
         """
@@ -135,7 +138,10 @@ class TtsJobStore:
             if self._busy_locked():
                 raise TtsBusy("đang đọc một văn bản khác — dừng lại rồi thử tiếp")
 
-            estimated = max(1.0, len(text) / CHARS_PER_SECOND)
+            estimated = max(
+                1.0,
+                len(text) / CHARS_PER_SECOND + max(0.0, float(extra_seconds)),
+            )
             needed = int(estimated * self._bytes_per_second)
             self._prune_finished()
             if needed > self._quota_bytes:

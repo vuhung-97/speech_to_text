@@ -25,7 +25,7 @@ from ..config.paths import TTS_DISK_QUOTA_MB, TTS_TEMP_DIR, VIENEU_CUSTOM_VOICES
 from ..config.tts import requested_precision, requested_threads
 from ..domain.audio.pcm import silence_pcm, to_pcm16, to_wav_bytes
 from ..domain.text.limits import MAX_TTS_CHARS, check_stream_text
-from ..domain.text.split import PARAGRAPH_GAP_SEC, split_paragraphs
+from ..domain.text.split import split_speech_units
 from .tts.engine_loader import TtsEngineLoader, package_installed
 from .tts.errors import (TtsBusy, TtsCancelled, TtsStorageError,
                          TtsUnavailable)
@@ -144,16 +144,30 @@ class TtsService:
         if not ready:
             raise TtsUnavailable(reason)
 
+        units = split_speech_units(value)
+        if not units:
+            raise ValueError("chưa có nội dung để đọc")
+
         selected = self._resolve_voice(voice)
+        pieces: list[np.ndarray] = []
         with self._infer_lock:
             engine = self._ensure_engine()
+            rate = int(getattr(engine, "sample_rate", SAMPLE_RATE))
             try:
-                audio = engine.infer(value, voice=selected)
+                for unit in units:
+                    audio = engine.infer(unit.text, voice=selected)
+                    if audio is None or len(audio) == 0:
+                        continue
+                    pieces.append(np.asarray(audio, dtype=np.float32))
+                    if unit.pause_after > 0:
+                        pieces.append(np.zeros(
+                            int(unit.pause_after * rate), dtype=np.float32))
             except ValueError as exc:
                 raise ValueError(str(exc)) from exc
-        if audio is None or len(audio) == 0:
+        if not pieces:
             raise ValueError("model không tạo được âm thanh cho văn bản này")
-        rate = int(getattr(engine, "sample_rate", SAMPLE_RATE))
+
+        audio = np.concatenate(pieces)
         seconds = len(audio) / float(rate)
         return to_wav_bytes(audio, rate), seconds
 
@@ -211,13 +225,18 @@ class TtsService:
         is still a normal JSON error instead of a broken audio stream.
         """
         value = check_stream_text(text)
+        units = split_speech_units(value)
+        if not units:
+            raise ValueError("chưa có nội dung để đọc")
         ready, reason = self.available()
         if not ready:
             raise TtsUnavailable(reason)
         if self._store.busy:
             raise TtsBusy("đang đọc một văn bản khác — dừng lại rồi thử tiếp")
         selected = self._resolve_voice(voice)
-        return self._store.create(value, selected, session_id)
+        extra_seconds = sum(unit.pause_after for unit in units)
+        return self._store.create(
+            value, selected, session_id, extra_seconds=extra_seconds)
 
     def stream_job(self, job: SpeechJob) -> Iterator[bytes]:
         """Yield PCM16 blocks while writing them to the job's WAV file.
@@ -231,17 +250,14 @@ class TtsService:
         job.started = True
         failed = False
         stream = None
+        units = split_speech_units(job.text)
         try:
             with self._infer_lock:
                 engine = self._ensure_engine()
-                for index, paragraph in enumerate(split_paragraphs(job.text)):
+                for index, unit in enumerate(units):
                     if job.cancelled.is_set():
                         break
-                    if index:
-                        gap = silence_pcm(PARAGRAPH_GAP_SEC, SAMPLE_RATE)
-                        job.store.append_pcm(gap)
-                        yield gap
-                    stream = engine.infer_stream(paragraph, voice=job.voice)
+                    stream = engine.infer_stream(unit.text, voice=job.voice)
                     try:
                         for block in stream:
                             if job.cancelled.is_set():
@@ -256,6 +272,10 @@ class TtsService:
                         if closer is not None:
                             closer()
                         stream = None
+                    if unit.pause_after > 0 and index < len(units) - 1:
+                        gap = silence_pcm(unit.pause_after, SAMPLE_RATE)
+                        job.store.append_pcm(gap)
+                        yield gap
         except GeneratorExit:
             job.cancelled.set()
             raise

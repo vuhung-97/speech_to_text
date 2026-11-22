@@ -12,6 +12,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from backend.domain.text.limits import MAX_TTS_WORDS, TextTooLong
+from backend.domain.text.split import (CLAUSE_PAUSE_SEC, PARAGRAPH_PAUSE_SEC,
+                                       SENTENCE_PAUSE_SEC)
 from backend.services.tts_service import (SpeechJob, TtsBusy, TtsService,
                                           TtsStorageError)
 
@@ -34,6 +36,7 @@ class FakeEngine:
             yield np.full(48_000, self.amplitude, dtype=np.float32)
 
     def infer(self, text: str, voice=None, **kwargs):
+        self.calls.append(text)
         return np.zeros(48_000, dtype=np.float32)
 
 
@@ -68,15 +71,39 @@ def test_stream_writes_wav_and_returns_blocks(service: FakeTts, tmp_path: Path) 
         if service._store.active is not None:
             statuses.append(service.job_status(service._store.active.id))
 
-    # two paragraphs → 3 s each plus a 0.35 s breath between them
-    expected = 2 * 3 * SAMPLE_RATE + int(0.35 * SAMPLE_RATE)
+    # two paragraphs → 3 s each plus the paragraph breath between them
+    expected = 2 * 3 * SAMPLE_RATE + int(PARAGRAPH_PAUSE_SEC * SAMPLE_RATE)
     assert total == expected
+    assert service.engine.calls == [
+        "Một đoạn văn bản ngắn.", "Đoạn thứ hai."]
     assert statuses and statuses[-1]["progress"] > 0
 
     job = next(iter(service._store.values()))
     assert job.finalized
     assert service.job_path(job.id) is not None
     assert job.wav_path.is_file()
+
+
+def test_stream_splits_strong_punctuation_but_not_commas(
+        service: FakeTts) -> None:
+    text = "Một, hai; ba: bốn. Năm!"
+    total = sum(len(block) // 2 for block in service.synthesize_stream(text))
+
+    assert service.engine.calls == ["Một, hai;", "ba:", "bốn.", "Năm!"]
+    pause = CLAUSE_PAUSE_SEC + CLAUSE_PAUSE_SEC + SENTENCE_PAUSE_SEC
+    assert total == 4 * 3 * SAMPLE_RATE + int(pause * SAMPLE_RATE)
+
+
+def test_quick_path_uses_the_same_units(service: FakeTts) -> None:
+    payload, seconds = service.synthesize("Một; Hai.")
+    assert payload[:4] == b"RIFF"
+    assert service.engine.calls == ["Một;", "Hai."]
+    assert seconds == pytest.approx(2 + CLAUSE_PAUSE_SEC)
+
+    service.engine.calls.clear()
+    _, single = service.synthesize("Một, hai.")
+    assert service.engine.calls == ["Một, hai."]
+    assert single == pytest.approx(1.0)
 
 
 def test_voice_is_resolved_and_rejected(service: FakeTts) -> None:

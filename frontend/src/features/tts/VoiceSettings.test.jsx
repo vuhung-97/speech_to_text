@@ -79,7 +79,43 @@ describe("VoiceSettings", () => {
     fireEvent.change(sample, { target: { value: "Đọc thử tiếng Việt." } });
     fireEvent.click(screen.getByRole("button", { name: "Test giọng" }));
 
-    expect(speech.start).toHaveBeenCalledWith("Đọc thử tiếng Việt.", "giọng-a");
+    expect(speech.start).toHaveBeenCalledWith("Đọc thử tiếng Việt.", "giọng-a", 1);
+  });
+
+  it("does not surface a 405 from an older server without preload", async () => {
+    api.preloadTts.mockRejectedValue(
+      Object.assign(new Error("HTTP 405"), { status: 405 }),
+    );
+    renderSettings();
+
+    const select = await screen.findByLabelText("Chọn giọng");
+    await waitFor(() =>
+      expect(screen.getByRole("option", { name: "Giọng B" })).toBeInTheDocument(),
+    );
+    await act(async () => {
+      fireEvent.change(select, { target: { value: "giọng-b" } });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(screen.queryByText("HTTP 405")).not.toBeInTheDocument();
+  });
+
+  it("persists the reading speed and applies it on the next play", async () => {
+    renderSettings();
+
+    await waitFor(() =>
+      expect(screen.getByRole("option", { name: "Giọng A" })).toBeInTheDocument(),
+    );
+    const slider = screen.getByLabelText("Tốc độ đọc");
+    fireEvent.change(slider, { target: { value: "1.4" } });
+    fireEvent.click(screen.getByRole("button", { name: "Test giọng" }));
+
+    expect(window.localStorage.getItem("tts.speed")).toBe("1.4");
+    expect(speech.start).toHaveBeenCalledWith(
+      "Xin chào, đây là giọng đọc thử nghiệm.",
+      "giọng-a",
+      1.4,
+    );
   });
 
   it("shows the unavailable reason and a retry action", async () => {

@@ -2,11 +2,10 @@
 
 import Button from "../../components/ui/Button";
 
-export default function ReadingNow({ turn, speech, audioPlaying, onStop }) {
+export default function ReadingNow({ turn, playback, active = false, onStop }) {
   if (!turn) return null;
 
-  const active = speech.busy || audioPlaying;
-  const progress = Math.round((speech.progress || 0) * 100);
+  const progress = Math.round((playback.progress || 0) * 100);
 
   return (
     <div
@@ -33,7 +32,7 @@ export default function ReadingNow({ turn, speech, audioPlaying, onStop }) {
             {turn.answer?.text}
           </p>
           <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/10">
-            {speech.estimated ? (
+            {playback.estimated > 0 ? (
               <div
                 className="h-full rounded-full bg-gradient-to-r from-accent to-accent-2"
                 style={{ width: `${progress}%` }}
@@ -44,9 +43,9 @@ export default function ReadingNow({ turn, speech, audioPlaying, onStop }) {
           </div>
         </div>
 
-        {speech.estimated > 0 && (
-          <span className="shrink-0 font-mono text-[12px] text-faint">
-            {speech.seconds.toFixed(1)}s
+        {playback.estimated > 0 && (
+          <span className="shrink-0 font-mono text-[12px] tabular-nums text-faint">
+            {Math.round(playback.seconds)}s/{Math.round(playback.estimated)}s
           </span>
         )}
         <Button variant="danger" size="sm" onClick={onStop}>

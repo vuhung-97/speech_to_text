@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import * as api from "../../services/api";
 import { beginPlayback, endPlayback, isCurrentPlayback } from "../../shared/playback/playbackChannel";
 import { useSpeechPlayer } from "../../shared/playback/useSpeechPlayer";
-import { readVoice } from "../../shared/tts/constants";
+import { readSpeed, readVoice } from "../../shared/tts/constants";
 
 // Reading an answer: cached WAV when available, otherwise the PCM stream.
 // One playback channel owns every audible source; this hook also owns its
@@ -12,6 +12,9 @@ import { readVoice } from "../../shared/tts/constants";
 export function useAnswerReader({ onBeforeRead } = {}) {
   const [readingId, setReadingId] = useState("");
   const [audioPlaying, setAudioPlaying] = useState(false);
+  const [mediaMode, setMediaMode] = useState("");
+  const [audioTiming, setAudioTiming] = useState({ seconds: 0, duration: 0 });
+  const audioRateRef = useRef(1);
   const audioRef = useRef(null);
   const speech = useSpeechPlayer();
   const speechStopRef = useRef(speech.stop);
@@ -31,15 +34,33 @@ export function useAnswerReader({ onBeforeRead } = {}) {
     aliveRef.current = true;
     const element = new Audio();
     element.preload = "auto";
-    const onPlay = () => setAudioPlaying(true);
+
+    const syncTiming = () => {
+      const duration = Number.isFinite(element.duration) ? element.duration : 0;
+      const rate = audioRateRef.current || 1;
+      setAudioTiming({
+        seconds: Math.max(0, (element.currentTime || 0) / rate),
+        duration: duration > 0 ? duration / rate : 0,
+      });
+    };
+
+    const onPlay = () => {
+      setAudioPlaying(true);
+      syncTiming();
+    };
     const onPause = () => setAudioPlaying(false);
     const onEnded = () => {
       setAudioPlaying(false);
       setReadingId("");
+      setMediaMode("");
+      setAudioTiming({ seconds: 0, duration: 0 });
     };
     element.addEventListener("play", onPlay);
     element.addEventListener("pause", onPause);
     element.addEventListener("ended", onEnded);
+    element.addEventListener("loadedmetadata", syncTiming);
+    element.addEventListener("durationchange", syncTiming);
+    element.addEventListener("timeupdate", syncTiming);
     audioRef.current = element;
 
     return () => {
@@ -47,6 +68,9 @@ export function useAnswerReader({ onBeforeRead } = {}) {
       element.removeEventListener("play", onPlay);
       element.removeEventListener("pause", onPause);
       element.removeEventListener("ended", onEnded);
+      element.removeEventListener("loadedmetadata", syncTiming);
+      element.removeEventListener("durationchange", syncTiming);
+      element.removeEventListener("timeupdate", syncTiming);
       element.pause();
       element.removeAttribute("src");
       try {
@@ -77,6 +101,8 @@ export function useAnswerReader({ onBeforeRead } = {}) {
     }
     setAudioPlaying(false);
     setReadingId("");
+    setMediaMode("");
+    setAudioTiming({ seconds: 0, duration: 0 });
   }, [speech]);
 
   const stop = useCallback(() => {
@@ -86,6 +112,12 @@ export function useAnswerReader({ onBeforeRead } = {}) {
       keyRef.current = 0;
     }
   }, [silence]);
+
+  useEffect(() => {
+    const onVoiceChange = () => stop();
+    window.addEventListener("tts:voice-change", onVoiceChange);
+    return () => window.removeEventListener("tts:voice-change", onVoiceChange);
+  }, [stop]);
 
   const read = useCallback(
     async (answer) => {
@@ -98,7 +130,9 @@ export function useAnswerReader({ onBeforeRead } = {}) {
       if (!aliveRef.current || !isCurrentPlayback(key)) return;
 
       const voice = readVoice();
+      const speed = readSpeed();
       setReadingId(answer.id);
+      setMediaMode("");
 
       let info = null;
       try {
@@ -110,8 +144,15 @@ export function useAnswerReader({ onBeforeRead } = {}) {
 
       if (info?.mode === "cached" && audioRef.current) {
         const element = audioRef.current;
+        setMediaMode("cached");
+        audioRateRef.current = speed;
+        setAudioTiming({ seconds: 0, duration: 0 });
         element.src = info.url;
         element.currentTime = 0;
+        // The speed slider is read once per read; changing it must not alter
+        // audio that is already playing.
+        element.playbackRate = speed;
+        element.preservesPitch = true;
         try {
           await element.play();
           // If a newer claim took over while play() was pending, its `silence`
@@ -126,14 +167,32 @@ export function useAnswerReader({ onBeforeRead } = {}) {
       }
 
       if (!aliveRef.current || !isCurrentPlayback(key)) return;
-      speech.start(answer.text, voice);
+      setMediaMode("stream");
+      speech.start(answer.text, voice, speed);
     },
     [silence, speech, stop],
   );
 
   useEffect(() => {
-    if (["idle", "done", "error"].includes(speech.status)) setReadingId("");
+    // `idle` is deliberately not included: cached WAV playback never changes
+    // the speech status, and a stream→idle transition during a new cached
+    // read must not clear the newly selected answer.
+    if (["done", "error"].includes(speech.status)) setReadingId("");
   }, [speech.status]);
 
-  return { speech, readingId, audioPlaying, read, stop };
+  const audioProgress =
+    audioTiming.duration > 0
+      ? Math.min(1, audioTiming.seconds / audioTiming.duration)
+      : 0;
+
+  return {
+    speech,
+    readingId,
+    audioPlaying,
+    mediaMode,
+    audioTiming,
+    audioProgress,
+    read,
+    stop,
+  };
 }

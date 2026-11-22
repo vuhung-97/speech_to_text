@@ -11,7 +11,6 @@ const STATUS = {
 
 export default function AnswerCard({
   answer,
-  active = false,
   playing = false,
   progress = 0,
   seconds = 0,
@@ -23,6 +22,10 @@ export default function AnswerCard({
 }) {
   const status = STATUS[answer.status] || STATUS.unanswered;
   const matched = answer.matched;
+  const ring = Math.min(1, Math.max(0, progress || 0));
+  const elapsed = Math.max(0, Math.round(seconds || 0));
+  const total = Math.max(0, Math.round(estimated || 0));
+  const timing = total > 0 ? `${elapsed}s/${total}s` : `${elapsed}s`;
 
   return (
     <div className="rounded-card border border-line bg-surface-2/70 p-4">
@@ -69,19 +72,36 @@ export default function AnswerCard({
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {playing ? (
-          <Button
-            variant="danger"
-            size="sm"
+          <button
+            type="button"
             onClick={onStop}
             aria-pressed="true"
+            aria-label="Đang đọc — bấm để dừng"
             title="Bấm để dừng"
+            className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-control border border-accent/40 bg-accent/10 px-2.5 py-1.5 text-[12px] font-medium text-accent transition hover:bg-accent/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
           >
             <span
-              className="h-2 w-2 animate-pulse rounded-full bg-current motion-reduce:animate-none"
+              className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-current motion-reduce:animate-none"
               aria-hidden="true"
             />
-            Đang đọc
-          </Button>
+            <span className="shrink-0">Đang đọc</span>
+            <span
+              className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-white/10 sm:w-24"
+              aria-hidden="true"
+            >
+              {total > 0 ? (
+                <span
+                  className="block h-full rounded-full bg-gradient-to-r from-accent to-accent-2"
+                  style={{ width: `${Math.round(ring * 100)}%` }}
+                />
+              ) : (
+                <span className="block h-full w-1/3 animate-pulse rounded-full bg-accent/60 motion-reduce:animate-none" />
+              )}
+            </span>
+            <span className="shrink-0 font-mono text-[11px] tabular-nums">
+              {timing}
+            </span>
+          </button>
         ) : (
           <Button variant="secondary" size="sm" onClick={onRead} disabled={!answer.text}>
             <svg
@@ -98,21 +118,6 @@ export default function AnswerCard({
             </svg>
             Đọc
           </Button>
-        )}
-
-        {active && (
-          <>
-            <span className="font-mono text-[12px] text-faint">
-              {seconds.toFixed(1)} s
-              {estimated ? ` / ~${Math.round(estimated)} s` : ""}
-            </span>
-            <span className="h-1 w-24 overflow-hidden rounded-full bg-white/10">
-              <span
-                className="block h-full rounded-full bg-gradient-to-r from-accent to-accent-2"
-                style={{ width: `${Math.round(progress * 100)}%` }}
-              />
-            </span>
-          </>
         )}
 
         {downloadUrl && (

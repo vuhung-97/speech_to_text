@@ -10,6 +10,7 @@ class FakeSource {
     this.context = context;
     this.startAt = null;
     this.onended = null;
+    this.playbackRate = { value: 1 };
   }
 
   connect() {}
@@ -77,6 +78,18 @@ describe("PcmPlayer scheduling", () => {
     }
     // 6 s received, only ~4 s scheduled ahead; the rest waits in the queue.
     expect(player.bufferedSeconds).toBeGreaterThan(5.5);
+    player.stop();
+  });
+
+  it("scales scheduled duration by the requested playback speed", () => {
+    const player = new PcmPlayer({ prebuffer: 0, speed: 2 });
+    player.setSampleRate(1000);
+
+    for (let index = 0; index < 3; index += 1) player.push(block());
+
+    expect(sources[0].playbackRate.value).toBe(2);
+    expect(sources[1].startAt).toBeCloseTo(sources[0].startAt + 0.05, 6);
+    expect(player.bufferedSeconds).toBeCloseTo(0.15, 6);
     player.stop();
   });
 

@@ -1,5 +1,6 @@
-// Voice selection + a sample reader shown in the settings drawer. Choosing a
-// voice persists it and warms that voice in the server RAM in the background.
+// Voice selection, reading speed and a sample reader shown in the Q&A sidebar.
+// Choosing a voice persists it and warms that voice in server RAM in the
+// background; the speed slider is read once when a read starts.
 
 import { useState } from "react";
 
@@ -7,6 +8,11 @@ import Alert from "../../components/ui/Alert";
 import Button from "../../components/ui/Button";
 import { FIELD_CLASS, FIELD_TEXT } from "../../components/ui/fieldStyles";
 import { useSpeechPlayer } from "../../shared/playback/useSpeechPlayer";
+import {
+  MAX_SPEED,
+  MIN_SPEED,
+  SPEED_STEP,
+} from "../../shared/tts/constants";
 import { useVoice } from "../../shared/tts/VoiceProvider";
 import VoicePicker from "./VoicePicker";
 
@@ -35,7 +41,7 @@ export default function VoiceSettings() {
       return;
     }
     const text = sample.trim();
-    if (text) speech.start(text, voice.voice);
+    if (text) speech.start(text, voice.voice, voice.speed);
   };
 
   return (
@@ -60,6 +66,24 @@ export default function VoiceSettings() {
             onChange={chooseVoice}
             loading={loading}
           />
+
+          <label className="block">
+            <span className="mb-1 flex items-center justify-between text-[12px] text-faint">
+              <span>Tốc độ đọc</span>
+              <span className="font-mono text-dim">{voice.speed.toFixed(1)}×</span>
+            </span>
+            <input
+              type="range"
+              min={MIN_SPEED}
+              max={MAX_SPEED}
+              step={SPEED_STEP}
+              value={voice.speed}
+              onChange={(event) => voice.chooseSpeed(Number(event.target.value))}
+              aria-label="Tốc độ đọc"
+              aria-valuetext={`${voice.speed.toFixed(1)} lần`}
+              className="h-11 w-full sm:h-6"
+            />
+          </label>
 
           {voice.preloading && (
             <p

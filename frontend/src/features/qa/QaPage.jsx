@@ -88,6 +88,20 @@ export default function QaPage() {
   const mic = useMicStatus({ listen, reader });
   const readingTurn =
     turns.find((turn) => turn.answer?.id === reader.readingId) || null;
+  const playback =
+    reader.mediaMode === "cached"
+      ? {
+          progress: reader.audioProgress,
+          seconds: reader.audioTiming.seconds,
+          estimated: reader.audioTiming.duration,
+        }
+      : reader.mediaMode === "stream"
+        ? {
+            progress: reader.speech.progress,
+            seconds: reader.speech.seconds,
+            estimated: reader.speech.estimated,
+          }
+        : { progress: 0, seconds: 0, estimated: 0 };
 
   return (
     <AppShell
@@ -133,12 +147,14 @@ export default function QaPage() {
         renderAnswerProps={(turn) => {
           const isReading = reader.readingId === turn.answer?.id;
           return {
-            active: isReading,
             playing: isReading,
-            progress: reader.speech.progress,
-            seconds: reader.speech.seconds,
-            estimated: reader.speech.estimated,
-            downloadUrl: isReading ? reader.speech.downloadUrl : "",
+            progress: playback.progress,
+            seconds: playback.seconds,
+            estimated: playback.estimated,
+            downloadUrl:
+              isReading && reader.mediaMode === "stream"
+                ? reader.speech.downloadUrl
+                : "",
             onRead: () => reader.read(turn.answer),
             onStop: reader.stop,
             onPick: (question) => handleAsk(question, "typed"),
@@ -148,8 +164,8 @@ export default function QaPage() {
 
       <ReadingNow
         turn={readingTurn}
-        speech={reader.speech}
-        audioPlaying={reader.audioPlaying}
+        playback={playback}
+        active={Boolean(readingTurn)}
         onStop={reader.stop}
       />
 

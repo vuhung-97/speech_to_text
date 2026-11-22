@@ -54,11 +54,13 @@ export function useSpeechPlayer() {
   }, [teardown]);
 
   const start = useCallback(
-    async (text, voice) => {
+    async (text, voice, speed = 1) => {
+      const rate = Math.min(3, Math.max(0.5, Number(speed) || 1));
       const controller = new AbortController();
       let sessionId = "";
       let key = 0;
       const player = new PcmPlayer({
+        speed: rate,
         // The claim is released only when the buffer actually finished
         // playing, not when the last byte arrived: the tail must still be
         // stopped by the next owner.
@@ -105,7 +107,9 @@ export function useSpeechPlayer() {
               setState({
                 status: "playing",
                 seconds: 0,
-                estimated,
+                // Header duration is audio time; show wall-clock time at the
+                // chosen playback rate (2x → half the seconds).
+                estimated: estimated / rate,
                 sessionId,
                 error: "",
               });
@@ -118,7 +122,7 @@ export function useSpeechPlayer() {
           },
           onProgress: ({ seconds }) => {
             if (isCurrentPlayback(key) && aliveRef.current) {
-              setState((previous) => ({ ...previous, seconds }));
+              setState((previous) => ({ ...previous, seconds: seconds / rate }));
             }
           },
           onDone: ({ sessionId: finished }) => {

@@ -15,6 +15,7 @@ vi.mock("../../shared/playback/useSpeechPlayer", () => ({
 }));
 vi.mock("../../shared/tts/constants", () => ({
   readVoice: () => "giọng",
+  readSpeed: () => 1.2,
 }));
 vi.mock("../../services/api", () => ({
   getAnswerSpeech: vi.fn(),
@@ -71,7 +72,7 @@ describe("useAnswerReader", () => {
     // The claim silences the element synchronously, before any await.
     expect(pauseSpy).toHaveBeenCalled();
     await waitFor(() =>
-      expect(speechMock.start).toHaveBeenCalledWith("đáp án hai", "giọng"),
+      expect(speechMock.start).toHaveBeenCalledWith("đáp án hai", "giọng", 1.2),
     );
   });
 
@@ -89,7 +90,7 @@ describe("useAnswerReader", () => {
     await waitFor(() => expect(api.getAnswerSpeech).toHaveBeenCalledTimes(1));
     fireEvent.click(view.getByText("đọc B"));
     await waitFor(() =>
-      expect(speechMock.start).toHaveBeenCalledWith("đáp án hai", "giọng"),
+      expect(speechMock.start).toHaveBeenCalledWith("đáp án hai", "giọng", 1.2),
     );
 
     await act(async () => {

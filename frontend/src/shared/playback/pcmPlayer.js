@@ -18,9 +18,10 @@ const HIGH_WATER_SEC = 6; // pause the producer above this buffered duration
 const LOW_WATER_SEC = 3; // resume it once playback drained below this
 
 export class PcmPlayer {
-  constructor({ volume = 1, prebuffer = 2.5, onDrained = null } = {}) {
+  constructor({ volume = 1, prebuffer = 2.5, onDrained = null, speed = 1 } = {}) {
     this.volume = volume;
     this.prebuffer = Math.max(0, prebuffer);
+    this.speed = Math.min(3, Math.max(0.5, Number(speed) || 1));
     this._onDrained = onDrained;
 
     this._context = null;
@@ -72,6 +73,10 @@ export class PcmPlayer {
     if (rate > 0) this._sampleRate = rate;
   }
 
+  setSpeed(speed) {
+    this.speed = Math.min(3, Math.max(0.5, Number(speed) || 1));
+  }
+
   /**
    * Queue one block. Resolves when there is room for more audio; `pcmStream`
    * awaits it so the HTTP body stops being read while the player is full.
@@ -79,7 +84,7 @@ export class PcmPlayer {
   push(float32) {
     if (this._stopped || !float32?.length) return Promise.resolve();
 
-    const duration = float32.length / this._sampleRate;
+    const duration = float32.length / this._sampleRate / this.speed;
     this._pending.push(float32);
     this._pendingSeconds += duration;
     this._pump();
@@ -110,7 +115,7 @@ export class PcmPlayer {
       const block = this._pending.shift();
       this._pendingSeconds = Math.max(
         0,
-        this._pendingSeconds - block.length / this._sampleRate,
+        this._pendingSeconds - block.length / this._sampleRate / this.speed,
       );
       this._schedule(block);
     }
@@ -124,6 +129,7 @@ export class PcmPlayer {
 
     const source = context.createBufferSource();
     source.buffer = buffer;
+    source.playbackRate.value = this.speed;
     source.connect(this._gain);
 
     const now = context.currentTime;
@@ -132,14 +138,15 @@ export class PcmPlayer {
     }
     // No "backlog reset": _pump only schedules within SCHEDULE_AHEAD_SEC, so
     // two blocks can never occupy the same moment.
+    const clockDuration = buffer.duration / this.speed;
     source.start(this._nextTime);
-    this._nextTime += buffer.duration;
-    this._queued += buffer.duration;
+    this._nextTime += clockDuration;
+    this._queued += clockDuration;
     this._sources.add(source);
 
     source.onended = () => {
       this._sources.delete(source);
-      this._queued = Math.max(0, this._queued - buffer.duration);
+      this._queued = Math.max(0, this._queued - clockDuration);
       this._pump();
       this._maybeDrain();
     };

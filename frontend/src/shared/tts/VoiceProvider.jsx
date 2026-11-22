@@ -13,7 +13,14 @@ import {
 } from "react";
 
 import * as api from "../../services/api";
-import { readVoice, saveVoice } from "./constants";
+import {
+  clampSpeed,
+  DEFAULT_SPEED,
+  readSpeed,
+  readVoice,
+  saveSpeed,
+  saveVoice,
+} from "./constants";
 
 const VoiceContext = createContext(null);
 
@@ -29,6 +36,7 @@ export const useVoice = () => {
 const INITIAL = {
   voices: [],
   voice: "",
+  speed: DEFAULT_SPEED,
   available: true,
   reason: "",
   status: {},
@@ -41,6 +49,7 @@ export function VoiceProvider({ children }) {
   const [state, setState] = useState(() => ({
     ...INITIAL,
     voice: readVoice(),
+    speed: readSpeed(),
   }));
   const [loading, setLoading] = useState(true);
   const mounted = useRef(true);
@@ -107,7 +116,18 @@ export function VoiceProvider({ children }) {
           preloadError: "Nạp giọng quá lâu — thử lại.",
         }));
       }
-    } catch {
+    } catch (error) {
+      // Older servers do not expose preload/status; that is not a user-facing
+      // error because the voice still works on the first real read.
+      if (error.status === 404 || error.status === 405) {
+        stopPolling();
+        setState((previous) => ({
+          ...previous,
+          preloading: false,
+          preloadError: "",
+        }));
+        return;
+      }
       // The status endpoint may be briefly unavailable while the server
       // restarts; keep polling, but stop after the same budget.
       if (++pollAttempts.current > PRELOAD_MAX_ATTEMPTS) {
@@ -138,7 +158,10 @@ export function VoiceProvider({ children }) {
         setState((previous) => ({
           ...previous,
           preloading: false,
-          preloadError: error.message,
+          // 404/405 = server chưa có endpoint preload (bản cũ). Giọng vẫn
+          // hoạt động ở lần đọc đầu, nên không hiện lỗi cho người dùng.
+          preloadError:
+            error.status === 404 || error.status === 405 ? "" : error.message,
         }));
         return;
       }
@@ -153,10 +176,21 @@ export function VoiceProvider({ children }) {
     (value) => {
       setState((previous) => ({ ...previous, voice: value }));
       saveVoice(value);
+      // The answer reader subscribes so a voice change never leaves old audio
+      // playing under the new selection.
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("tts:voice-change"));
+      }
       preload(value);
     },
     [preload],
   );
+
+  const chooseSpeed = useCallback((value) => {
+    const speed = clampSpeed(value);
+    setState((previous) => ({ ...previous, speed }));
+    saveSpeed(speed);
+  }, []);
 
   useEffect(() => {
     mounted.current = true;
@@ -174,8 +208,9 @@ export function VoiceProvider({ children }) {
       load,
       preload,
       chooseVoice,
+      chooseSpeed,
     }),
-    [state, loading, load, preload, chooseVoice],
+    [state, loading, load, preload, chooseVoice, chooseSpeed],
   );
 
   return (

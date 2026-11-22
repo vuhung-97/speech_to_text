@@ -78,7 +78,9 @@ nền (~10–15 giây, log `TTS model đã nạp vào RAM`), nên lần bấm �
 không còn chờ nạp. Tắt bằng `--no-tts-preload`; muốn chạy thử luôn một câu lúc
 khởi động đặt `TTS_PRELOAD_INFER=1`. Khi đổi giọng trong Cài đặt, frontend gọi
 `POST /tts/preload` để nạp giọng đó ở nền, rồi poll `GET /tts/status`
-(`loaded`, `preloading`, `preload_error`, `warmed_voice`).
+(`loaded`, `preloading`, `preload_error`, `warmed_voice`). Tốc độ đọc 0.8–2.0×
+do client áp dụng bằng `playbackRate` khi phát, nên không có tham số `speed`
+trong API và file WAV tải về vẫn ở tốc độ gốc.
 
 | Method | Path | Ghi chú |
 |---|---|---|

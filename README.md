@@ -57,7 +57,8 @@ sau khi cài. Lõi là **zipformer 30M int8 (sherpa-onnx)**, backend **FastAPI**
   trên CPU (ONNX), model nạp lần đầu khi dùng. Văn bản được cắt sẵn theo
   `. ! ? … ; : ()` và đoạn văn để chèn khoảng nghỉ đúng chỗ; dấu phẩy giữ trong câu
   cho model đọc tự nhiên. Chọn giọng ở **sidebar Hỏi đáp → Giọng đọc**: có ô nội
-  dung thử + nút **Test giọng**; đổi giọng tự nạp giọng vào RAM ở nền.
+  dung thử, nút **Test giọng** và thanh **Tốc độ đọc** 0.8–2.0× (bước 0.2, áp
+  dụng ở lần bấm đọc kế tiếp); đổi giọng tự nạp giọng vào RAM ở nền.
 - **Hỏi đáp theo đề cương — không dùng LLM** — câu hỏi (nói hoặc gõ) được embed bằng
   `multilingual-e5-small` (ONNX, 384 chiều), so cosine với câu hỏi trong kho rồi
   rerank bằng BM25; câu trả lời là **nguyên văn đáp án** của câu hỏi khớp nhất.

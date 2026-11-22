@@ -44,10 +44,11 @@ Mục nào lỗi thì ghi lại màn hình + bước tái hiện.
 - [ ] Sau câu đầu tiên, URL thành `/?session=…`; `F5` vẫn còn hội thoại.
 - [ ] Câu trả lời chưa khớp hiện badge "Chưa có đáp án", text fallback, và ghi
       vào "Kho câu hỏi → chưa trả lời".
-- [ ] Nút `Đọc` phát audio; khi đang đọc nút chuyển **“Đang đọc”**; bấm lần nữa
-      dừng ngay và nút trở lại **“Đọc”**.
+- [ ] Nút `Đọc` phát audio; khi đang đọc, nút chuyển thành khối **“Đang đọc”**
+      kèm thanh tiến độ và thời gian `4s/21s`; bấm lần nữa dừng ngay, thanh thời
+      gian biến mất và nút trở lại **“Đọc”**.
 - [ ] Thanh **“Đang đọc”** phía trên composer hiện nội dung đáp án đang đọc,
-      progress và nút `Dừng`; biến mất khi đọc xong/dừng.
+      progress, thời gian `4s/21s` và nút `Dừng`; biến mất khi đọc xong/dừng.
 - [ ] `Tải WAV` xuất hiện sau khi audio bắt đầu và tải được file mở bằng
       Windows Media Player.
 - [ ] Sidebar phải có 4 card: **Bộ đề**, **Chế độ**, **Giọng đọc**, **Mic** — mỗi card
@@ -94,6 +95,8 @@ Mục nào lỗi thì ghi lại màn hình + bước tái hiện.
 - [ ] Card **Chế độ** có 2 nút `Chính xác` / `Realtime`; bấm đổi ngay, trạng thái
       `aria-pressed` đúng.
 - [ ] Card **Giọng đọc** liệt kê preset + giọng clone.
+- [ ] Thanh **Tốc độ đọc** chạy 0.8–2.0×, bước 0.2; đổi tốc độ không làm thay
+      đổi audio đang phát, chỉ áp dụng ở lần bấm đọc/test kế tiếp.
 - [ ] Đổi giọng → hiện “Đang nạp giọng vào RAM…”, sau đó biến mất; không chặn thao tác.
 - [ ] Đổi giọng khi đang đọc đáp án → audio cũ dừng, giọng mới được nạp.
 - [ ] Ô **Nội dung thử** + nút **Test giọng** đọc bằng đúng giọng đang chọn;

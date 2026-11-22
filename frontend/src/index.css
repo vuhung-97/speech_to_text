@@ -7,6 +7,12 @@ body,
   height: 100%;
 }
 
+/* Native selects, scrollbars and date pickers follow the dark UI. Without
+   this, Windows/Chrome paints the dropdown list white-on-white. */
+:root {
+  color-scheme: dark;
+}
+
 body {
   margin: 0;
   background-color: var(--color-ink);
@@ -14,6 +20,11 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
+}
+
+select option {
+  background-color: var(--color-surface-2);
+  color: #eef2f7;
 }
 
 /* reading text: a touch larger than the utility default */

@@ -122,6 +122,24 @@ describe("useSpeechPlayer", () => {
     expect(players[1].stop).not.toHaveBeenCalled();
   });
 
+  it("applies playback speed and reports wall-clock time", async () => {
+    vi.mocked(streamSpeech).mockImplementationOnce((text, voice, handlers) => {
+      handlers.onStart({ sampleRate: 48000, estimated: 20, sessionId: "s1" });
+      handlers.onProgress({ seconds: 4 });
+      return Promise.resolve({ sessionId: "s1" });
+    });
+    const { result } = renderHook(() => useSpeechPlayer());
+
+    await act(async () => {
+      await result.current.start("câu", "Mai", 2);
+    });
+
+    expect(players[0].options.speed).toBe(2);
+    expect(result.current.estimated).toBe(10);
+    expect(result.current.seconds).toBe(2);
+    expect(result.current.status).toBe("playing");
+  });
+
   it("reports done when the buffer actually drains", async () => {
     vi.mocked(streamSpeech).mockImplementationOnce((text, voice, handlers) => {
       handlers.onStart({ sampleRate: 48000, estimated: 2, sessionId: "s1" });

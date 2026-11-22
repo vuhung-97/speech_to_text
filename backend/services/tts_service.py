@@ -63,6 +63,11 @@ class TtsService:
         self._load_seconds = 0.0
         self._load_lock = threading.Lock()
         self._infer_lock = threading.Lock()
+        self._preload_lock = threading.Lock()
+        self._preload_token = 0
+        self._preloading = False
+        self._preload_error = ""
+        self._warmed_voice = ""
         self._store = TtsJobStore(temp_root or TTS_TEMP_DIR, quota_mb)
 
     # -- availability / catalog -------------------------------------------
@@ -91,6 +96,9 @@ class TtsService:
             "sample_rate": SAMPLE_RATE,
             "max_chars": MAX_TTS_CHARS,
             "precision": self._precision,
+            "preloading": self._preloading,
+            "preload_error": self._preload_error,
+            "warmed_voice": self._warmed_voice,
         }
 
     def voices(self) -> tuple[list[dict[str, Any]], str]:
@@ -176,38 +184,65 @@ class TtsService:
         """One-shot streaming entry point required by ``SpeechSynthesizer``."""
         yield from self.synthesize_stream(text, voice)
 
-    def warmup(self, *, synthesize: bool = False) -> bool:
-        """Load the TTS engine into RAM ahead of time.
+    def warmup(self, *, synthesize: bool = False,
+               voice: str | None = None) -> bool:
+        """Load the TTS engine into RAM and optionally warm one voice.
 
-        ``synthesize=True`` also runs one tiny inference so ONNX graph setup and
-        voice resolution are paid at startup instead of the first read.
+        ``synthesize=True`` runs a tiny inference with ``voice`` so ONNX graph
+        setup and voice resolution are paid before the first real read.
         """
         if not self.package_installed():
             logger.warning("vieneu chưa cài — không nạp trước TTS")
             return False
+
+        selected = self._resolve_voice(voice) if synthesize else None
         if self._engine is not None:
-            return True
-        try:
-            self._ensure_engine()
-        except TtsUnavailable as exc:
-            logger.warning("không nạp được TTS: %s", exc)
-            return False
-        logger.info("TTS model đã nạp vào RAM (%.1f giây)", self._load_seconds)
+            if not synthesize or (selected and self._warmed_voice == selected):
+                return True
+        else:
+            try:
+                self._ensure_engine()
+            except TtsUnavailable as exc:
+                logger.warning("không nạp được TTS: %s", exc)
+                return False
+            logger.info("TTS model đã nạp vào RAM (%.1f giây)", self._load_seconds)
+
         if synthesize:
             try:
-                self.synthesize("Xin chào.", self._resolve_voice(None))
-                logger.info("TTS đã chạy thử một câu — sẵn sàng đọc ngay")
+                self.synthesize("Xin chào.", selected)
+                with self._load_lock:
+                    self._warmed_voice = selected or ""
+                logger.info("TTS đã nạp giọng '%s' — sẵn sàng đọc ngay", selected)
             except Exception as exc:  # noqa: BLE001 - warmup must never block startup
                 logger.warning("chạy thử TTS thất bại: %s", exc)
+                return False
         return True
 
-    def preload_async(self, *, synthesize: bool = False) -> threading.Thread:
-        thread = threading.Thread(
-            target=self.warmup,
-            kwargs={"synthesize": synthesize},
-            daemon=True,
-            name="tts-preload",
-        )
+    def preload_async(self, *, synthesize: bool = False,
+                      voice: str | None = None) -> threading.Thread:
+        """Start warming the engine/voice; poll :meth:`status` for progress."""
+        with self._preload_lock:
+            self._preload_token += 1
+            token = self._preload_token
+            self._preloading = True
+            self._preload_error = ""
+
+        def run() -> None:
+            error = ""
+            try:
+                ok = self.warmup(synthesize=synthesize, voice=voice)
+                if not ok:
+                    error = "không nạp được TTS"
+            except Exception as exc:  # noqa: BLE001 - surfaced through status
+                error = str(exc) or exc.__class__.__name__
+                logger.warning("nạp trước TTS thất bại: %s", error)
+            finally:
+                with self._preload_lock:
+                    if token == self._preload_token:
+                        self._preloading = False
+                        self._preload_error = error
+
+        thread = threading.Thread(target=run, daemon=True, name="tts-preload")
         thread.start()
         return thread
 

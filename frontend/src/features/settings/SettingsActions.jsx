@@ -12,7 +12,7 @@ export default function SettingsActions() {
         disabled={dirtyCount === 0}
         className="min-h-11 rounded-xl bg-gradient-to-br from-accent to-accent-2 px-4 py-2 text-[13.5px] font-semibold text-[#201505] transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-default disabled:opacity-45 sm:min-h-0"
       >
-        Áp dụng &amp; nạp lại
+        Áp dụng
       </button>
       <button
         type="button"
@@ -21,9 +21,11 @@ export default function SettingsActions() {
       >
         Mặc định
       </button>
-      <span className="min-w-full flex-1 text-left text-[12px] text-faint sm:min-w-0 sm:text-right">
-        {dirtyCount ? `${dirtyCount} thay đổi cần nạp lại` : "Đổi trực tiếp là áp dụng ngay"}
-      </span>
+      {dirtyCount > 0 && (
+        <span className="min-w-full flex-1 text-left text-[12px] text-faint sm:min-w-0 sm:text-right">
+          {dirtyCount} thay đổi
+        </span>
+      )}
     </div>
   );
 }

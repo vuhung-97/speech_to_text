@@ -17,7 +17,6 @@ const ICONS = {
   ask: "M21 15a3 3 0 0 1-3 3H8l-5 3V6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3z",
   sessions: "M4 6h16M4 12h16M4 18h10",
   faq: "M4 5h16v14H4zM8 9h8M8 13h5",
-  mic: "M12 3a3 3 0 0 1 3 3v6a3 3 0 1 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3",
   settings:
     "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z",
   panel: "M4 4h16v16H4zM14 4v16M7 8h4M7 12h4",
@@ -28,8 +27,6 @@ const NAV = [
   { to: "/", icon: "ask", label: "Hỏi đáp", end: true },
   { to: "/sessions", icon: "sessions", label: "Phiên" },
   { to: "/faq", icon: "faq", label: "Kho hỏi" },
-  { to: "/dictation", icon: "mic", label: "Chính tả" },
-  { to: "/settings", icon: "settings", label: "Cài đặt" },
 ];
 
 function NavIcon({ name }) {
@@ -56,6 +53,8 @@ export default function AppShell({ title, subtitle, right = null, actions = null
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(true);
+
+  const openSettings = () => setSettingsOpen(true);
 
   useEffect(() => {
     mainRef.current?.focus();
@@ -102,9 +101,6 @@ export default function AppShell({ title, subtitle, right = null, actions = null
           </NavLink>
         ))}
 
-        <span className="mt-auto text-[12px] tracking-[0.08em] text-faint">
-          BETA
-        </span>
       </nav>
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -131,14 +127,14 @@ export default function AppShell({ title, subtitle, right = null, actions = null
                 label={panelOpen ? "Ẩn bảng phụ" : "Hiện bảng phụ"}
                 active={panelOpen}
                 onClick={() => setPanelOpen((open) => !open)}
-                className="max-xl:hidden"
+                className="max-lg:hidden"
               >
                 <NavIcon name="panel" />
               </IconButton>
             )}
             <IconButton
               label="Cài đặt (Ctrl+Comma)"
-              onClick={() => setSettingsOpen(true)}
+              onClick={openSettings}
             >
               <NavIcon name="settings" />
             </IconButton>
@@ -156,8 +152,8 @@ export default function AppShell({ title, subtitle, right = null, actions = null
           {right && (
             <aside
               aria-label="Bảng phụ"
-              className={`scroll-thin w-[320px] shrink-0 overflow-y-auto border-l border-line bg-surface/40 px-4 py-4 max-xl:hidden ${
-                panelOpen ? "" : "xl:hidden"
+              className={`scroll-thin w-[320px] shrink-0 overflow-y-auto border-l border-line bg-surface/40 px-4 py-4 max-lg:hidden ${
+                panelOpen ? "" : "lg:hidden"
               }`}
             >
               {right}

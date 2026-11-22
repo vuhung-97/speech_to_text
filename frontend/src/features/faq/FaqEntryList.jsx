@@ -2,8 +2,6 @@ import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import EmptyState from "../../components/ui/EmptyState";
 
-const SAMPLE_CSV = "question,answer,category\nThủ đô Việt Nam là gì?,Hà Nội.,địa lý\n";
-
 function PrerenderButton({ job, disabled, onClick }) {
   if (job?.status === "running") {
     return (
@@ -58,7 +56,7 @@ export default function FaqEntryList({
     return (
       <EmptyState
         title="Kho đang trống"
-        hint={`Thêm câu hỏi ở trên, hoặc nhập đề cương .docx (mỗi câu: dòng «Câu …», bảng câu hỏi/«Đáp án»), hoặc CSV 3 cột question, answer, category. Mẫu: ${SAMPLE_CSV.split("\n")[1]}`}
+        hint="Thêm câu hỏi ở trên hoặc nhập tệp .docx/CSV."
       />
     );
   }

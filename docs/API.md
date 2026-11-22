@@ -76,12 +76,15 @@ hoặc với câu vừa nhận trong cùng tệp.
 Khi khởi động `python run.py`, model VieNeu được **nạp trước vào RAM** ở luồng
 nền (~10–15 giây, log `TTS model đã nạp vào RAM`), nên lần bấm “Đọc” đầu tiên
 không còn chờ nạp. Tắt bằng `--no-tts-preload`; muốn chạy thử luôn một câu lúc
-khởi động đặt `TTS_PRELOAD_INFER=1`. Trạng thái: `GET /tts/voices` →
-`status.loaded`, `status.load_seconds`.
+khởi động đặt `TTS_PRELOAD_INFER=1`. Khi đổi giọng trong Cài đặt, frontend gọi
+`POST /tts/preload` để nạp giọng đó ở nền, rồi poll `GET /tts/status`
+(`loaded`, `preloading`, `preload_error`, `warmed_voice`).
 
 | Method | Path | Ghi chú |
 |---|---|---|
 | GET | `/tts/voices` | danh sách giọng, `max_chars`, `max_words`, status |
+| GET | `/tts/status` | trạng thái nạp model/giọng |
+| POST | `/tts/preload` | `{voice?}` → nạp engine/giọng vào RAM ở nền |
 | GET | `/tts/limits` | `{max_quick_chars:1000, max_words:2000, max_stream_chars:20000, sample_rate, busy}` |
 | POST | `/tts` | WAV trong RAM cho văn bản ≤1000 ký tự |
 | POST | `/tts/stream` | PCM16 chunked, ≤2000 từ; header `X-Tts-Session`, `X-Sample-Rate`, `X-Estimated-Seconds`; lỗi 400/409/413/507 trước khi stream |

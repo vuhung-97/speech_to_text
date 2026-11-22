@@ -1,6 +1,6 @@
 // Server-side live state: connection status, engine, capture stats, queue and
-// settings snapshot. Browser microphone/dictation state lives in the mic
-// feature (`useSpeechStream`), not here.
+// settings snapshot. Browser microphone state lives in the mic feature
+// (`useSpeechStream`), not here.
 
 import {
   createContext,

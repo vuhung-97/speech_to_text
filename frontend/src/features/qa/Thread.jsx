@@ -54,8 +54,8 @@ export default function Thread({ turns, loading = false, onExample, renderAnswer
       ) : turns.length === 0 ? (
         <div className="mx-auto max-w-[640px]">
           <EmptyState
-            title="Hỏi bằng giọng nói hoặc gõ tay"
-            hint="Câu hỏi được khớp với kho câu trả lời soạn sẵn. Chưa khớp thì hệ thống gợi ý câu gần nhất và ghi lại để bạn bổ sung sau."
+            title="Bắt đầu hỏi"
+            hint="Nói hoặc gõ câu hỏi; câu trả lời lấy nguyên văn từ kho."
             action={
               <div className="flex flex-wrap justify-center gap-1.5">
                 {EXAMPLES.map((example) => (

@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { GRACE_MS } from "../../shared/mic/constants";
 import Composer from "./Composer";
 
 const renderComposer = (overrides = {}) => {
@@ -48,14 +47,5 @@ describe("Composer", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Hỏi" }));
     expect(onSubmit).toHaveBeenCalledWith("câu đã chốt");
-  });
-
-  it("derives the silence hint from GRACE_MS instead of hardcoding seconds", () => {
-    renderComposer({ listening: true });
-    const label = (GRACE_MS / 1000).toLocaleString("vi-VN");
-
-    expect(
-      screen.getByText(new RegExp(`${label} giây im lặng`)),
-    ).toBeInTheDocument();
   });
 });

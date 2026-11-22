@@ -1,7 +1,8 @@
-// Settings body shared by the drawer and the /settings route.
+// Settings body rendered inside the settings drawer (gear / Ctrl+,).
 // One responsibility: render the schema-driven form and its side panels.
 
 import { useLive } from "../../shared/live/LiveProvider";
+import { VoiceSettings } from "../tts";
 import FieldRow from "./FieldRow";
 import PresetPanel from "./PresetPanel";
 import ReplayPanel from "./ReplayPanel";
@@ -38,7 +39,7 @@ function EngineBadge({ engine }) {
   );
 }
 
-export default function SettingsForm() {
+export default function SettingsForm({ active = true }) {
   const { settings } = useSettings();
   const { pending, engine } = useLive();
 
@@ -54,6 +55,8 @@ export default function SettingsForm() {
 
   return (
     <div className="space-y-5">
+      <VoiceSettings active={active} />
+
       {settings.warnings?.length > 0 && (
         <ul className="space-y-1.5">
           {settings.warnings.map((warning) => (
@@ -84,14 +87,6 @@ export default function SettingsForm() {
             {fields.map((field) => (
               <FieldRow key={field.key} field={field} devices={[]} />
             ))}
-
-            {group === "engine" && (
-              <div className="mb-2 rounded-lg border border-line bg-white/[0.02] px-2.5 py-1.5 text-[12px] leading-relaxed text-faint">
-                Micro được mở trong trình duyệt của từng người dùng và chỉ hoạt
-                động khi bấm <span className="text-white">Nghe</span>. Đổi thiết bị
-                mic ở trang Hỏi đáp.
-              </div>
-            )}
 
             {group === "stream" && (
               <div className="mb-2 flex items-center justify-between text-[12px] text-faint">

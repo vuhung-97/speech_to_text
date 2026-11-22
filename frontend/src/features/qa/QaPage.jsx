@@ -10,10 +10,7 @@ import Alert from "../../components/ui/Alert";
 import { useFaqDocuments } from "../faq";
 import { useMicStatus } from "./useMicStatus";
 import Composer from "./Composer";
-import DocumentPicker from "./DocumentPicker";
-import MatchPanel from "./MatchPanel";
-import MicPanel from "./MicPanel";
-import ReadingPanel from "./ReadingPanel";
+import QaSidebar from "./QaSidebar";
 import Thread from "./Thread";
 import { useAnswerReader } from "./useAnswerReader";
 import { useAsk } from "./useAsk";
@@ -87,45 +84,24 @@ export default function QaPage() {
     micDevices.refresh();
   }, [listen, micDevices, reader]);
 
-  const lastAnswer = turns[turns.length - 1]?.answer || null;
   const mic = useMicStatus({ listen, reader });
-
-  const right = (
-    <>
-      <DocumentPicker
-        documents={documents.documents}
-        value={documentId}
-        onChange={documents.select}
-        disabled={busy}
-      />
-      <MicPanel
-        micLabel={mic.micLabel}
-        listen={listen}
-        liveText={mic.liveText}
-        levelPercent={mic.levelPercent}
-        silentMic={mic.silentMic}
-        insecure={mic.insecure}
-        devices={micDevices.devices}
-        device={micDevices.device}
-        onChooseMic={micDevices.choose}
-      />
-      <MatchPanel
-        lastAnswer={lastAnswer}
-        onPick={(question) => handleAsk(question, "typed")}
-      />
-      <ReadingPanel speech={reader.speech} audioPlaying={reader.audioPlaying} />
-    </>
-  );
 
   return (
     <AppShell
       title="Hỏi đáp"
-      subtitle={
-        sessionId
-          ? `Phiên ${sessionId.slice(0, 8)} · ${turns.length} lượt`
-          : "Câu hỏi mới"
+      right={
+        <QaSidebar
+          documents={documents.documents}
+          documentId={documentId}
+          onSelectDocument={documents.select}
+          busy={busy}
+          mic={mic}
+          listen={listen}
+          devices={micDevices.devices}
+          device={micDevices.device}
+          onChooseMic={micDevices.choose}
+        />
       }
-      right={right}
     >
       <Thread
         turns={turns}
@@ -158,7 +134,6 @@ export default function QaPage() {
         busy={busy}
         listening={listen.active}
         onToggleListen={toggleListen}
-        error={listen.error}
       />
     </AppShell>
   );

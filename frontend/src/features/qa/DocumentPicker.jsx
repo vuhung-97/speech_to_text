@@ -4,10 +4,8 @@ import { FIELD_CLASS, FIELD_TEXT } from "../../components/ui/fieldStyles";
 
 export default function DocumentPicker({ documents, value, onChange, disabled }) {
   return (
-    <label className="block">
-      <span className="mb-1 block text-[12px] font-semibold tracking-[0.08em] text-faint uppercase">
-        Bộ đề
-      </span>
+    <label className="block min-w-0">
+      <span className="mb-1 block text-[12px] text-faint">Bộ đề</span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}

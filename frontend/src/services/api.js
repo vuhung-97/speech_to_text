@@ -27,8 +27,9 @@ export const getSamples = () => http.get("/api/samples");
 export const replaySample = (name, segment) => http.post("/api/replay", { name, segment });
 
 export const getTtsVoices = () => http.get("/api/tts/voices");
-export const synthesizeSpeech = (text, voice) =>
-  http.requestAudio("/api/tts", { body: { text, voice: voice || null } });
+export const getTtsStatus = () => http.get(v1("/tts/status"));
+export const preloadTts = (voice) =>
+  http.post(v1("/tts/preload"), { voice: voice || null });
 
 export const uploadSample = (file) => {
   const form = new FormData();

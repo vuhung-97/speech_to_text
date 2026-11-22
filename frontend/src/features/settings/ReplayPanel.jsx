@@ -146,7 +146,7 @@ export default function ReplayPanel() {
         }`}
       >
         <label className="cursor-pointer">
-          Kéo file audio vào đây (wav, mp3, m4a…)
+          Kéo file audio vào đây
           <input
             type="file"
             accept="audio/*,.wav,.mp3,.m4a,.flac,.ogg,.webm"

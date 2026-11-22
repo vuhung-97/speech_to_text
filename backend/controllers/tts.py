@@ -44,6 +44,25 @@ def list_voices(tts: TtsDep) -> dict[str, Any]:
     }
 
 
+@router.post("/tts/preload")
+def preload_tts(request: TtsRequest, tts: TtsDep) -> dict[str, Any]:
+    """Warm the engine/voice in RAM; poll ``/tts/status`` for progress."""
+    ready, reason = tts.available()
+    if not ready:
+        raise ApiError(reason, status_code=503)
+    try:
+        voice = tts.resolve_voice(request.voice)
+    except ValueError as exc:
+        raise ApiError(str(exc), status_code=400) from exc
+    tts.preload_async(synthesize=True, voice=voice)
+    return {"ok": True, "preloading": True, "voice": voice}
+
+
+@router.get("/tts/status")
+def tts_status(tts: TtsDep) -> dict[str, Any]:
+    return {"ok": True, **tts.status()}
+
+
 @router.get("/tts/limits")
 def limits(tts: TtsDep) -> dict[str, Any]:
     """Everything the UI needs to validate before submitting, in one call."""

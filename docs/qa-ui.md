@@ -5,10 +5,10 @@ Mục nào lỗi thì ghi lại màn hình + bước tái hiện.
 
 ## 1. Khung ứng dụng
 
-- [ ] Rail trái hiển thị 5 mục: Hỏi đáp, Phiên, Kho hỏi, Chính tả, Cài đặt.
+- [ ] Rail trái hiển thị 3 mục: Hỏi đáp, Phiên, Kho hỏi.
 - [ ] Mục đang mở có nền accent và icon sáng; hover các mục còn lại đổi màu.
 - [ ] Topbar hiện tiêu đề từng màn hình + `StatusPill` + nút Ctrl+K + bánh răng.
-- [ ] Nút "bảng phụ" chỉ hiện ở trang Hỏi đáp và ở màn ≥ 1280px.
+- [ ] Nút "bảng phụ" chỉ hiện ở trang Hỏi đáp và ở màn ≥ 1280px; sidebar phải có card Bộ đề và card Mic tách nhau.
 - [ ] `Ctrl+K` mở palette; gõ để lọc; `↑`/`↓` đổi lựa chọn; `Enter` điều hướng;
       `Esc` đóng. Bấm ra ngoài cũng đóng.
 - [ ] `Ctrl+,` mở/đóng drawer Cài đặt ở mọi màn hình.
@@ -17,10 +17,12 @@ Mục nào lỗi thì ghi lại màn hình + bước tái hiện.
 
 - [ ] Trạng thái rỗng: 3 câu hỏi mẫu; bấm một câu → tạo lượt hỏi và câu trả lời.
 - [ ] Mở app: `StatusPill` hiện **"Sẵn sàng"**; chưa có thiết bị mic nào bị mở.
-- [ ] Ô nhập tự focus; gõ câu hỏi + `Enter` → gửi; `Shift+Enter` → xuống dòng
-      (không gửi); nút `Hỏi` cũng gửi.
-- [ ] Panel Mic có select thiết bị **của trình duyệt**; chọn mic khác và bấm
-      `Nghe` → trình duyệt hỏi quyền (lần đầu) → đèn mic đúng thiết bị sáng.
+- [ ] Ô nhập tự focus; gõ câu hỏi + `Enter` → gửi; nút `Hỏi` cũng gửi.
+- [ ] Ba phần tử `Nghe` / ô nhập / `Hỏi` cao bằng nhau (44px), thẳng hàng, không
+      nhô lệch; mobile 375px không tràn ngang.
+- [ ] Card Mic trong sidebar phải có select thiết bị **của trình duyệt**, tách khỏi
+      card Bộ đề; chọn mic khác và bấm `Nghe` → trình duyệt hỏi quyền (lần đầu) →
+      đèn mic đúng thiết bị sáng.
 - [ ] Bấm `Nghe` → mic mở, nói một câu → im 2 giây → mic tự đóng và câu vừa nói
       xuất hiện trong ô, **không tự gửi**.
 - [ ] Trong 2 giây sau khi chốt câu, nói tiếp → mic vẫn mở, chữ nối thêm; hết
@@ -45,8 +47,11 @@ Mục nào lỗi thì ghi lại màn hình + bước tái hiện.
 - [ ] Nút `Đọc` phát audio sau ~2–3 giây; progress chạy; `Dừng đọc` cắt ngay.
 - [ ] `Tải WAV` xuất hiện sau khi audio bắt đầu và tải được file mở bằng
       Windows Media Player.
-- [ ] Panel phải: "Mic" hiện Mic tắt / Đang nghe / Đang đọc và số từ đang nói;
-      "Câu hỏi khớp" hiện điểm/percent; "Đang đọc" hiện tiến độ.
+- [ ] Sidebar phải chỉ có 2 card: **Bộ đề** (select) và **Mic** (trạng thái, level,
+      thiết bị), cách nhau khoảng 16px; không dính nhau.
+- [ ] Câu hỏi của user chỉ hiện nội dung + giờ, **không** hiện nhãn “gõ tay”/“giọng nói”.
+- [ ] Badge khớp/percent và tiến độ đọc nằm trong AnswerCard; không có panel
+      “Câu hỏi khớp”/“Đang đọc” trùng lặp.
 
 ## 3. Phiên (`/sessions`)
 
@@ -72,17 +77,23 @@ Mục nào lỗi thì ghi lại màn hình + bước tái hiện.
 - [ ] Danh sách "Chưa có đáp án" hiện câu đã hỏi nhưng kho chưa có.
 - [ ] Empty state đúng khi kho trống.
 
-## 5. Đọc chính tả (`/dictation`)
+## 5. Cài đặt (drawer, bánh răng / `Ctrl+,`)
 
-- [ ] Nút mũi tên quay về Hỏi đáp; mic trình duyệt, transcript, `Bắt đầu nghe` hoạt động.
-- [ ] `Esc` bật/tắt mic; `Ctrl+,` mở cài đặt.
-- [ ] Trang này không mở mic của server (đèn mic laptop không sáng khi dùng trình duyệt khác).
+- [ ] Không còn route `/settings`; bánh răng mở drawer ở mọi màn hình.
+- [ ] Drawer đóng được bằng `Esc`, nút đóng, hoặc bấm ra ngoài; focus trả về nút mở.
+- [ ] Thay đổi một trường "live" áp dụng ngay; trường engine/capture có nút `Áp dụng`.
+- [ ] Không còn đoạn hướng dẫn dài về micro.
 
-## 6. Cài đặt (`/settings`)
+## 6. Giọng đọc & preload
 
-- [ ] Drawer tự mở; đóng được; thay đổi một trường "live" áp dụng ngay.
-- [ ] Không còn ô chọn “Micro” của server; có ghi chú mic nằm ở trình duyệt.
-- [ ] Model đổi được và có cảnh báo nếu cần nạp lại.
+- [ ] Mục **Giọng đọc** nằm đầu drawer; select liệt kê preset + giọng clone.
+- [ ] Đổi giọng → hiện “Đang nạp giọng vào RAM…”, sau đó biến mất; không chặn thao tác.
+- [ ] Đổi giọng khi đang đọc đáp án → audio cũ dừng, giọng mới được nạp.
+- [ ] Ô **Nội dung thử** + nút **Test giọng** đọc bằng đúng giọng đang chọn;
+      nút chuyển `Dừng` khi đang phát.
+- [ ] Lỗi nạp giọng hiện message + nút `Thử lại`.
+- [ ] Mở DevTools → Network: đổi giọng có `POST /tts/preload`, sau đó poll
+      `GET /tts/status` đến khi `preloading=false`.
 
 ## 7. Accessibility
 

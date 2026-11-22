@@ -38,6 +38,7 @@ class FakeTts(TtsService):
     def __init__(self, tmp_path: Path) -> None:
         super().__init__(temp_root=tmp_path)
         self.engine = FakeEngine()
+        self.preloaded = None
 
     def available(self):
         return True, ""
@@ -47,6 +48,10 @@ class FakeTts(TtsService):
 
     def _ensure_engine(self):
         return self.engine
+
+    def preload_async(self, *, synthesize=False, voice=None):
+        self.preloaded = (synthesize, voice)
+        return None
 
 
 @pytest.fixture()
@@ -61,6 +66,18 @@ def client(tmp_path: Path, tts: FakeTts):
     app = create_app(None, StubPipeline(), None, None, tmp_path, tts=tts)  # type: ignore[arg-type]
     with TestClient(app) as instance:
         yield instance
+
+
+def test_preload_warms_the_selected_voice(client: TestClient,
+                                          tts: FakeTts) -> None:
+    response = client.post("/api/v1/tts/preload", json={"voice": "Mai Anh"})
+    assert response.status_code == 200
+    assert response.json()["preloading"] is True
+    assert tts.preloaded == (True, "Mai Anh")
+
+    status = client.get("/api/v1/tts/status")
+    assert status.status_code == 200
+    assert "preloading" in status.json()
 
 
 def test_stream_returns_pcm_with_headers(client: TestClient) -> None:

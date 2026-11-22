@@ -6,11 +6,9 @@ import { useNavigate } from "react-router-dom";
 import { useFocusTrap } from "./ui/useFocusTrap";
 
 const ITEMS = [
-  { to: "/", label: "Hỏi đáp", hint: "Hỏi và nghe câu trả lời" },
-  { to: "/sessions", label: "Phiên hội thoại", hint: "Lịch sử hỏi đáp" },
-  { to: "/faq", label: "Kho câu hỏi", hint: "Câu hỏi chưa có đáp án" },
-  { to: "/dictation", label: "Đọc chính tả", hint: "Mic + văn bản trực tiếp" },
-  { to: "/settings", label: "Cài đặt", hint: "Model, micro, giọng đọc" },
+  { to: "/", label: "Hỏi đáp" },
+  { to: "/sessions", label: "Phiên hội thoại" },
+  { to: "/faq", label: "Kho câu hỏi" },
 ];
 
 export default function CommandPalette({ open, onClose }) {
@@ -24,11 +22,7 @@ export default function CommandPalette({ open, onClose }) {
   const items = useMemo(() => {
     const value = query.trim().toLowerCase();
     if (!value) return ITEMS;
-    return ITEMS.filter(
-      (item) =>
-        item.label.toLowerCase().includes(value) ||
-        item.hint.toLowerCase().includes(value),
-    );
+    return ITEMS.filter((item) => item.label.toLowerCase().includes(value));
   }, [query]);
 
   useEffect(() => {
@@ -101,7 +95,6 @@ export default function CommandPalette({ open, onClose }) {
                 }`}
               >
                 <span className="text-[13px]">{item.label}</span>
-                <span className="text-[12px] text-faint">{item.hint}</span>
               </button>
             </li>
           ))}

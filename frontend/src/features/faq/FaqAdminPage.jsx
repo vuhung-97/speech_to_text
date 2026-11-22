@@ -47,7 +47,6 @@ export default function FaqAdminPage() {
   return (
     <AppShell
       title="Kho câu hỏi"
-      subtitle="Cặp câu hỏi – câu trả lời soạn sẵn, khớp bằng embedding"
       right={
         <>
           <FaqStatsPanel

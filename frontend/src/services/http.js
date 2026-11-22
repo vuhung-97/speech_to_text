@@ -132,35 +132,4 @@ export async function requestStream(path, options = {}) {
   return response;
 }
 
-export async function requestAudio(path, options = {}) {
-  const { method = "POST", body, signal, timeout = 0, headers } = options;
-
-  const response = await send(path, {
-    method,
-    body,
-    headers,
-    signal,
-    timeout,
-    accept: "audio/*",
-  });
-
-  if (!response.ok) {
-    throw ApiError.fromResponse(response, await readJson(response));
-  }
-  if (!response.headers.get("content-type")?.includes("audio/")) {
-    throw new ApiError("Phản hồi không phải audio", {
-      status: response.status,
-      code: "bad-content-type",
-    });
-  }
-  try {
-    return {
-      blob: await response.blob(),
-      seconds: Number(response.headers.get("X-Audio-Seconds")) || null,
-    };
-  } catch (error) {
-    throw ApiError.fromNetwork(error);
-  }
-}
-
 export { DEFAULT_TIMEOUT };

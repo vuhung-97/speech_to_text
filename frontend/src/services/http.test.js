@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "./errors";
-import { request, requestAudio, requestForm, requestStream } from "./http";
+import { request, requestForm, requestStream } from "./http";
 
 function jsonResponse(body, { status = 200 } = {}) {
   return new Response(JSON.stringify(body), {
@@ -102,23 +102,4 @@ describe("requestStream", () => {
   });
 });
 
-describe("requestAudio", () => {
-  it("rejects a response that is not audio", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ ok: true })));
 
-    await expect(requestAudio("/api/tts")).rejects.toMatchObject({ code: "bad-content-type" });
-  });
-
-  it("returns the blob and the reported duration", async () => {
-    const response = new Response("pcm", {
-      status: 200,
-      headers: { "Content-Type": "audio/wav", "X-Audio-Seconds": "1.5" },
-    });
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response));
-
-    const result = await requestAudio("/api/tts");
-
-    expect(await result.blob.text()).toBe("pcm");
-    expect(result.seconds).toBe(1.5);
-  });
-});

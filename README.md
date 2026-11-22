@@ -50,15 +50,16 @@ sau khi cài. Lõi là **zipformer 30M int8 (sherpa-onnx)**, backend **FastAPI**
   `fr/s`, `coverage`, `dropped` để kiểm chứng (đo được 99–100%, trước đây chỉ 67%).
 - **VAD chống khoá** — noise-floor chỉ học từ frame yên tĩnh, ngưỡng bị chặn bởi 30% đỉnh
   gần đây, hysteresis khi đang nói, giữ trạng thái qua pause/resume.
-- **Bảng cài đặt trên web** — schema sinh động theo engine đang chọn, có preset và
-  cảnh báo cấu hình rủi ro.
+- **Cài đặt dạng drawer** — mở bằng bánh răng hoặc `Ctrl+,`: engine, VAD, giọng đọc,
+  preset và cảnh báo cấu hình.
 - **Replay file audio** — kéo–thả `wav/mp3/m4a/…` rồi decode bằng đúng cấu hình đang dùng
   để A/B thông số trên cùng một file.
-- **Đọc văn bản (TTS)** — drawer **Đọc** dùng VieNeu-TTS v3 Turbo: 25 giọng preset,
-  gộp cả giọng clone của app VieNeu, nghe trực tiếp hoặc tải WAV 48 kHz; chạy offline
+- **Đọc câu trả lời (TTS)** — nút **Đọc** trên mỗi đáp án dùng VieNeu-TTS v3 Turbo:
+  25 giọng preset, gộp cả giọng clone của app VieNeu, tải WAV 48 kHz; chạy offline
   trên CPU (ONNX), model nạp lần đầu khi dùng. Văn bản được cắt sẵn theo
   `. ! ? … ; : ()` và đoạn văn để chèn khoảng nghỉ đúng chỗ; dấu phẩy giữ trong câu
-  cho model đọc tự nhiên.
+  cho model đọc tự nhiên. Chọn giọng trong **Cài đặt → Giọng đọc**: có ô nội dung
+  thử + nút **Test giọng**; đổi giọng tự nạp giọng vào RAM ở nền.
 - **Hỏi đáp theo đề cương — không dùng LLM** — câu hỏi (nói hoặc gõ) được embed bằng
   `multilingual-e5-small` (ONNX, 384 chiều), so cosine với câu hỏi trong kho rồi
   rerank bằng BM25; câu trả lời là **nguyên văn đáp án** của câu hỏi khớp nhất.
@@ -187,12 +188,13 @@ python tools/eval_matcher.py    # top-1 / top-3 / MRR + khoảng điểm trong/n
 
 ## Giao diện
 
-| Nhận dạng trực tiếp | Bảng cài đặt |
+| Hỏi đáp | Cài đặt (drawer) |
 | --- | --- |
 | ![Giao diện chính](docs/ui.png) | ![Bảng cài đặt](docs/settings.png) |
 
-Bảng cài đặt được sinh từ schema của engine đang chọn: model zipformer hiện thêm
-`Max active paths` và `Blank penalty` bên cạnh các thông số chung.
+Cài đặt được sinh từ schema của engine đang chọn: model zipformer hiện thêm
+`Max active paths` và `Blank penalty` bên cạnh các thông số chung; mục **Giọng đọc**
+nằm ngay đầu drawer và tự nạp giọng khi đổi.
 
 ## Kiến trúc
 
@@ -270,14 +272,13 @@ Swagger UI: `http://127.0.0.1:8765/api/docs`
 | `GET /api/settings` | Schema + values |
 | `POST /api/settings` | Cập nhật một phần (`{key: value}`), trả lại `fields`, `engines` |
 | `POST /api/settings/reset` | Khôi phục mặc định |
-| `GET /api/devices` | Danh sách micro |
 | `GET /api/samples` | Danh sách file trong `samples/` |
 | `POST /api/samples` | Upload (`multipart/form-data`, field `file`) |
 | `POST /api/replay` | `{name, segment}` → decode file bằng cấu hình hiện tại |
 | `GET /api/tts/voices` | Danh sách giọng đọc + trạng thái model TTS |
+| `GET /api/tts/status` | Trạng thái nạp model/giọng (`loaded`, `preloading`, `warmed_voice`) |
+| `POST /api/tts/preload` | `{voice?}` → nạp engine/giọng vào RAM ở nền |
 | `POST /api/tts` | `{text, voice?}` → `audio/wav` 48 kHz (tối đa 1000 ký tự) |
-| `POST /api/pause` | `{paused: bool}` |
-| `POST /api/clear` | Xoá transcript |
 | `POST /api/v1/qa/ask` | `{question, session_id?, source?, document_id?}` → câu trả lời + điểm khớp |
 | `GET /api/v1/faq/entries` | Danh sách câu hỏi/đáp án (lọc `q`, `category`, `active`, `document_id`) |
 | `POST /api/v1/faq/import` | Nạp CSV (`multipart/form-data`, field `file`, ≤ 2 MB) |

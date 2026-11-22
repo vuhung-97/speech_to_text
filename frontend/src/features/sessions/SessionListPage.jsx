@@ -93,7 +93,7 @@ export default function SessionListPage() {
           <div className="mx-auto max-w-[720px]">
             <EmptyState
               title="Chưa có phiên nào"
-              hint="Mỗi câu hỏi bạn gửi sẽ tạo một phiên gồm câu hỏi, câu trả lời khớp và phần giọng đọc."
+              hint="Câu hỏi đã hỏi và câu trả lời tương ứng."
               action={
                 <Link
                   to="/"

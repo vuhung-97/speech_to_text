@@ -23,7 +23,7 @@ export default function SettingsDrawer({ open, onClose }) {
       contentClass="px-5 pt-3 pb-6"
       footer={<SettingsActions />}
     >
-      <SettingsForm />
+      <SettingsForm active={open} />
     </Drawer>
   );
 }

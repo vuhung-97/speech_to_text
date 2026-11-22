@@ -40,6 +40,23 @@ def test_preload_async_runs_in_background(tmp_path: Path) -> None:
     thread.join(timeout=2)
     assert not thread.is_alive()
     assert service._engine is not None
+    assert service.status()["preloading"] is False
+
+
+def test_preload_async_warms_the_selected_voice(tmp_path: Path) -> None:
+    class Recording(FakeTts):
+        def warmup(self, *, synthesize: bool = False,
+                   voice: str | None = None) -> bool:
+            self.warmed = (synthesize, voice)
+            return True
+
+    service = Recording(tmp_path)
+    thread = service.preload_async(synthesize=True, voice="Mai Anh")
+    thread.join(timeout=2)
+
+    assert not thread.is_alive()
+    assert service.warmed == (True, "Mai Anh")
+    assert service.status()["preloading"] is False
 
 
 def test_warmup_reports_unavailable(tmp_path: Path) -> None:

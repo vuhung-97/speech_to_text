@@ -5,10 +5,8 @@
 // being recognised and is read-only, so server updates never fight the caret.
 // Enter still submits: the screen stops the mic and appends the spoken tail.
 
-import Alert from "../../components/ui/Alert";
 import Button from "../../components/ui/Button";
 import { FIELD_CLASS, FIELD_TEXT } from "../../components/ui/fieldStyles";
-import { GRACE_MS } from "../../shared/mic/constants";
 
 function MicIcon() {
   return (
@@ -41,11 +39,9 @@ export default function Composer({
   busy,
   listening,
   onToggleListen,
-  error,
 }) {
   const shown = displayValue(value, live, listening);
   const canSubmit = Boolean(shown.trim()) && !busy;
-  const graceLabel = (GRACE_MS / 1000).toLocaleString("vi-VN");
 
   const submit = () => {
     if (!canSubmit) return;
@@ -60,16 +56,11 @@ export default function Composer({
       }}
       className="shrink-0 border-t border-line bg-surface/70 px-5 py-3"
     >
-      {error && (
-        <Alert size="compact" className="mx-auto mb-2 max-w-[720px]">
-          {error}
-        </Alert>
-      )}
-
-      <div className="mx-auto flex max-w-[720px] items-end gap-2">
+      <div className="mx-auto flex max-w-[760px] items-center gap-2">
         <Button
           variant={listening ? "danger" : "secondary"}
           size="md"
+          className="h-11 shrink-0 px-4"
           aria-pressed={listening}
           onClick={onToggleListen}
           title={listening ? "Dừng nghe" : "Nghe câu hỏi"}
@@ -92,28 +83,21 @@ export default function Composer({
             readOnly={listening}
             autoFocus
             rows={1}
-            placeholder={
-              listening
-                ? "Đang nghe… nói câu hỏi của bạn"
-                : "Nhập câu hỏi, hoặc bấm Nghe để nói…"
-            }
-            className={`${FIELD_CLASS} max-h-[140px] min-h-11 w-full resize-y rounded-control px-3 py-2.5 leading-relaxed ${FIELD_TEXT}`}
+            placeholder={listening ? "Đang nghe…" : "Nhập câu hỏi…"}
+            className={`${FIELD_CLASS} h-11 min-h-11 w-full resize-none rounded-control px-3 py-2 leading-normal ${FIELD_TEXT}`}
           />
         </label>
 
-        <Button type="submit" variant="primary" size="md" disabled={!canSubmit}>
+        <Button
+          type="submit"
+          variant="primary"
+          size="md"
+          className="h-11 shrink-0 px-4"
+          disabled={!canSubmit}
+        >
           {busy ? "Đang tìm…" : "Hỏi"}
         </Button>
       </div>
-
-      <p
-        aria-live="polite"
-        className="mx-auto mt-2 mb-0 max-w-[720px] text-[12px] text-faint"
-      >
-        {listening
-          ? `Mic đang mở · tự dừng sau ${graceLabel} giây im lặng · bấm Dừng để cắt ngay.`
-          : "Mic tắt mặc định · Enter để hỏi · Shift+Enter để xuống dòng."}
-      </p>
     </form>
   );
 }

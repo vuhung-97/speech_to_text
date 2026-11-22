@@ -56,10 +56,6 @@ export default function FaqDocumentsPanel({ documents, busy, onRename, onRemove 
           ))}
         </ul>
       )}
-      <p className="mt-2 mb-0 text-[12px] leading-relaxed text-faint">
-        Nạp lại tệp cùng tên sẽ cập nhật bộ; câu không còn trong tệp bị tắt
-        (vẫn khôi phục được).
-      </p>
     </section>
   );
 }

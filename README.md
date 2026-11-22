@@ -17,6 +17,10 @@
 - TTS: **VieNeu-TTS v3 Turbo (ONNX, CPU)**
 - Chạy được trên **Windows / Linux / macOS**, không cần GPU.
 
+<p align="center">
+  <img src="docs/ui-empty-dark.png" alt="Giao diện hỏi đáp trạng thái rỗng" width="820">
+</p>
+
 ---
 
 ## Mục lục
@@ -71,6 +75,18 @@
 - Dưới `1024px`: rail đổi thành bottom navigation; công cụ mở trong bottom sheet.
 - Trang **Hỏi đáp**, **Phiên**, **Kho hỏi** dùng chung app shell.
 - Cài đặt dạng drawer: `Ctrl+,` hoặc bánh răng.
+
+### Ảnh giao diện
+
+Các ảnh dưới đây chụp **trạng thái rỗng**, không hiển thị câu hỏi hay bộ đề thật.
+
+| Hỏi đáp — tối | Hỏi đáp — sáng |
+| --- | --- |
+| ![Hỏi đáp tối](docs/ui-empty-dark.png) | ![Hỏi đáp sáng](docs/ui-empty-light.png) |
+
+| Cài đặt | Mobile |
+| --- | --- |
+| ![Cài đặt](docs/settings.png) | ![Mobile](docs/ui-empty-mobile.png) |
 
 ### Riêng tư
 

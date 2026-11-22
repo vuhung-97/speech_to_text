@@ -103,6 +103,21 @@ export default function QaPage() {
         />
       }
     >
+      {/* Mobile/tablet fallback: the right sidebar is hidden below lg. */}
+      <div className="shrink-0 border-b border-line bg-surface/40 p-4 lg:hidden">
+        <QaSidebar
+          documents={documents.documents}
+          documentId={documentId}
+          onSelectDocument={documents.select}
+          busy={busy}
+          mic={mic}
+          listen={listen}
+          devices={micDevices.devices}
+          device={micDevices.device}
+          onChooseMic={micDevices.choose}
+        />
+      </div>
+
       <Thread
         turns={turns}
         loading={loading}

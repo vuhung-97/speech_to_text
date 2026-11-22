@@ -4,22 +4,18 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![Tailwind](https://img.shields.io/badge/Tailwind-4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
-[![Node](https://img.shields.io/badge/node-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Offline](https://img.shields.io/badge/100%25-offline-success)](#)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)](#)
 
-**Nhận dạng tiếng Việt offline, realtime trên CPU** — không cần GPU, không cần internet
-sau khi cài. Lõi là **zipformer 30M int8 (sherpa-onnx)**, backend **FastAPI**, giao diện
-**React + Tailwind**, kèm cơ chế **plugin để cắm model AI khác**. Tính năng **đọc văn bản
-(TTS)** dùng **VieNeu-TTS v3 Turbo** chạy offline, xuất WAV 48 kHz.
+**Hỏi đáp tiếng Việt offline theo bộ đề, có đọc đáp án bằng TTS.**
 
-<p align="center">
-  <img src="docs/ui.png" alt="Giao diện hỏi đáp STT Trực Tiếp" width="820">
-</p>
+Ứng dụng nhận câu hỏi bằng **giọng nói hoặc bàn phím**, tìm câu trả lời **nguyên văn** trong kho câu hỏi bằng embedding + BM25, rồi đọc đáp án bằng **VieNeu-TTS v3 Turbo**. Không dùng LLM, không gửi dữ liệu ra cloud sau khi cài.
 
-<p align="center">
-  <em>168 giây audio bản tin → text trong 8.3 giây (RTF 0.049) · khớp 99% bản đối chiếu · không hallucination</em>
-</p>
+- Backend: **FastAPI + SQLite**
+- Giao diện: **React 19 + Tailwind 4**
+- STT: **zipformer 30M int8 (sherpa-onnx)**
+- TTS: **VieNeu-TTS v3 Turbo (ONNX, CPU)**
+- Chạy được trên **Windows / Linux / macOS**, không cần GPU.
 
 ---
 
@@ -29,64 +25,75 @@ sau khi cài. Lõi là **zipformer 30M int8 (sherpa-onnx)**, backend **FastAPI**
 - [Yêu cầu](#yêu-cầu)
 - [Cài đặt nhanh](#cài-đặt-nhanh)
 - [Sử dụng](#sử-dụng)
-- [Hỏi đáp theo đề cương](#hỏi-đáp-theo-đề-cương)
-- [Giao diện](#giao-diện)
+- [Micro trên LAN](#micro-trên-lan)
+- [Dữ liệu và model](#dữ-liệu-và-model)
 - [Kiến trúc](#kiến-trúc)
 - [Cấu hình](#cấu-hình)
 - [API](#api)
-- [Thêm model AI mới](#thêm-model-ai-mới)
-- [Hiệu năng](#hiệu-năng)
 - [Kiểm thử](#kiểm-thử)
 - [Khắc phục sự cố](#khắc-phục-sự-cố)
-- [Đóng góp](#đóng-góp)
-- [Giấy phép](#giấy-phép)
+- [Tài liệu](#tài-liệu)
+
+---
 
 ## Tính năng
 
-- **Hai chế độ nhận dạng**
-  - `accurate` — chốt từng câu khi bạn ngừng nói ~0.6s (chất lượng cao nhất).
-  - `realtime` — chữ chạy dần theo từng từ, phần chưa chắc chắn hiển thị mờ.
-- **Thu âm không rơi frame** — PortAudio callback + tự fallback sang burst; UI hiển thị
-  `fr/s`, `coverage`, `dropped` để kiểm chứng (đo được 99–100%, trước đây chỉ 67%).
-- **VAD chống khoá** — noise-floor chỉ học từ frame yên tĩnh, ngưỡng bị chặn bởi 30% đỉnh
-  gần đây, hysteresis khi đang nói, giữ trạng thái qua pause/resume.
-- **Giao diện sáng/tối** — đổi ngay trên topbar hoặc trong **Cài đặt → Giao diện**;
-  lựa chọn lưu trên trình duyệt, không nháy theme khi reload. Nền tối dùng than + amber,
-  nền sáng dùng ivory ấm; mọi card/input/select/scrollbar đổi theo theme.
-- **Cài đặt dạng drawer** — mở bằng bánh răng hoặc `Ctrl+,`: giao diện, engine, VAD,
-  preset và cảnh báo cấu hình. Chế độ nhận dạng và giọng đọc nằm ở sidebar Hỏi đáp.
-- **Đọc câu trả lời (TTS)** — nút **Đọc** trên mỗi đáp án dùng VieNeu-TTS v3 Turbo:
-  25 giọng preset, gộp cả giọng clone của app VieNeu, tải WAV 48 kHz; chạy offline
-  trên CPU (ONNX), model nạp lần đầu khi dùng. Văn bản được cắt sẵn theo
-  `. ! ? … ; : ()` và đoạn văn để chèn khoảng nghỉ đúng chỗ; dấu phẩy giữ trong câu
-  cho model đọc tự nhiên. Chọn giọng ở **sidebar Hỏi đáp → Giọng đọc**: có ô nội
-  dung thử, nút **Test giọng** và thanh **Tốc độ đọc** 0.8–2.0× (bước 0.2, áp
-  dụng ở lần bấm đọc kế tiếp); đổi giọng tự nạp giọng vào RAM ở nền.
-- **Hỏi đáp theo đề cương — không dùng LLM** — câu hỏi (nói hoặc gõ) được embed bằng
-  `multilingual-e5-small` (ONNX, 384 chiều), so cosine với câu hỏi trong kho rồi
-  rerank bằng BM25; câu trả lời là **nguyên văn đáp án** của câu hỏi khớp nhất.
-  Kho nạp từ `cauhoi_dapan.docx` (nút **Nhập câu hỏi** ở trang Kho câu hỏi, hoặc CLI).
-- **API + docs tự động** tại `/api/docs`, sự kiện realtime qua **SSE**.
-- **Plugin model** — thêm model mới bằng một file, không sửa code lõi.
+### Hỏi đáp offline
+
+- Hỏi bằng **giọng nói** (micro trình duyệt) hoặc **bàn phím**.
+- Câu hỏi được embed bằng `multilingual-e5-small` (ONNX, 384 chiều), so cosine với kho rồi rerank bằng BM25.
+- Câu trả lời là **nguyên văn đáp án** của câu hỏi khớp nhất, không sinh văn bản bằng LLM.
+- Khi không đủ điểm khớp: hiện fallback, ghi vào danh sách **Chưa có đáp án**, gợi ý 3 câu gần nhất.
+- Phiên hội thoại được lưu SQLite, mở lại qua URL hoặc trang **Phiên**.
+
+### Đọc đáp án
+
+- Nút **Đọc** trên từng câu trả lời; khi đang đọc chuyển thành **Đang đọc** kèm thanh tiến độ và `4s/21s`; bấm lần nữa dừng.
+- Thanh **Đang đọc** phía trên composer hiển thị nội dung đang phát và nút **Dừng**.
+- Chọn giọng preset hoặc giọng clone; đổi giọng tự nạp vào RAM ở nền.
+- Thanh **Tốc độ đọc** `0.8–2.0×` (bước `0.2`), áp dụng ở lần đọc kế tiếp.
+- Ô **Nội dung thử** + **Test giọng** trong sidebar.
+- Tải WAV 48 kHz; đọc dài dùng PCM stream, không tạo Blob toàn bộ trong RAM.
+
+### Quản lý kho câu hỏi
+
+- Bộ đề tách riêng; chọn một bộ hoặc hỏi tất cả.
+- Thêm/sửa/xoá/bật/tắt câu hỏi.
+- Nhập CSV hoặc đề cương `.docx`.
+- Chống trùng exact và cosine; cập nhật bộ đề theo tên tệp.
+- Xem thống kê, trạng thái embedding, câu chưa có đáp án và audit gần đây.
+- Tạo sẵn bản đọc cho từng câu để lần đọc sau phát ngay.
+
+### Giao diện
+
+- **Sáng/tối**: đổi trên topbar hoặc **Cài đặt → Giao diện**; lưu trên trình duyệt.
+- Sidebar phải gồm **Bộ đề**, **Đọc đáp án**, **Mic**.
+- Dưới `1024px`: rail đổi thành bottom navigation; công cụ mở trong bottom sheet.
+- Trang **Hỏi đáp**, **Phiên**, **Kho hỏi** dùng chung app shell.
+- Cài đặt dạng drawer: `Ctrl+,` hoặc bánh răng.
+
+### Riêng tư
+
+- Dữ liệu, phiên và audio lưu trên máy chủ nội bộ.
+- Không gọi API cloud sau khi đã có model.
+- Không đưa private key/cert hay dữ liệu bộ đề vào frontend bundle.
+
+---
 
 ## Yêu cầu
 
 | Thành phần | Phiên bản | Ghi chú |
-| --- | --- | --- |
+|---|---|---|
 | Python | 3.11+ | đã test 3.13.5 trên Windows 11 |
-| Node.js | 18+ | chỉ cần khi sửa giao diện (`npm run dev/build`) |
-| Micro | bất kỳ | cần quyền micro của desktop app |
+| Node.js | 20+ | chỉ cần khi build/dev giao diện (Vite 7) |
+| Trình duyệt | Chrome/Edge/Safari hiện đại | micro cần secure context |
 | GPU | không cần | model chạy CPU int8 |
+| Ổ đĩa | ~vài trăm MB | model STT/TTS/embedding |
 
-Repo đã kèm sẵn **model zipformer** (`models/sherpa/`). Bản build giao diện
-(`frontend/dist/`) không commit vào git: chạy `cd frontend && npm install && npm run build`
-một lần trước khi `python run.py`.
+- Micro trên `localhost` không cần HTTPS.
+- Máy khác trong LAN muốn dùng micro phải mở app qua **HTTPS** — xem [Micro trên LAN](#micro-trên-lan).
 
-TTS dùng package `vieneu` (đã nằm trong `requirements.txt`) và model **VieNeu-TTS v3 Turbo**
-trong `models/vieneu/`. Nếu thư mục này chưa có, lần đọc đầu tiên backend sẽ tải model từ
-Hugging Face (cần mạng); các lần sau chạy offline.
-
-Linux/macOS cần PortAudio (`sudo apt install libportaudio2` hoặc `brew install portaudio`).
+---
 
 ## Cài đặt nhanh
 
@@ -98,315 +105,299 @@ python -m venv .venv
 .venv\Scripts\activate          # Linux/macOS: source .venv/bin/activate
 pip install -r requirements.txt
 
+cd frontend
+npm install
+npm run build
+cd ..
+
 python run.py
 ```
 
-Trình duyệt tự mở `http://127.0.0.1:8765/` (cổng bận sẽ tự nhảy sang cổng kế tiếp).
-`Ctrl+C` ở terminal để dừng.
+Mở URL server in ra, thường là:
+
+```text
+http://127.0.0.1:8765/
+```
+
+`frontend/dist/` không commit vào git, nên cần build một lần trước khi chạy. Nếu cổng bận, server tự nhảy sang cổng kế tiếp.
+
+### Chạy cho LAN
+
+```powershell
+python run.py --host 0.0.0.0 --port 8765
+```
+
+Máy khác mở `http://<IP-LAN>:8765` để hỏi bằng bàn phím và nghe đáp án. Muốn dùng micro trên máy khác, xem [Micro trên LAN](#micro-trên-lan).
 
 ### Phát triển giao diện
 
-```bash
-python run.py --no-browser        # terminal 1
+```powershell
+# terminal 1
+python run.py --no-browser
+
+# terminal 2
 cd frontend
 npm install
-npm run dev                       # terminal 2 → http://127.0.0.1:5173
+npm run dev
 ```
 
-Vite proxy `/api` và `/events` về backend. Khi sửa UI xong, build lại để backend phục vụ:
+Vite proxy `/api`, `/events` và WebSocket về backend. Khi xong:
 
-```bash
-cd frontend && npm run build
+```powershell
+cd frontend
+npm run build
 ```
 
 ### Tham số dòng lệnh
 
-```bash
-python run.py --list-devices
+```powershell
+python run.py --help
 python run.py --mode accurate --cpu-threads 2
-python run.py --device 1 --silence-hang 0.5 --threshold 0.008
-python run.py --port 9000 --no-browser
+python run.py --host 0.0.0.0 --port 8765
+python run.py --threshold 0.008 --silence-hang 0.5
+python run.py --no-browser --no-tts-preload
 ```
+
+Các tham số chính: `--host`, `--port`, `--mode`, `--cpu-threads`, `--silence-hang`, `--threshold`, `--decode-interval`, `--settings`, `--no-browser`, `--no-tts-preload`.
+
+---
 
 ## Sử dụng
 
-1. Nói tiếng Việt; nghỉ ~0.6s để chốt câu.
-2. Ở chế độ `realtime`, chữ mờ là bản nháp đang chờ xác nhận (LocalAgreement).
-3. Mở cài đặt bằng nút ⚙ hoặc `Ctrl+,`; đổi `mode`/`threshold` áp dụng ngay, đổi
-   `model`/`cpu_threads`/micro sẽ nạp lại nền (UI không bị chặn).
-4. Tab **Thử nghiệm trên file**: thả file audio vào `samples/` rồi **Chạy thử** để so
-   cấu hình trên cùng một file.
-5. Nút **Đọc** cạnh “Sao chép” mở drawer TTS: chọn giọng, dùng transcript hoặc nhập
-   văn bản, bấm **Tạo giọng đọc** rồi nghe/tải WAV. Lần đầu nạp model ~10–20 giây.
+### Hỏi đáp
+
+1. Gõ câu hỏi vào ô dưới cùng rồi `Enter`, hoặc bấm **Hỏi**.
+2. Bấm **Nghe**, nói câu hỏi; sau khoảng 2 giây im lặng micro tự đóng, chữ vào ô và **không tự gửi**.
+3. Đọc đáp án; bấm **Sao chép** để copy, **Tải WAV** để tải bản đọc.
+4. Nếu câu trả lời chưa khớp, bấm một gợi ý để hỏi lại.
+
+### Thanh công cụ bên phải
+
+- **Bộ đề**: chọn bộ câu hỏi dùng để tìm.
+- **Đọc đáp án**: chọn chế độ `Chính xác`/`Realtime`, giọng đọc, tốc độ; mở **Thử giọng** để test.
+- **Mic**: trạng thái, mức âm lượng, chọn thiết bị.
+
+### Phiên
+
+- Danh sách phiên nhóm theo **Hôm nay / Hôm qua / Trước đó**.
+- Tìm theo câu hỏi, mở lại hội thoại, xoá phiên.
+- URL `/sessions/:id` mở trực tiếp.
+
+### Kho câu hỏi
+
+- **Thêm câu hỏi** mở drawer nhập câu hỏi/đáp án/danh mục.
+- Lọc theo trạng thái, tìm theo từ khoá, sửa, tắt/bật, xoá.
+- **Nhập tệp** để nạp CSV hoặc `.docx`.
+- **Tổng hợp sẵn** tạo file đọc cho câu trả lời.
+- Panel phải hiển thị thống kê, bộ đề, câu chưa có đáp án và hoạt động gần đây.
+
+### Cài đặt
+
+- `Ctrl+,` hoặc bánh răng để mở.
+- **Giao diện**: Sáng/Tối.
+- **Model & tài nguyên**, **Câu & im lặng**, **Luồng**, preset.
+- Thay đổi `live` áp dụng ngay; đổi model/capture sẽ nạp lại nền.
+
+### Phím tắt
 
 | Phím | Tác dụng |
-| --- | --- |
-| `Esc` | Tạm dừng / tiếp tục (đóng drawer nếu đang mở) |
-| `Ctrl` + `,` | Mở / đóng cài đặt |
+|---|---|
+| `Enter` | Gửi câu hỏi |
+| `Shift` + `Enter` | Xuống dòng |
+| `Ctrl` + `K` | Mở điều hướng nhanh |
+| `Ctrl` + `,` | Mở/đóng Cài đặt |
+| `Esc` | Đóng drawer/palette |
 
-## Hỏi đáp theo đề cương
+---
 
-Luồng chạy (offline, **không có model sinh văn bản**):
+## Micro trên LAN
 
-```text
-micro → STT → text người dùng nói
-      → focus_question()                      # bỏ «đồng chí hãy/trình bày/…», «là gì»
-      → embedding e5 (384d) → cosine với mọi câu hỏi trong kho
-      → BM25 rerank top-10                    # phân biệt «trạm chính» / «trạm vùng»
-      → đáp án nguyên văn của câu khớp nhất   # < 0.86: báo chưa có đáp án + 3 gợi ý
+`getUserMedia` chỉ chạy khi trang là **secure context**:
+
+- `http://localhost` / `http://127.0.0.1`, hoặc
+- `https://...`.
+
+Vì vậy:
+
+- **Máy chủ** có thể dùng micro qua `http://127.0.0.1:8765`.
+- **Máy khác trong LAN** mở `http://<IP>:8765` vẫn **xem/nghe đáp án** bình thường, nhưng **micro bị chặn**.
+- Muốn dùng micro trên máy khác/điện thoại, cần HTTPS và trust root CA trên thiết bị đó.
+
+Hướng dẫn Caddy/mkcert và các lưu ý bảo mật:
+
+- [`docs/TRIEN_KHAI_LAN.md`](docs/TRIEN_KHAI_LAN.md)
+- [`docs/ke_hoach_https.md`](docs/ke_hoach_https.md)
+
+WebSocket mic tự dùng `wss://` khi trang là HTTPS. Không cần sửa frontend.
+
+---
+
+## Dữ liệu và model
+
+| Thư mục | Nội dung |
+|---|---|
+| `models/sherpa/` | model zipformer STT |
+| `models/vieneu/` | cache VieNeu-TTS, giọng clone (không commit) |
+| `models/embed/` | model embedding ONNX (không commit) |
+| `data/` | SQLite, audio lưu sẵn, log (không commit) |
+| `settings.json` | cấu hình runtime (không commit) |
+| `frontend/dist/` | build UI (không commit) |
+
+Tải model embedding:
+
+```powershell
+python tools/fetch_embed_model.py
 ```
 
-Điểm hiển thị là **cosine** (0.86 là sàn trả lời, 0.88 là mức "chắc chắn"); BM25 chỉ
-đổi thứ hạng nên không làm câu lạc đề vượt sàn. Mã câu (`Câu I.1.1`) chỉ lưu để nhập
-lại không nhân đôi — màn hình Hỏi đáp không hiện mã câu.
+Nếu chưa có model TTS local, lần đọc đầu tiên backend sẽ tải từ Hugging Face; sau đó chạy offline.
 
-### Nạp đề cương `.docx`
-
-Mỗi câu trong tệp gồm một dòng `Câu …` (vd `Câu I.1.1`) rồi một bảng 2 cột: hàng đầu
-là câu hỏi + điểm, hàng `Đáp án`, các hàng sau là đoạn đáp án + điểm. Parser dùng
-`zipfile`/XML của Python (không cần `python-docx`), bỏ cột điểm và tự chịu được ô gộp,
-bảng lồng trong content control, câu hỏi nằm cùng dòng `Câu 3: …`, hoặc tệp không có
-bảng (đáp án viết thành đoạn).
-
-```bash
-python tools/import_docx.py --file cauhoi_dapan.docx          # nạp + embedding ngay
-python tools/import_docx.py --file cauhoi_dapan.docx --dry-run # chỉ đếm câu
-```
-
-Hoặc mở **Kho câu hỏi → Nhập câu hỏi** và chọn tệp `.docx` (tối đa 20 MB). Mỗi tệp
-thành một **bộ đề** (bảng `faq_documents`): nạp lại tệp cùng tên sẽ cập nhật bộ đó,
-nạp lại đúng nội dung dưới tên khác thì bỏ qua, còn tệp mới nội dung mới thành bộ
-mới. Câu không còn trong tệp (so theo mã câu) bị **tắt** (`active=0`) và được báo ở
-mục `stale` — bấm Bật trong danh sách để khôi phục. Trang **Kho câu hỏi** có panel
-Bộ đề (đổi tên, xoá cả bộ), màn hình **Hỏi đáp** có dropdown để hỏi trong một bộ
-hoặc tất cả. Hai câu gần giống nhau trong đề cương (vd `I.1.7` và `I.1.8`) **không**
-bị gộp.
-
-Đo chất lượng tìm kiếm trên bộ câu hỏi vàng (`tools/eval/docx_queries.json`):
-
-```bash
-python tools/eval_matcher.py    # top-1 / top-3 / MRR + khoảng điểm trong/ngoài phạm vi
-```
-
-## Giao diện
-
-| Hỏi đáp — tối | Hỏi đáp — sáng |
-| --- | --- |
-| ![Giao diện tối](docs/ui.png) | ![Giao diện sáng](docs/ui-light.png) |
-
-| Cài đặt (drawer) | Hỏi đáp trên mobile |
-| --- | --- |
-| ![Bảng cài đặt](docs/settings.png) | ![Giao diện mobile](docs/ui-mobile.png) |
-
-Cài đặt được sinh từ schema của engine đang chọn: model zipformer hiện thêm
-`Max active paths` và `Blank penalty` bên cạnh các thông số chung. Sidebar Hỏi đáp
-có 3 khối **Bộ đề**, **Đọc đáp án** (chế độ, giọng, tốc độ, thử giọng) và **Mic**.
-Dưới 1024px, rail đổi thành bottom navigation và các khối này mở trong bottom sheet.
+---
 
 ## Kiến trúc
 
 ```text
 speech_to_text/
-├── backend/                        # FastAPI (Python)
-│   ├── main.py                     # entry: uvicorn + lifespan + engine fallback
-│   ├── config/                     # paths · constants · fields · settings (schema động)
-│   ├── controllers/                # health · state/SSE · settings · devices · samples · tts · session
-│   ├── routes/                     # bảng route duy nhất
-│   ├── middleware/                 # lỗi → JSON {ok, error}
-│   ├── models/                     # DTO: CaptureStats, ReplayResult…
-│   ├── domain/                     # value objects + luật thuần (faq, qa, text, audio)
-│   ├── ports/                      # hợp đồng: Embedder, FaqRepository, FaqIndex…
-│   ├── adapters/
-│   │   ├── embedding/              # e5 ONNX (fallback hashing)
-│   │   ├── retrieval/              # SQLite repo + cosine/BM25 matcher
-│   │   ├── importer/               # parser đề cương .docx (zip + XML)
-│   │   └── storage/                # schema SQLite + migration
-│   ├── services/
-│   │   ├── audio_sessions.py       # hub: mỗi WebSocket là một phiên, giới hạn 8
-│   │   ├── ws_mic.py               # PCM16 qua WebSocket → block 100 ms
-│   │   ├── segmentation_service.py # EnergyGate · UtteranceSegmenter · LocalAgreement
-│   │   ├── transcription_service.py# pipeline: 2 mode, hàng đợi câu
-│   │   ├── pipeline/               # engine_reloader (Đổi model nền, một token)
-│   │   ├── faq_service.py          # CRUD + index + thống kê
-│   │   ├── faq_import.py           # nhập CSV/.docx + dedupe
-│   │   ├── faq_documents.py        # bộ đề: tạo/đổi tên/xoá
-│   │   ├── qa_service.py           # câu hỏi → kết quả khớp → lưu phiên/lịch sử
-│   │   ├── tts_service.py          # facade VieNeu TTS: lazy load, voices, WAV
-│   │   ├── tts/                    # engine_loader · voice_catalog · job_store
-│   │   ├── replay_service.py · event_service.py
-│   │   └── engines/                # ASREngine contract + registry + plugins
-│   └── utils/                      # priority thread, errors
-├── frontend/                       # React 19 + Tailwind 4 (Vite)
-│   ├── public/
-│   ├── src/{shared,features,pages,components,services,utils}
-│   └── dist/                       # tạo bằng npm run build (không commit)
-├── models/sherpa/                  # zipformer-vi-30M int8
-├── models/vieneu/                  # VieNeu-TTS v3 Turbo (cache HF + giọng clone)
-├── samples/                        # file audio để replay (không commit)
-├── tests/                          # test_settings · test_streaming
-├── smoke_test.py · run.py · requirements.txt
+├── backend/                     # FastAPI
+│   ├── main.py                  # create_app, lifespan
+│   ├── bootstrap.py             # CLI, uvicorn
+│   ├── config/                  # settings, fields, paths, constants
+│   ├── controllers/             # HTTP/WebSocket endpoints
+│   ├── routes/                  # route table
+│   ├── domain/                  # luật thuần: QA, FAQ, text, audio
+│   ├── ports/                   # interface repository/embedder
+│   ├── adapters/                # SQLite, ONNX, importer
+│   ├── services/                # QA, FAQ, TTS, STT, jobs
+│   └── middleware/              # lỗi, request log
+├── frontend/                    # React 19 + Vite + Tailwind
+│   └── src/
+│       ├── app/                 # shell, router, providers
+│       ├── components/          # UI primitives
+│       ├── features/            # qa, sessions, faq, settings, tts
+│       ├── shared/              # live, mic, playback, tts, ui
+│       └── services/            # HTTP client
+├── tools/                       # import, fetch model, eval
+├── tests/                       # pytest
+├── run.py
+└── requirements.txt
 ```
 
-Luồng xử lý:
+Luồng chính:
 
 ```text
-micro → callback capture → 16kHz mono → VAD/segmenter → decode worker (zipformer)
-                                                 │
-                                     EventBus → SSE → React UI
+Micro trình duyệt
+    → WebSocket PCM16
+    → STT (zipformer)
+    → câu hỏi → embedding + BM25
+    → đáp án nguyên văn
+    → TTS stream/WAV
+    → loa trình duyệt
 ```
+
+---
 
 ## Cấu hình
 
-`settings.json` được tạo tự động (không commit). Ưu tiên: **mặc định** ← `settings.json`
-← **tham số CLI** (chỉ hiệu lực phiên chạy).
+`settings.json` được tạo tự động. Thứ tự ưu tiên: mặc định → `settings.json` → tham số CLI.
 
 | Nhóm | Thông số |
-| --- | --- |
-| Chế độ | `mode` (`accurate`/`realtime`) |
-| Model & micro | `model`, `cpu_threads`, `device` + field riêng của engine (vd `max_active_paths`, `blank_penalty`) |
-| Câu & micro | `silence_hang`, `threshold`, `noise_floor_ratio`, `min_speech`, `preroll`, `max_utterance` |
-| Luồng | `decode_interval` (realtime), `queue_size` |
+|---|---|
+| Chế độ | `mode` (`accurate` / `realtime`) |
+| Model | `model`, `cpu_threads`, field riêng của engine |
+| Câu & im lặng | `silence_hang`, `threshold`, `noise_floor_ratio`, `min_speech`, `preroll`, `max_utterance` |
+| Luồng | `decode_interval`, `queue_size` |
+| Mic | thiết bị chọn trong sidebar (không lưu phía server) |
+
+---
 
 ## API
 
-Swagger UI: `http://127.0.0.1:8765/api/docs`
+Base: `/api/v1`; prefix `/api` vẫn hoạt động cho tương thích ngược. Swagger UI:
 
-| Endpoint | Mô tả |
-| --- | --- |
-| `GET /api/health` | Engine đang dùng |
-| `GET /api/state` | Snapshot: status, engine, capture, queue, settings, warnings |
-| `GET /events` | SSE: `status` · `level` · `partial` · `final` · `queue` · `engine` · `warning` |
-| `GET /api/settings` | Schema + values |
-| `POST /api/settings` | Cập nhật một phần (`{key: value}`), trả lại `fields`, `engines` |
-| `POST /api/settings/reset` | Khôi phục mặc định |
-| `GET /api/samples` | Danh sách file trong `samples/` |
-| `POST /api/samples` | Upload (`multipart/form-data`, field `file`) |
-| `POST /api/replay` | `{name, segment}` → decode file bằng cấu hình hiện tại |
-| `GET /api/tts/voices` | Danh sách giọng đọc + trạng thái model TTS |
-| `GET /api/tts/status` | Trạng thái nạp model/giọng (`loaded`, `preloading`, `warmed_voice`) |
-| `POST /api/tts/preload` | `{voice?}` → nạp engine/giọng vào RAM ở nền |
-| `POST /api/tts` | `{text, voice?}` → `audio/wav` 48 kHz (tối đa 1000 ký tự) |
-| `POST /api/v1/qa/ask` | `{question, session_id?, source?, document_id?}` → câu trả lời + điểm khớp |
-| `GET /api/v1/faq/entries` | Danh sách câu hỏi/đáp án (lọc `q`, `category`, `active`, `document_id`) |
-| `POST /api/v1/faq/import` | Nạp CSV (`multipart/form-data`, field `file`, ≤ 2 MB) |
-| `POST /api/v1/faq/import-docx` | Nạp đề cương `.docx` (field `file`, ≤ 20 MB), trả `added/updated/skipped/stale/errors` + bộ đề |
-| `GET /api/v1/faq/documents` | Danh sách bộ đề: tên, số câu, ngày cập nhật |
-| `PATCH /api/v1/faq/documents/{id}` | Đổi tên bộ đề `{name}` |
-| `DELETE /api/v1/faq/documents/{id}` | Xoá bộ đề cùng các câu của nó |
-| `POST /api/v1/faq/reindex` | Embedding lại toàn bộ kho |
-| `GET /api/v1/faq/stats` | Số câu, đã embedding, model, ngưỡng |
-
-## Thêm model AI mới
-
-Mọi engine kế thừa `ASREngine` (`backend/services/engines/base.py`):
-
-```python
-class ASREngine(ABC):
-    key: str        # id dùng trong settings
-    label: str      # tên hiển thị trong UI
-
-    def __init__(self, values: dict): ...
-    def transcribe(self, audio) -> tuple[str, float]: ...   # (text, real_time_factor)
-    def describe(self) -> dict: ...
-
-    @classmethod
-    def fields(cls) -> tuple[Field, ...]: ...               # thông số riêng (UI tự render)
-    @classmethod
-    def is_available(cls) -> tuple[bool, str]: ...          # (ready, lý do nếu thiếu)
+```text
+http://127.0.0.1:8765/api/docs
 ```
 
-**3 bước** để cắm model mới:
+Các nhóm chính:
 
-1. Tạo `backend/services/engines/<ten>_engine.py`. sherpa-onnx có loader sẵn cho
-   Zipformer, SenseVoice, Moonshine, Paraformer, FireRedASR, Whisper…
-2. Khai báo `key`, `label`, viết `transcribe()`; thêm `fields()` nếu model có tham số
-   riêng; kiểm tra package/model trong `is_available()`.
-3. Khởi động lại — model xuất hiện trong **⚙ → Model**, schema tự đổi theo.
+| Nhóm | Endpoint |
+|---|---|
+| Hỏi đáp | `POST /qa/ask`, `POST /qa/answers/{id}/speech` |
+| Phiên | `GET /sessions`, `GET /sessions/{id}`, `DELETE /sessions/{id}` |
+| Kho câu hỏi | `GET/POST /faq/entries`, `PATCH/DELETE /faq/entries/{id}`, `POST /faq/import`, `POST /faq/import-docx`, `POST /faq/reindex` |
+| Bộ đề | `GET /faq/documents`, `PATCH/DELETE /faq/documents/{id}` |
+| TTS | `GET /tts/voices`, `GET /tts/status`, `POST /tts/preload`, `POST /tts/stream`, `GET /tts/sessions/{id}.wav` |
+| Vận hành | `GET /health`, `GET /state`, `GET /events` (SSE) |
 
-Plugin thiếu package/model sẽ báo lý do rõ ràng, app vẫn chạy engine cũ.
+Chi tiết request/response: [`docs/API.md`](docs/API.md).
 
-<details>
-<summary>Ví dụ tối thiểu</summary>
-
-```python
-from ...config.fields import Field
-from .base import ASREngine
-
-class EchoEngine(ASREngine):
-    key = "echo"
-    label = "Echo (demo)"
-
-    @classmethod
-    def fields(cls):
-        return (Field("gain", "engine", "Gain", "float", 1.0, minimum=0, maximum=2),)
-
-    def transcribe(self, audio):
-        return "xin chào", 0.01
-```
-
-</details>
-
-## Hiệu năng
-
-Thiết bị test: CPU 8 luồng, model 2 thread, int8. File thử: bản tin đọc liên tục 168s.
-
-| Cấu hình | Decode | RTF | Ghi chú |
-| --- | --- | --- | --- |
-| **zipformer-vi-30M (mặc định)** | **8.3s** | **0.049** | khớp 99%, không hallucination |
-| whisper-small (CT2) | ~53s | 0.31 | sai tên riêng, dễ lặp |
-| PhoWhisper-small (CT2) | 48–85s | 0.29–0.50 | khớp 98%, không dấu câu |
+---
 
 ## Kiểm thử
 
-```bash
-python tests/test_settings.py     # schema động, clamp, effects, persistence
-python tests/test_streaming.py    # pipeline, engine registry, replay, FastAPI + SSE
-python tests/test_tts.py          # WAV, voice catalog, API (fake engine)
-VIENEU_SMOKE=1 python tests/test_tts.py   # synth thật (chậm, cần model TTS)
-python -m pytest tests            # toàn bộ backend (gồm test_docx_import)
-python tools/eval_matcher.py      # đo top-1/top-3 của bộ câu hỏi vàng
-python smoke_test.py              # zipformer + micro thật
+Backend:
+
+```powershell
+python -m pytest -q
 ```
 
-Frontend (Vitest + jsdom):
+Frontend:
 
-```bash
+```powershell
 cd frontend
-npm test                          # hooks, HTTP client, PCM stream
-npm run build                     # tạo frontend/dist (không commit)
+npm test
+npm run build
 ```
+
+Kết quả hiện tại:
+
+- Backend: **208 passed, 1 skipped**
+- Frontend: **102 passed / 24 file**
+- Build production: thành công
+
+Đo chất lượng tìm kiếm:
+
+```powershell
+python tools/eval_matcher.py
+```
+
+---
 
 ## Khắc phục sự cố
 
 | Hiện tượng | Cách xử lý |
-| --- | --- |
-| Không mở được micro | Windows → Settings → Privacy → Microphone → bật *Let desktop apps access*; hoặc `python run.py --list-devices` rồi `--device <index>` |
-| UI trắng / báo "frontend chưa build" | `cd frontend && npm install && npm run build` |
-| Cổng bận | app tự nhảy cổng, hoặc `python run.py --port 9000` |
-| Mất chữ, `coverage` thấp | tăng `threshold`; kiểm tra `dropped` trong ⚙; thử `--device` khác |
-| Nạp model lỗi | kiểm tra `models/sherpa/sherpa-onnx-zipformer-vi-30M-int8-2026-02-09/` có `encoder.int8.onnx` |
-| TTS báo “chưa cài package vieneu” | `.venv\Scripts\pip install -r requirements.txt` (hoặc `pip install vieneu`) |
-| TTS không thấy model | cần `models/vieneu/vieneu/hf_cache/` (từ app VieNeu) hoặc mạng cho lần tải đầu |
-| TTS chậm/lần đầu lâu | model nạp ~10–20 s; đặt `VIENEU_PRECISION=int8` (CPU có VNNI) để nhanh hơn |
-| Giọng nhỏ bị bỏ | giảm `threshold` (~0.006–0.008) |
-| Nhập `.docx` báo "không đọc được câu hỏi/đáp án nào" | mỗi câu cần dòng `Câu …` và bảng có hàng `Đáp án` (hoặc các đoạn đáp án); tệp `.doc` cũ phải lưu lại thành `.docx` |
-| Hỏi đúng nội dung nhưng báo "Chưa có đáp án" | kiểm tra `GET /api/v1/faq/stats` đã embedding chưa (chạy `python tools/import_docx.py --file …`), và điểm khớp có dưới sàn 0.86 không |
+|---|---|
+| UI trắng / báo chưa build | `cd frontend && npm install && npm run build` rồi tải lại |
+| Cổng bận | Server tự nhảy cổng; hoặc `python run.py --port 9000` |
+| Không mở được micro trên máy khác | Dùng HTTPS/secure context; xem `docs/TRIEN_KHAI_LAN.md` |
+| Micro bị chặn trên Windows | Settings → Privacy → Microphone → cho phép ứng dụng |
+| TTS báo 405 | Server đang chạy bản cũ; tắt và chạy lại `python run.py` |
+| TTS báo 409 | Job đọc trước còn bận; dừng đọc, chờ vài giây rồi thử lại |
+| Không thấy giọng/model TTS | Kiểm tra `models/vieneu/`, `pip install -r requirements.txt`, kết nối mạng cho lần tải đầu |
+| Kho câu hỏi không khớp | Kiểm tra embedding bằng `python tools/fetch_embed_model.py`, `POST /faq/reindex`, xem ngưỡng khớp |
+| Nhập `.docx` lỗi | Mỗi câu cần dòng `Câu …` và bảng/đoạn `Đáp án`; file `.doc` cũ phải lưu lại thành `.docx` |
+| Câu trả lời quá dài bị từ chối | Giới hạn đọc 2000 từ / 20.000 ký tự; WAV nhanh ≤1000 ký tự |
+| Đổi giọng xong không đọc | Chờ “Đang nạp giọng…” kết thúc; thử **Test giọng** trước |
+
+---
+
+## Tài liệu
+
+- [`docs/API.md`](docs/API.md) — API v1, giới hạn, storage.
+- [`docs/TRIEN_KHAI_LAN.md`](docs/TRIEN_KHAI_LAN.md) — HTTPS/mic trong LAN.
+- [`docs/ke_hoach_https.md`](docs/ke_hoach_https.md) — kế hoạch HTTPS, CA và wizard cài đặt.
+- [`docs/qa-ui.md`](docs/qa-ui.md) — checklist QA giao diện.
+- [`docs/KE_HOACH_PHAT_TRIEN.md`](docs/KE_HOACH_PHAT_TRIEN.md) — kế hoạch phát triển.
+
+---
 
 ## Đóng góp
 
-1. Fork repo và tạo nhánh: `git checkout -b feat/ten-tinh-nang`.
-2. Chạy test trước khi gửi PR: `python tests/test_settings.py`, `python tests/test_streaming.py`.
-3. Mở Pull Request, mô tả thay đổi + cách kiểm chứng.
+1. Fork repo, tạo nhánh `feat/...`.
+2. Chạy `python -m pytest -q`, `cd frontend && npm test && npm run build`.
+3. Mở Pull Request kèm mô tả thay đổi và cách kiểm chứng.
 
-Thêm engine mới thì chỉ cần một file trong `backend/services/engines/` — rất khuyến khích
-gửi PR kèm model/benchmark của bạn.
+---
 
 ## Giấy phép
 
-Repo chưa kèm file `LICENSE`. Nếu bạn muốn công bố theo giấy phép cụ thể (MIT, Apache-2.0…),
-thêm `LICENSE` ở thư mục gốc — nội dung README không cần sửa gì thêm.
-
-## Tham chiếu
-
-- [k2-fsa/sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) — runtime + model zipformer Việt.
-- [PortAudio](https://www.portaudio.com/) / [python-sounddevice](https://python-sounddevice.readthedocs.io/) — thu âm thanh.
+Repo chưa kèm file `LICENSE`. Nếu công bố theo giấy phép cụ thể, thêm `LICENSE` ở thư mục gốc.

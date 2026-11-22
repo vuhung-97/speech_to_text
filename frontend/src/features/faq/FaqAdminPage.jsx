@@ -1,12 +1,13 @@
 // Catalogue admin screen: composition of stats, filters, list and editor.
 // State lives in useFaqAdmin/usePrerenderJobs/useFaqDocuments.
 
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import AppShell from "../../app/AppShell";
 import Alert from "../../components/ui/Alert";
 import Button from "../../components/ui/Button";
 import Drawer from "../../components/ui/Drawer";
+import SearchInput from "../../components/ui/SearchInput";
 import FaqDocumentsPanel from "./FaqDocumentsPanel";
 import FaqEntryForm from "./FaqEntryForm";
 import FaqEntryList from "./FaqEntryList";
@@ -15,12 +16,6 @@ import FaqStatsPanel from "./FaqStatsPanel";
 import { useFaqAdmin } from "./hooks/useFaqAdmin";
 import { useFaqDocuments } from "./hooks/useFaqDocuments";
 import { usePrerenderJobs } from "./hooks/usePrerenderJobs";
-
-const FILTERS = [
-  { id: "all", label: "Tất cả" },
-  { id: "active", label: "Đang bật" },
-  { id: "inactive", label: "Đang tắt" },
-];
 
 function Stat({ value, label }) {
   return (
@@ -38,18 +33,11 @@ export default function FaqAdminPage() {
   const documents = useFaqDocuments();
   const fileRef = useRef(null);
   const [formOpen, setFormOpen] = useState(false);
-  const [filter, setFilter] = useState("all");
 
   const { jobs, prerender } = usePrerenderJobs({
     onFinished: admin.load,
     onError: admin.setError,
   });
-
-  const filteredEntries = useMemo(() => {
-    if (filter === "active") return admin.entries.filter((entry) => entry.active);
-    if (filter === "inactive") return admin.entries.filter((entry) => !entry.active);
-    return admin.entries;
-  }, [admin.entries, filter]);
 
   const openNew = () => {
     admin.resetForm();
@@ -174,37 +162,23 @@ export default function FaqAdminPage() {
           )}
 
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-            <label className="flex min-h-11 w-full items-center gap-2 rounded-control border border-line bg-wash-strong px-3 py-2 focus-within:border-accent/60 sm:min-h-0 sm:w-auto sm:min-w-[240px] sm:flex-1">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                aria-hidden="true"
-                className="h-3.5 w-3.5 text-faint"
-              >
-                <circle cx="11" cy="11" r="7" />
-                <path d="m20 20-3.4-3.4" />
-              </svg>
-              <span className="sr-only">Tìm trong kho</span>
-              <input
-                value={admin.query}
-                onChange={(event) => admin.setQuery(event.target.value)}
-                placeholder="Tìm câu hỏi hoặc câu trả lời…"
-                className="w-full min-w-0 border-0 bg-transparent text-[12px] text-content outline-none placeholder:text-faint"
-              />
-            </label>
+            <SearchInput
+              label="Tìm trong kho"
+              value={admin.query}
+              onChange={(event) => admin.setQuery(event.target.value)}
+              placeholder="Tìm câu hỏi hoặc câu trả lời…"
+              className="w-full sm:w-auto sm:min-w-[240px] sm:flex-1"
+            />
 
             <div className="flex flex-wrap items-center gap-2">
-              {FILTERS.map((item) => (
+              {admin.filters.map((item) => (
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => setFilter(item.id)}
-                  aria-pressed={filter === item.id}
-                  className={`min-h-11 rounded-full border px-3 py-1 text-[10.5px] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-8 ${
-                    filter === item.id
+                  onClick={() => admin.setFilter(item.id)}
+                  aria-pressed={admin.filter === item.id}
+                  className={`min-h-11 rounded-full border px-3 py-1 text-[10.5px] transition focus-ring sm:min-h-8 ${
+                    admin.filter === item.id
                       ? "border-accent/30 bg-accent/10 text-accent"
                       : "border-line text-faint hover:bg-wash-hover hover:text-content"
                   }`}
@@ -216,7 +190,7 @@ export default function FaqAdminPage() {
           </div>
 
           <FaqEntryList
-            entries={filteredEntries}
+            entries={admin.filteredEntries}
             jobs={jobs}
             busy={admin.busy}
             loading={admin.loading}
@@ -225,12 +199,10 @@ export default function FaqAdminPage() {
             onPrerender={prerender}
             onRemove={admin.remove}
             emptyTitle={
-              admin.query || filter !== "all"
-                ? "Không tìm thấy câu hỏi"
-                : "Kho đang trống"
+              admin.isFiltered ? "Không tìm thấy câu hỏi" : "Kho đang trống"
             }
             emptyHint={
-              admin.query || filter !== "all"
+              admin.isFiltered
                 ? "Thử từ khoá khác hoặc chọn bộ lọc khác."
                 : "Thêm câu hỏi hoặc nhập tệp .docx/CSV."
             }

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import * as api from "../../../services/api";
 import { messageFor } from "../../../services/errors";
+import { useAsyncTask } from "./useAsyncTask";
 
 export const DOCUMENT_FILTER_KEY = "qa.document";
 
@@ -16,8 +17,7 @@ function readSelected() {
 export function useFaqDocuments() {
   const [documents, setDocuments] = useState([]);
   const [selectedId, setSelectedId] = useState(readSelected);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const { busy, error, setError, setBusy, run } = useAsyncTask();
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -30,7 +30,7 @@ export function useFaqDocuments() {
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [setBusy, setError]);
 
   useEffect(() => {
     load();
@@ -54,34 +54,22 @@ export function useFaqDocuments() {
 
   const rename = useCallback(
     async (documentId, name) => {
-      setBusy(true);
-      setError("");
-      try {
+      await run(async () => {
         await api.renameFaqDocument(documentId, name);
         await load();
-      } catch (renameError) {
-        setError(messageFor(renameError));
-      } finally {
-        setBusy(false);
-      }
+      });
     },
-    [load],
+    [load, run],
   );
 
   const remove = useCallback(
     async (documentId) => {
-      setBusy(true);
-      setError("");
-      try {
+      await run(async () => {
         await api.deleteFaqDocument(documentId);
         await load();
-      } catch (removeError) {
-        setError(messageFor(removeError));
-      } finally {
-        setBusy(false);
-      }
+      });
     },
-    [load],
+    [load, run],
   );
 
   return {

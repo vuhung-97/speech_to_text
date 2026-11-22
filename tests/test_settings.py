@@ -3,7 +3,7 @@
 Checks:
     1. Defaults/schema, including engine-provided fields.
     2. Clamping, enum/number validation, unknown keys.
-    3. Effect classification (live / engine / capture).
+    3. Effect classification (live / engine / capture / vad).
     4. Persistence round-trip and CLI overrides staying session-only.
     5. Warnings for risky values and unavailable engines.
 
@@ -76,6 +76,7 @@ def test_effects() -> None:
         result = settings.update({"cpu_threads": 4, "silence_hang": 0.8})
         assert result["effects"]["engine"] == ["cpu_threads"]
         assert result["effects"]["capture"] == []
+        assert result["effects"]["vad"] == ["silence_hang"]
         assert set(result["applied"]) == {"cpu_threads", "silence_hang"}
     print("[3] Effects OK - engine / live split correctly")
 

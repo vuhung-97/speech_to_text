@@ -8,6 +8,7 @@ from fastapi import APIRouter
 
 from ..utils.errors import NotFoundError
 from .deps import AuditDep, SessionsRepoDep, TenantDep
+from .payload import ok
 
 router = APIRouter(tags=["sessions"])
 
@@ -16,7 +17,7 @@ router = APIRouter(tags=["sessions"])
 def list_sessions(sessions: SessionsRepoDep, tenant: TenantDep,
                   limit: int = 50, offset: int = 0) -> dict[str, Any]:
     items = sessions.list_sessions(tenant, limit=limit, offset=offset)
-    return {"ok": True, "items": list(items), "limit": limit, "offset": offset}
+    return ok(items=list(items), limit=limit, offset=offset)
 
 
 @router.get("/sessions/{session_id}")
@@ -25,7 +26,7 @@ def get_session(session_id: str, sessions: SessionsRepoDep,
     session = sessions.get_session(session_id, tenant)
     if session is None:
         raise NotFoundError("không tìm thấy phiên hội thoại")
-    return {"ok": True, **session}
+    return ok(**session)
 
 
 @router.delete("/sessions/{session_id}")
@@ -34,4 +35,4 @@ def delete_session(session_id: str, sessions: SessionsRepoDep,
     if not sessions.delete_session(session_id, tenant):
         raise NotFoundError("không tìm thấy phiên hội thoại")
     audit.record(tenant=tenant, action="session.delete", target=session_id)
-    return {"ok": True, "deleted": session_id}
+    return ok(deleted=session_id)

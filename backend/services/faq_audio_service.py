@@ -16,6 +16,7 @@ import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from ..config.constants import BYTES_PER_MB
 from ..config.paths import AUDIO_CACHE_DIR
 from ..domain.faq.models import FaqEntryNotFound
 from ..ports.faq import FaqAudioRepository, FaqRepository
@@ -48,7 +49,7 @@ class FaqAudioService:
         self._entries = entries
         self._tts = tts
         self._dir = Path(cache_dir) if cache_dir else AUDIO_CACHE_DIR
-        self._quota = max(1, int(quota_mb)) * 1024 * 1024
+        self._quota = max(1, int(quota_mb)) * BYTES_PER_MB
         self._jobs: dict[str, FaqAudioJob] = {}
         # Re-entrant: ``start`` holds it while inspecting the cache/jobs.
         self._lock = threading.RLock()

@@ -12,15 +12,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from ...config.constants import BYTES_PER_MB, TTS_SAMPLE_RATE
 from ...config.paths import TTS_DISK_QUOTA_MB, TTS_TEMP_DIR
-from ...config.constants import TTS_SAMPLE_RATE
 from ..audio.temp_store import (TempAudioStore, TempSession,
                                 cleanup_stale_sessions, free_bytes)
 from .errors import TtsBusy, TtsCancelled, TtsStorageError
 
 JOB_TTL_SECONDS = 1_800  # finished WAVs are removed after 30 minutes
 CHARS_PER_SECOND = 11.7  # ~speech pace used for the disk estimate
-DISK_HEADROOM_BYTES = 64 * 1024 * 1024
+DISK_HEADROOM_BYTES = 64 * BYTES_PER_MB
 
 
 @dataclass
@@ -62,7 +62,7 @@ class TtsJobStore:
         ttl_seconds: float = JOB_TTL_SECONDS,
     ) -> None:
         self._temp_root = Path(temp_root) if temp_root else TTS_TEMP_DIR
-        self._quota_bytes = max(1, int(quota_mb)) * 1024 * 1024
+        self._quota_bytes = max(1, int(quota_mb)) * BYTES_PER_MB
         self._bytes_per_second = int(sample_rate) * 2
         self._ttl = float(ttl_seconds)
         self._jobs: dict[str, SpeechJob] = {}

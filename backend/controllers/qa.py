@@ -13,6 +13,7 @@ from ..domain.qa.models import Answer, SessionNotFound
 from ..services.qa_service import QaOutcome
 from ..utils.errors import ApiError, NotFoundError
 from .deps import (FaqAudioDep, QaDep, QueryLogDep, SessionsRepoDep, TenantDep)
+from .payload import ok
 
 router = APIRouter(tags=["qa"])
 
@@ -42,11 +43,10 @@ def _match_json(match: FaqMatch | None) -> dict[str, Any] | None:
 
 def answer_json(outcome: QaOutcome) -> dict[str, Any]:
     answer: Answer = outcome.answer
-    return {
-        "ok": True,
-        "session_id": outcome.session_id,
-        "question": outcome.question,
-        "answer": {
+    return ok(
+        session_id=outcome.session_id,
+        question=outcome.question,
+        answer={
             "id": answer.id,
             "turn_id": answer.turn_id,
             "session_id": outcome.session_id,
@@ -58,7 +58,7 @@ def answer_json(outcome: QaOutcome) -> dict[str, Any]:
             "matched": _match_json(answer.matched),
             "candidates": [_match_json(item) for item in answer.candidates],
         },
-    }
+    )
 
 
 @router.post("/qa/ask")
@@ -78,7 +78,7 @@ def ask(request: AskRequest, qa: QaDep, tenant: TenantDep) -> dict[str, Any]:
 
 @router.get("/qa/unanswered")
 def unanswered(log: QueryLogDep, tenant: TenantDep, limit: int = 50) -> dict[str, Any]:
-    return {"ok": True, "items": list(log.unanswered(tenant, limit=limit))}
+    return ok(items=list(log.unanswered(tenant, limit=limit)))
 
 
 @router.post("/qa/answers/{answer_id}/speech")
@@ -95,6 +95,6 @@ def answer_speech(answer_id: str, request: SpeechRequest, sessions: SessionsRepo
         if cached:
             url = (f"/api/v1/faq/entries/{entry_id}/audio"
                    f"?voice={quote(str(voice))}")
-            return {"ok": True, "mode": "cached", "url": url,
-                    "seconds": cached["seconds"], "voice": voice}
-    return {"ok": True, "mode": "stream", "text": row["text"], "voice": voice}
+            return ok(mode="cached", url=url,
+                      seconds=cached["seconds"], voice=voice)
+    return ok(mode="stream", text=row["text"], voice=voice)

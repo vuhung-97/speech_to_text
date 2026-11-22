@@ -17,6 +17,7 @@ from typing import Any
 
 import uvicorn
 
+from .config.constants import MODES
 from .config.paths import SAMPLES_DIR, SETTINGS_PATH
 from .config.settings import Settings
 from .main import create_app
@@ -31,7 +32,7 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Offline Vietnamese STT with a web UI + API.")
     p.add_argument("--cpu-threads", type=int, default=None,
                    help="model CPU threads (default: settings.json -> 2)")
-    p.add_argument("--mode", default=None, choices=("accurate", "realtime"),
+    p.add_argument("--mode", default=None, choices=MODES,
                    help="accurate: one decode per sentence (default) | realtime: live draft")
     p.add_argument("--silence-hang", type=float, default=None,
                    help="seconds of silence that close a sentence")

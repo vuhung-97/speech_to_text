@@ -63,7 +63,7 @@ export default function Thread({ turns, loading = false, onExample, renderAnswer
                     key={example}
                     type="button"
                     onClick={() => onExample?.(example)}
-                    className="inline-flex min-h-11 items-center rounded-full border border-line bg-wash-strong px-3 py-1.5 text-[12px] text-dim transition hover:bg-wash-hover hover:text-content focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
+                    className="inline-flex min-h-11 items-center rounded-full border border-line bg-wash-strong px-3 py-1.5 text-[12px] text-dim transition hover:bg-wash-hover hover:text-content focus-ring sm:min-h-0"
                   >
                     {example}
                   </button>

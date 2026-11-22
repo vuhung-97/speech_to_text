@@ -61,7 +61,7 @@ export default function FieldRow({ field, devices = [] }) {
             aria-checked={Boolean(value)}
             aria-label={field.label}
             onClick={() => setField(field, !value)}
-            className="grid h-11 w-11 flex-none place-items-center rounded-full transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:h-9 sm:w-9"
+            className="grid h-11 w-11 flex-none place-items-center rounded-full transition focus-ring sm:h-9 sm:w-9"
           >
             <span
               className={`relative h-[21px] w-[38px] rounded-full border transition ${

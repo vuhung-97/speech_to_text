@@ -21,11 +21,14 @@ import {
   saveSpeed,
   saveVoice,
 } from "./constants";
+import { isPreloadUnsupported } from "./preload";
 
 const VoiceContext = createContext(null);
 
 const PRELOAD_POLL_MS = 800;
 const PRELOAD_MAX_ATTEMPTS = 150; // ~2 minutes
+
+const IDLE_WARMUP = { running: false, error: "" };
 
 export const useVoice = () => {
   const value = useContext(VoiceContext);
@@ -41,8 +44,7 @@ const INITIAL = {
   reason: "",
   status: {},
   loaded: false,
-  preloading: false,
-  preloadError: "",
+  warmup: IDLE_WARMUP,
 };
 
 export function VoiceProvider({ children }) {
@@ -82,7 +84,7 @@ export function VoiceProvider({ children }) {
         reason: data.reason || "",
         status: data.status || {},
         loaded: true,
-        preloadError: "",
+        warmup: IDLE_WARMUP,
       }));
     } catch (error) {
       if (!mounted.current) return;
@@ -104,28 +106,25 @@ export function VoiceProvider({ children }) {
       setState((previous) => ({
         ...previous,
         status,
-        preloading: Boolean(status.preloading),
-        preloadError: status.preload_error || "",
+        warmup: {
+          running: Boolean(status.preloading),
+          error: status.preload_error || "",
+        },
       }));
       if (!status.preloading) stopPolling();
       else if (++pollAttempts.current > PRELOAD_MAX_ATTEMPTS) {
         stopPolling();
         setState((previous) => ({
           ...previous,
-          preloading: false,
-          preloadError: "Nạp giọng quá lâu — thử lại.",
+          warmup: { running: false, error: "Nạp giọng quá lâu — thử lại." },
         }));
       }
     } catch (error) {
-      // Older servers do not expose preload/status; that is not a user-facing
-      // error because the voice still works on the first real read.
-      if (error.status === 404 || error.status === 405) {
+      // Older servers do not expose preload/status; the voice still works on
+      // the first real read, so this is not a user-facing error.
+      if (isPreloadUnsupported(error)) {
         stopPolling();
-        setState((previous) => ({
-          ...previous,
-          preloading: false,
-          preloadError: "",
-        }));
+        setState((previous) => ({ ...previous, warmup: IDLE_WARMUP }));
         return;
       }
       // The status endpoint may be briefly unavailable while the server
@@ -134,8 +133,10 @@ export function VoiceProvider({ children }) {
         stopPolling();
         setState((previous) => ({
           ...previous,
-          preloading: false,
-          preloadError: "Không đọc được trạng thái nạp giọng.",
+          warmup: {
+            running: false,
+            error: "Không đọc được trạng thái nạp giọng.",
+          },
         }));
       }
     }
@@ -148,8 +149,7 @@ export function VoiceProvider({ children }) {
       pollAttempts.current = 0;
       setState((previous) => ({
         ...previous,
-        preloading: true,
-        preloadError: "",
+        warmup: { running: true, error: "" },
       }));
       try {
         await api.preloadTts(voice);
@@ -157,11 +157,10 @@ export function VoiceProvider({ children }) {
         if (!mounted.current) return;
         setState((previous) => ({
           ...previous,
-          preloading: false,
-          // 404/405 = server chưa có endpoint preload (bản cũ). Giọng vẫn
-          // hoạt động ở lần đọc đầu, nên không hiện lỗi cho người dùng.
-          preloadError:
-            error.status === 404 || error.status === 405 ? "" : error.message,
+          warmup: {
+            running: false,
+            error: isPreloadUnsupported(error) ? "" : error.message,
+          },
         }));
         return;
       }
@@ -205,6 +204,8 @@ export function VoiceProvider({ children }) {
     () => ({
       ...state,
       loading,
+      preloading: state.warmup.running,
+      preloadError: state.warmup.error,
       load,
       preload,
       chooseVoice,

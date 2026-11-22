@@ -23,11 +23,12 @@ import zipfile
 from collections.abc import Iterator
 from xml.etree import ElementTree
 
+from ...config.constants import BYTES_PER_MB
 from ...domain.faq.models import FaqOutline
 
 _W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 DOCUMENT_PART = "word/document.xml"
-MAX_DOCUMENT_BYTES = 64 * 1024 * 1024
+MAX_DOCUMENT_BYTES = 64 * BYTES_PER_MB
 
 # "Câu I.1.1", "Câu 12", "Câu 2.3", "Câu II-4-11" — the trailing text is the
 # question when the author wrote it on the heading line.

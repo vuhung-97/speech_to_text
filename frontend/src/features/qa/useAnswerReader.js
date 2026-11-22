@@ -9,6 +9,21 @@ import { readSpeed, readVoice } from "../../shared/tts/constants";
 // One playback channel owns every audible source; this hook also owns its
 // <audio> element so unmounting the screen always pauses it, even when the ref
 // would already be detached.
+
+export const MEDIA_MODE = Object.freeze({
+  CACHED: "cached",
+  STREAM: "stream",
+});
+
+const IDLE_PLAYBACK = { progress: 0, seconds: 0, estimated: 0 };
+
+// One shape for the player UI, whichever source is audible.
+function playbackOf(mode, cached, stream) {
+  if (mode === MEDIA_MODE.CACHED) return cached;
+  if (mode === MEDIA_MODE.STREAM) return stream;
+  return IDLE_PLAYBACK;
+}
+
 export function useAnswerReader({ onBeforeRead } = {}) {
   const [readingId, setReadingId] = useState("");
   const [readError, setReadError] = useState("");
@@ -145,9 +160,9 @@ export function useAnswerReader({ onBeforeRead } = {}) {
       }
       if (!aliveRef.current || !isCurrentPlayback(key)) return;
 
-      if (info?.mode === "cached" && audioRef.current) {
+      if (info?.mode === MEDIA_MODE.CACHED && audioRef.current) {
         const element = audioRef.current;
-        setMediaMode("cached");
+        setMediaMode(MEDIA_MODE.CACHED);
         audioRateRef.current = speed;
         setAudioTiming({ seconds: 0, duration: 0 });
         element.src = info.url;
@@ -178,7 +193,7 @@ export function useAnswerReader({ onBeforeRead } = {}) {
       // mediaMode. Re-assert them *after* the handoff, otherwise the audio
       // plays while the card falls back to the plain "Đọc" button.
       speech.start(answer.text, voice, speed);
-      setMediaMode("stream");
+      setMediaMode(MEDIA_MODE.STREAM);
       setReadingId(answer.id);
     },
     [silence, speech, stop],
@@ -200,14 +215,28 @@ export function useAnswerReader({ onBeforeRead } = {}) {
       ? Math.min(1, audioTiming.seconds / audioTiming.duration)
       : 0;
 
+  // One shape for the player UI, whichever source is audible.
+  const playback = playbackOf(
+    mediaMode,
+    {
+      progress: audioProgress,
+      seconds: audioTiming.seconds,
+      estimated: audioTiming.duration,
+    },
+    {
+      progress: speech.progress,
+      seconds: speech.seconds,
+      estimated: speech.estimated,
+    },
+  );
+
   return {
     speech,
     readingId,
     readError,
     audioPlaying,
     mediaMode,
-    audioTiming,
-    audioProgress,
+    playback,
     read,
     stop,
   };

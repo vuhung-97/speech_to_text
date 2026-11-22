@@ -24,7 +24,7 @@ function SegmentedMode({ field, value, setField }) {
           type="button"
           aria-pressed={value === option}
           onClick={() => setField(field, option)}
-          className={`min-h-11 rounded-lg px-2 py-1.5 text-[10.5px] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0 ${
+          className={`min-h-11 rounded-lg px-2 py-1.5 text-[10.5px] transition focus-ring sm:min-h-0 ${
             value === option
               ? "bg-accent/15 font-semibold text-accent shadow-[inset_0_0_0_1px_var(--color-accent-soft)]"
               : "text-faint hover:bg-wash-hover hover:text-content"

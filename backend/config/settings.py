@@ -13,6 +13,7 @@ from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any
 
+from .constants import MODE_ACCURATE, MODE_REALTIME, MODES
 from .fields import EngineSpec, Field
 from .paths import SETTINGS_PATH
 
@@ -22,33 +23,34 @@ CATALOG = Callable[[], dict[str, EngineSpec]]
 MODEL_KEY = "model"
 
 BASE_FIELDS: tuple[Field, ...] = (
-    Field("mode", "mode", "Chế độ", "enum", "accurate",
+    Field("mode", "mode", "Chế độ", "enum", MODE_ACCURATE,
           hint="accurate: chốt từng câu khi bạn ngừng nói. realtime: hiện chữ ngay khi nói.",
-          options=("accurate", "realtime")),
+          options=MODES),
     Field("cpu_threads", "engine", "CPU threads", "int", 2,
           hint="Số thread cho model. 2 là cân bằng; tăng nếu máy nhiều nhân rảnh.",
           effect="engine", minimum=1, maximum=6, step=1),
     Field("silence_hang", "vad", "Nghỉ để chốt câu", "float", 0.6,
           hint="Ngắn hơn: chốt nhanh nhưng dễ cắt giữa câu.",
-          minimum=0.3, maximum=2.0, step=0.05, unit="s"),
+          minimum=0.3, maximum=2.0, step=0.05, unit="s", effect="vad"),
     Field("threshold", "vad", "Ngưỡng mở micro", "float", 0.012,
           hint="RMS tuyệt đối. Phòng ồn thì tăng; nói nhỏ mà mất chữ thì giảm.",
-          minimum=0.003, maximum=0.06, step=0.001),
+          minimum=0.003, maximum=0.06, step=0.001, effect="vad"),
     Field("noise_floor_ratio", "vad", "Hệ số nền ồn", "float", 4.0,
           hint="Ngưỡng = max(threshold, nền ồn × hệ số này).",
-          minimum=2.0, maximum=8.0, step=0.5, advanced=True),
+          minimum=2.0, maximum=8.0, step=0.5, advanced=True, effect="vad"),
     Field("min_speech", "vad", "Độ dài tối thiểu", "float", 0.25,
           hint="Đoạn nói ngắn hơn mức này bị bỏ (lọc tiếng động).",
-          minimum=0.1, maximum=1.0, step=0.05, unit="s"),
+          minimum=0.1, maximum=1.0, step=0.05, unit="s", effect="vad"),
     Field("preroll", "vad", "Giữ trước khi nói", "float", 0.30,
           hint="Đệm audio trước khi phát hiện giọng để không mất âm tiết đầu.",
-          minimum=0.0, maximum=0.5, step=0.05, unit="s"),
+          minimum=0.0, maximum=0.5, step=0.05, unit="s", effect="vad"),
     Field("max_utterance", "vad", "Câu dài tối đa", "float", 15.0,
           hint="Vượt mức này sẽ chốt tạm một cửa sổ (gate giữ nguyên, không mất chữ).",
-          minimum=8.0, maximum=28.0, step=1.0, unit="s", advanced=True),
+          minimum=8.0, maximum=28.0, step=1.0, unit="s", advanced=True,
+          effect="vad"),
     Field("decode_interval", "stream", "Nhịp cập nhật", "float", 0.9,
           hint="Chỉ dùng ở chế độ realtime: số giây audio giữa 2 lần decode.",
-          minimum=0.2, maximum=1.5, step=0.1, unit="s", mode_only="realtime"),
+          minimum=0.2, maximum=1.5, step=0.1, unit="s", mode_only=MODE_REALTIME),
     Field("queue_size", "stream", "Hàng đợi câu", "int", 4,
           hint="Số câu tối đa chờ nhận dạng; đầy thì câu cũ nhất bị bỏ.",
           minimum=1, maximum=8, step=1, advanced=True),
@@ -247,6 +249,7 @@ def _effects(known: dict[str, Field],
     return {
         "engine": [key for key in keys if known[key].effect == "engine"],
         "capture": [key for key in keys if known[key].effect == "capture"],
+        "vad": [key for key in keys if known[key].effect == "vad"],
     }
 
 

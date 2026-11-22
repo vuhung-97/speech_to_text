@@ -27,7 +27,7 @@ export default function AppearanceSettings() {
             type="button"
             aria-pressed={theme === option.id}
             onClick={() => setTheme(option.id)}
-            className={`min-h-11 rounded-lg px-2 py-1.5 text-[11.5px] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0 ${
+            className={`min-h-11 rounded-lg px-2 py-1.5 text-[11.5px] transition focus-ring sm:min-h-0 ${
               theme === option.id
                 ? "bg-accent/15 font-semibold text-accent"
                 : "text-faint hover:bg-wash-hover hover:text-content"

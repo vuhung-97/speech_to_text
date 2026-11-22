@@ -12,6 +12,7 @@ DEFAULT_THRESHOLD = 0.88   # tuned on multilingual-e5-small: in-domain ≥0.90,
 DEFAULT_NEAR = 0.86        # off-topic ≤0.82, so "near" is the answer floor
 
 MAX_DOCUMENT_NAME_CHARS = 120
+CONTENT_HASH_PREFIX = 12  # short fingerprint shown in API payloads
 
 
 class FaqEntryNotFound(ValueError):
@@ -59,6 +60,18 @@ class FaqDocument:
     entry_count: int = 0
     created_at: float = 0.0
     updated_at: float = 0.0
+
+
+def document_to_dict(document: FaqDocument) -> dict[str, Any]:
+    """One wire shape for a question set (import report and list endpoint)."""
+    return {
+        "id": document.id,
+        "name": document.name,
+        "entry_count": document.entry_count,
+        "content_hash": document.content_hash[:CONTENT_HASH_PREFIX],
+        "created_at": document.created_at,
+        "updated_at": document.updated_at,
+    }
 
 
 @dataclass(frozen=True)
@@ -143,6 +156,7 @@ class FaqResult:
 
 
 __all__ = [
+    "CONTENT_HASH_PREFIX",
     "DEFAULT_NEAR",
     "DEFAULT_THRESHOLD",
     "FaqDocument",
@@ -153,6 +167,7 @@ __all__ = [
     "FaqOutline",
     "FaqResult",
     "MAX_DOCUMENT_NAME_CHARS",
+    "document_to_dict",
     "outline_fingerprint",
     "score_percent",
 ]

@@ -124,7 +124,7 @@ export default function AnswerCard({
                 key={item.id}
                 type="button"
                 onClick={() => onPick?.(item.question)}
-                className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-lg border border-line bg-wash-strong px-2.5 py-1.5 text-left text-[11.5px] text-dim transition hover:bg-wash-hover hover:text-content focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
+                className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-lg border border-line bg-wash-strong px-2.5 py-1.5 text-left text-[11.5px] text-dim transition hover:bg-wash-hover hover:text-content focus-ring sm:min-h-0"
               >
                 <span className="min-w-0 truncate">{item.question}</span>
                 <span className="shrink-0 font-mono text-[10.5px] text-faint">
@@ -144,7 +144,7 @@ export default function AnswerCard({
             aria-pressed="true"
             aria-label="Đang đọc — bấm để dừng"
             title="Bấm để dừng"
-            className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-control border border-accent/40 bg-accent/10 px-2.5 py-1.5 text-[11.5px] font-semibold text-accent transition hover:bg-accent/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
+            className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-control border border-accent/40 bg-accent/10 px-2.5 py-1.5 text-[11.5px] font-semibold text-accent transition hover:bg-accent/15 focus-ring sm:min-h-0"
           >
             <span
               className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-current motion-reduce:animate-none"
@@ -178,7 +178,7 @@ export default function AnswerCard({
         <button
           type="button"
           onClick={copy}
-          className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 py-1 text-[11.5px] text-faint transition hover:bg-wash-hover hover:text-content focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 py-1 text-[11.5px] text-faint transition hover:bg-wash-hover hover:text-content focus-ring sm:min-h-0"
           aria-label="Sao chép câu trả lời"
         >
           <CopyIcon />
@@ -189,7 +189,7 @@ export default function AnswerCard({
           <a
             href={downloadUrl}
             download
-            className="ml-auto inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 py-1 text-[11.5px] text-accent transition hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
+            className="ml-auto inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 py-1 text-[11.5px] text-accent transition hover:bg-accent/10 focus-ring sm:min-h-0"
           >
             <DownloadIcon />
             Tải WAV

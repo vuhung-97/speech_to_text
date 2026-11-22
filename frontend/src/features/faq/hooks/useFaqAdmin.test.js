@@ -86,4 +86,24 @@ describe("useFaqAdmin import routing", () => {
     expect(result.current.report).toBeNull();
     expect(result.current.error).toContain("tệp hỏng");
   });
+
+  it("owns the active filter and derives the visible entries", async () => {
+    api.getFaqEntries.mockResolvedValue({
+      items: [
+        { id: "e1", question: "một?", answer: "a", active: true },
+        { id: "e2", question: "hai?", answer: "b", active: false },
+      ],
+    });
+    const { result } = await mounted();
+    await waitFor(() => expect(result.current.entries).toHaveLength(2));
+
+    expect(result.current.filter).toBe("all");
+    expect(result.current.filteredEntries).toHaveLength(2);
+    expect(result.current.isFiltered).toBe(false);
+
+    act(() => result.current.setFilter("inactive"));
+
+    expect(result.current.filteredEntries.map((entry) => entry.id)).toEqual(["e2"]);
+    expect(result.current.isFiltered).toBe(true);
+  });
 });

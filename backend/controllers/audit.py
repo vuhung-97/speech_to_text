@@ -7,6 +7,7 @@ from typing import Any
 from fastapi import APIRouter
 
 from .deps import AuditDep, TenantDep
+from .payload import ok
 
 router = APIRouter(tags=["audit"])
 
@@ -14,4 +15,4 @@ router = APIRouter(tags=["audit"])
 @router.get("/audit")
 def list_audit(audit: AuditDep, tenant: TenantDep,
                limit: int = 50) -> dict[str, Any]:
-    return {"ok": True, "items": list(audit.list(tenant, limit=limit))}
+    return ok(items=list(audit.list(tenant, limit=limit)))

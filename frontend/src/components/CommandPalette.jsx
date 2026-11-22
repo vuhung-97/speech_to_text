@@ -88,7 +88,7 @@ export default function CommandPalette({ open, onClose }) {
                   navigate(item.to);
                   onClose();
                 }}
-                className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0 ${
+                className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left transition focus-ring sm:min-h-0 ${
                   position === index
                     ? "bg-accent/15 text-content"
                     : "text-dim hover:bg-wash-hover"

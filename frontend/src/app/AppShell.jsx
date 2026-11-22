@@ -33,6 +33,23 @@ const NAV = [
   { to: "/faq", icon: "faq", label: "Kho hỏi" },
 ];
 
+const NAV_ITEM_BASE =
+  "transition focus-ring";
+
+// One definition for the rail (desktop) and the bottom bar (mobile).
+function navItemClass(isActive, compact = false) {
+  if (compact) {
+    return `flex min-w-0 flex-col items-center justify-center gap-1 text-[9.5px] ${NAV_ITEM_BASE} ${
+      isActive ? "text-accent" : "text-faint hover:text-content"
+    }`;
+  }
+  return `relative flex min-h-[58px] w-full flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-[10.5px] ${NAV_ITEM_BASE} ${
+    isActive
+      ? "bg-accent/15 text-accent"
+      : "text-faint hover:bg-wash-hover hover:text-content"
+  }`;
+}
+
 function NavIcon({ name, className = "h-[19px] w-[19px]" }) {
   return (
     <svg
@@ -61,11 +78,7 @@ function MobileNav({ hasTools, toolsOpen, onTools, onSettings }) {
           key={item.to}
           to={item.to}
           end={item.end}
-          className={({ isActive }) =>
-            `flex min-w-0 flex-col items-center justify-center gap-1 text-[9.5px] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
-              isActive ? "text-accent" : "text-faint hover:text-content"
-            }`
-          }
+          className={({ isActive }) => navItemClass(isActive, true)}
         >
           <NavIcon name={item.icon} className="h-[19px] w-[19px]" />
           <span className="truncate">{item.label}</span>
@@ -77,9 +90,7 @@ function MobileNav({ hasTools, toolsOpen, onTools, onSettings }) {
           type="button"
           onClick={onTools}
           aria-expanded={toolsOpen}
-          className={`flex min-w-0 flex-col items-center justify-center gap-1 text-[9.5px] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
-            toolsOpen ? "text-accent" : "text-faint hover:text-content"
-          }`}
+          className={navItemClass(toolsOpen, true)}
         >
           <NavIcon name="sliders" className="h-[19px] w-[19px]" />
           <span>Công cụ</span>
@@ -88,7 +99,7 @@ function MobileNav({ hasTools, toolsOpen, onTools, onSettings }) {
         <button
           type="button"
           onClick={onSettings}
-          className="flex min-w-0 flex-col items-center justify-center gap-1 text-[9.5px] text-faint transition hover:text-content focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          className={navItemClass(false, true)}
         >
           <NavIcon name="settings" className="h-[19px] w-[19px]" />
           <span>Cài đặt</span>
@@ -157,13 +168,7 @@ export default function AppShell({
               key={item.to}
               to={item.to}
               end={item.end}
-              className={({ isActive }) =>
-                `relative flex min-h-[58px] w-full flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-[10.5px] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
-                  isActive
-                    ? "bg-accent/15 text-accent"
-                    : "text-faint hover:bg-wash-hover hover:text-content"
-                }`
-              }
+              className={({ isActive }) => navItemClass(isActive)}
             >
               {({ isActive }) => (
                 <>

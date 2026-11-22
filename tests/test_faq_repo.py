@@ -137,6 +137,23 @@ def test_document_scoped_entry_management(tmp_path: Path) -> None:
     assert repo.count_in_document("local", "d2") == 1
 
 
+def test_deactivate_missing_handles_large_outlines(tmp_path: Path) -> None:
+    """Big outlines must not break the SQL parameter cap — or skip a batch."""
+    _, repo = make(tmp_path)
+    total = 1_050
+    for number in range(total):
+        repo.upsert(FaqEntry(id="", tenant_id="local", question=f"hỏi {number}?",
+                             answer="đáp", source_ref=f"Câu {number}",
+                             document_id="big"))
+
+    keep = {f"Câu {number}" for number in range(total - 10)}
+    assert repo.deactivate_missing("local", "big", keep) == 10
+
+    assert repo.count_in_document("local", "big") == total
+    assert repo.find_by_source("local", "big", "Câu 0").active is True
+    assert repo.find_by_source("local", "big", f"Câu {total - 1}").active is False
+
+
 def test_v6_backfill_groups_entries_by_source_file(tmp_path: Path) -> None:
     """Upgrading a v5 database turns (tenant, source_file) groups into documents."""
     path = tmp_path / "app.db"

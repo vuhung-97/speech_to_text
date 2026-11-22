@@ -3,7 +3,7 @@
 
 const BASE =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-control font-medium transition " +
-  "active:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent " +
+  "active:brightness-95 focus-ring " +
   "disabled:cursor-default disabled:opacity-45 sm:min-h-0";
 
 const VARIANTS = {
@@ -22,6 +22,11 @@ const SIZES = {
   lg: "px-4 py-2.5 text-[13.5px]",
 };
 
+// One place builds the class string, so Button and LinkButton cannot drift.
+export function buttonClass({ variant = "secondary", size = "md", className = "" } = {}) {
+  return `${BASE} ${VARIANTS[variant] || VARIANTS.secondary} ${SIZES[size] || SIZES.md} ${className}`;
+}
+
 export default function Button({
   variant = "secondary",
   size = "md",
@@ -32,7 +37,7 @@ export default function Button({
   return (
     <button
       type={type}
-      className={`${BASE} ${VARIANTS[variant] || VARIANTS.secondary} ${SIZES[size] || SIZES.md} ${className}`}
+      className={buttonClass({ variant, size, className })}
       {...rest}
     />
   );

@@ -5,7 +5,7 @@
 export const FIELD_CLASS =
   "min-h-11 border border-line bg-wash-strong text-content outline-none transition sm:min-h-0 " +
   "placeholder:text-faint focus:border-accent/60 " +
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent " +
+  "focus-ring " +
   "disabled:opacity-50";
 
 // Mobile inputs stay at 14px (avoids iOS zoom); desktop keeps the compact 13px.

@@ -13,7 +13,7 @@ import Composer from "./Composer";
 import QaSidebar from "./QaSidebar";
 import ReadingNow from "./ReadingNow";
 import Thread from "./Thread";
-import { useAnswerReader } from "./useAnswerReader";
+import { MEDIA_MODE, useAnswerReader } from "./useAnswerReader";
 import { useAsk } from "./useAsk";
 import { useListen } from "./useListen";
 import { useMicDevices } from "./useMicDevices";
@@ -88,20 +88,7 @@ export default function QaPage() {
   const mic = useMicStatus({ listen, reader });
   const readingTurn =
     turns.find((turn) => turn.answer?.id === reader.readingId) || null;
-  const playback =
-    reader.mediaMode === "cached"
-      ? {
-          progress: reader.audioProgress,
-          seconds: reader.audioTiming.seconds,
-          estimated: reader.audioTiming.duration,
-        }
-      : reader.mediaMode === "stream"
-        ? {
-            progress: reader.speech.progress,
-            seconds: reader.speech.seconds,
-            estimated: reader.speech.estimated,
-          }
-        : { progress: 0, seconds: 0, estimated: 0 };
+  const playback = reader.playback;
 
   return (
     <AppShell
@@ -133,7 +120,7 @@ export default function QaPage() {
             seconds: playback.seconds,
             estimated: playback.estimated,
             downloadUrl:
-              isReading && reader.mediaMode === "stream"
+              isReading && reader.mediaMode === MEDIA_MODE.STREAM
                 ? reader.speech.downloadUrl
                 : "",
             onRead: () => reader.read(turn.answer),

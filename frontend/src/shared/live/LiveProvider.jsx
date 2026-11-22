@@ -14,6 +14,7 @@ import {
 import { useToast } from "../ui/ToastProvider";
 import * as api from "../../services/api";
 import { connectEvents } from "../../services/sse";
+import { MODE_ACCURATE } from "./constants";
 
 const LiveContext = createContext(null);
 
@@ -24,7 +25,7 @@ const INITIAL_STATUS = {
   paused: false,
   listening: false,
   rtf: null,
-  mode: "accurate",
+  mode: MODE_ACCURATE,
 };
 
 export function LiveProvider({ children }) {
@@ -70,7 +71,7 @@ export function LiveProvider({ children }) {
             paused: Boolean(event.paused),
             listening: event.listening ?? !event.paused,
             rtf: event.rtf ?? null,
-            mode: event.mode || "accurate",
+            mode: event.mode || MODE_ACCURATE,
           });
           break;
         case "queue":

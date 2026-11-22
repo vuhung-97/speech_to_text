@@ -70,6 +70,7 @@ class FaqImportService:
         entries, matrix = self._index.ensure_index(tenant)
         known = {normalize_question(entry.question) for entry in entries}
         accepted: list[np.ndarray] = []
+        added = 0
 
         for index, row in enumerate(rows, start=2):  # header is line 1
             question = (row.get("question") or row.get("câu hỏi") or "").strip()
@@ -102,8 +103,9 @@ class FaqImportService:
             vector = self._vector(clean_question)
             if vector is not None:
                 accepted.append(vector)
-            report["added"] = int(report["added"]) + 1
+            added += 1
 
+        report["added"] = added
         self._index.invalidate(tenant)
         return report
 
@@ -134,6 +136,9 @@ class FaqImportService:
             "changed": [],
         }
         kept_codes: set[str] = set()
+        added = 0
+        updated = 0
+        skipped = 0
 
         for position, item in enumerate(entries, start=1):
             if item.code:
@@ -149,7 +154,7 @@ class FaqImportService:
             target = self._import_target(tenant, document, item.code, clean_question)
             if (target is not None and target.question == clean_question
                     and target.answer == clean_answer):
-                report["skipped"] = int(report["skipped"]) + 1
+                skipped += 1
                 continue
 
             saved = self._repo.upsert(FaqEntry(
@@ -164,10 +169,14 @@ class FaqImportService:
                 document_id=document.id,
             ))
             if target is None:
-                report["added"] = int(report["added"]) + 1
+                added += 1
             else:
-                report["updated"] = int(report["updated"]) + 1
+                updated += 1
                 report["changed"].append(saved.id)
+
+        report["added"] = added
+        report["updated"] = updated
+        report["skipped"] = skipped
 
         report["stale"] = self._repo.deactivate_missing(
             tenant, document.id, kept_codes)

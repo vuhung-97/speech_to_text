@@ -9,10 +9,87 @@ import {
   WS_AUDIO_PATH,
   WORKLET_URL,
 } from "./constants";
+import { closeReason, missingDeviceMessage, startErrorMessage } from "./errors";
+
+const PACKETS_PER_UI_UPDATE = 25;
 
 function socketUrl() {
   const scheme = window.location.protocol === "https:" ? "wss:" : "ws:";
   return `${scheme}//${window.location.host}${WS_AUDIO_PATH}`;
+}
+
+function openSocket() {
+  const ws = new WebSocket(socketUrl());
+  ws.binaryType = "arraybuffer";
+  return ws;
+}
+
+// Microphone → AudioWorklet graph. Releases the device itself when a step fails,
+// so a rejected permission can never leave the OS microphone open.
+async function openCapture(deviceId) {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    throw new Error(missingDeviceMessage());
+  }
+
+  const constraints = {
+    audio: {
+      channelCount: 1,
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+      ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
+    },
+  };
+  // Ask for the microphone first: Chrome's autoplay policy allows an
+  // AudioContext once the page is capturing audio. Creating it earlier leaves
+  // it suspended and the worklet never runs.
+  const stream = await navigator.mediaDevices.getUserMedia(constraints);
+  let context;
+  try {
+    const tracks = stream.getAudioTracks();
+    tracks.forEach((track) => {
+      track.enabled = true;
+    });
+
+    try {
+      context = new AudioContext({ sampleRate: MIC_RATE });
+    } catch {
+      context = new AudioContext();
+    }
+    if (context.state !== "running") await context.resume().catch(() => {});
+    await context.audioWorklet.addModule(WORKLET_URL);
+
+    const source = context.createMediaStreamSource(stream);
+    const node = new AudioWorkletNode(context, "pcm-processor", {
+      processorOptions: { targetRate: MIC_RATE, packetSeconds: PACKET_SECONDS },
+    });
+    const mute = context.createGain();
+    mute.gain.value = 0;
+    source.connect(node);
+    node.connect(mute);
+    mute.connect(context.destination);
+
+    if (context.state !== "running") await context.resume().catch(() => {});
+    if (context.state !== "running") {
+      throw new Error("trình duyệt đang chặn âm thanh — bấm Nghe lại");
+    }
+
+    return {
+      stream,
+      context,
+      source,
+      node,
+      mute,
+      label: tracks[0]?.label || "",
+      sampleRate: context.sampleRate,
+    };
+  } catch (error) {
+    stream.getTracks().forEach((track) => track.stop());
+    if (context && context.state !== "closed") {
+      await context.close().catch(() => {});
+    }
+    throw error;
+  }
 }
 
 export function useMic({ onEvent } = {}) {
@@ -87,8 +164,7 @@ export function useMic({ onEvent } = {}) {
         if (readyRef.current && setupRef.current) setState("live");
       };
 
-      const ws = new WebSocket(socketUrl());
-      ws.binaryType = "arraybuffer";
+      const ws = openSocket();
       refs.current = { ws };
 
       ws.onmessage = (event) => {
@@ -107,13 +183,7 @@ export function useMic({ onEvent } = {}) {
         if (refs.current.ws !== ws) return;
         refs.current = {};
         setState("error");
-        const reasons = {
-          1003: "định dạng audio không được hỗ trợ",
-          1008: "origin của trang bị máy chủ từ chối",
-          1012: "cài đặt vừa thay đổi — bấm Nghe lại",
-          1013: "máy chủ đang bận (đủ phiên) — thử lại sau",
-        };
-        setError(reasons[event.code] || "mất kết nối tới máy chủ nhận dạng");
+        setError(closeReason(event.code));
       };
 
       try {
@@ -122,69 +192,22 @@ export function useMic({ onEvent } = {}) {
           ws.onerror = () => reject(new Error("không kết nối được máy chủ"));
         });
 
-        if (!navigator.mediaDevices?.getUserMedia) {
-          throw new Error(
-            window.isSecureContext
-              ? "trình duyệt không hỗ trợ micro"
-              : "trang chưa chạy HTTPS — micro bị chặn (xem docs/TRIEN_KHAI_LAN.md)",
-          );
-        }
+        const capture = await openCapture(deviceId);
+        const { label, sampleRate: captureRate, ...parts } = capture;
+        setDeviceLabel(label);
+        setSampleRate(captureRate);
 
-        const constraints = {
-          audio: {
-            channelCount: 1,
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-            ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
-          },
-        };
-        // Ask for the microphone first: Chrome's autoplay policy allows an
-        // AudioContext once the page is capturing audio. Creating it earlier
-        // leaves it suspended and the worklet never runs.
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        const tracks = stream.getAudioTracks();
-        tracks.forEach((track) => {
-          track.enabled = true;
-        });
-        setDeviceLabel(tracks[0]?.label || "");
-
-        let context;
-        try {
-          context = new AudioContext({ sampleRate: MIC_RATE });
-        } catch {
-          context = new AudioContext();
-        }
-        if (context.state !== "running") await context.resume().catch(() => {});
-        await context.audioWorklet.addModule(WORKLET_URL);
-
-        const source = context.createMediaStreamSource(stream);
-        const node = new AudioWorkletNode(context, "pcm-processor", {
-          processorOptions: { targetRate: MIC_RATE, packetSeconds: PACKET_SECONDS },
-        });
-        const mute = context.createGain();
-        mute.gain.value = 0;
-        source.connect(node);
-        node.connect(mute);
-        mute.connect(context.destination);
-        node.onprocessorerror = () => {
+        capture.node.onprocessorerror = () => {
           setState("error");
           setError("bộ xử lý âm thanh (worklet) gặp lỗi");
         };
-
-        if (context.state !== "running") await context.resume().catch(() => {});
-        if (context.state !== "running") {
-          throw new Error("trình duyệt đang chặn âm thanh — bấm Nghe lại");
-        }
-        setSampleRate(context.sampleRate);
-
-        node.port.onmessage = (event) => {
+        capture.node.port.onmessage = (event) => {
           const payload = event.data;
           if (payload.type === "audio") {
             if (ws.readyState === WebSocket.OPEN) {
               ws.send(payload.buffer);
               packetsRef.current += 1;
-              if (packetsRef.current % 25 === 0) {
+              if (packetsRef.current % PACKETS_PER_UI_UPDATE === 0) {
                 setPackets(packetsRef.current);
               }
             }
@@ -193,18 +216,14 @@ export function useMic({ onEvent } = {}) {
           }
         };
 
-        refs.current = { ws, stream, context, source, node, mute };
+        refs.current = { ws, ...parts };
         setupRef.current = true;
         markLive();
         return true;
       } catch (startError) {
         await teardown();
         setState("error");
-        setError(
-          startError?.name === "NotAllowedError"
-            ? "bạn chưa cho phép dùng micro"
-            : startError?.message || "không mở được micro",
-        );
+        setError(startErrorMessage(startError));
         return false;
       }
     },

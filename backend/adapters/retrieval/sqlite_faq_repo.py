@@ -17,6 +17,8 @@ _COLUMNS = ("id, tenant_id, question, answer, category, active, embed_model,"
             " embed_version, created_at, updated_at, search_text,"
             " source_file, source_ref, document_id")
 
+_UPDATE_BATCH = 500  # rows per statement: SQLite caps host parameters
+
 
 def _row_to_entry(row) -> FaqEntry:
     return FaqEntry(
@@ -267,19 +269,32 @@ class SqliteFaqRepository:
         """Turn off entries of the document whose codes left the new file.
 
         Re-enabling them later is the operator's call; they are not deleted.
+        Codes are compared in RAM and updated in batches because SQLite caps the
+        host parameters of a single ``IN`` list (a large outline exceeds it).
         """
         if not keep_refs:
             return 0
-        placeholders = ",".join("?" for _ in keep_refs)
         with self._db.connect() as connection:
-            cursor = connection.execute(
-                f"UPDATE faq_entries SET active = 0, embedding = NULL,"
-                f" embed_model = NULL, embed_version = 0"
-                f" WHERE tenant_id = ? AND document_id = ? AND source_ref != ''"
-                f" AND source_ref NOT IN ({placeholders})",
-                (tenant, document_id, *sorted(keep_refs)),
-            )
-            return int(cursor.rowcount or 0)
+            rows = connection.execute(
+                "SELECT DISTINCT source_ref FROM faq_entries"
+                " WHERE tenant_id = ? AND document_id = ? AND source_ref != ''",
+                (tenant, document_id),
+            ).fetchall()
+            missing = sorted({str(row["source_ref"]) for row in rows}
+                             - set(keep_refs))
+            deactivated = 0
+            for start in range(0, len(missing), _UPDATE_BATCH):
+                batch = missing[start:start + _UPDATE_BATCH]
+                placeholders = ",".join("?" for _ in batch)
+                cursor = connection.execute(
+                    f"UPDATE faq_entries SET active = 0, embedding = NULL,"
+                    f" embed_model = NULL, embed_version = 0"
+                    f" WHERE tenant_id = ? AND document_id = ?"
+                    f" AND source_ref IN ({placeholders})",
+                    (tenant, document_id, *batch),
+                )
+                deactivated += int(cursor.rowcount or 0)
+            return deactivated
 
     def delete_by_document(self, tenant: str,
                            document_id: str) -> list[str]:

@@ -8,17 +8,19 @@ from fastapi import APIRouter, File, Request, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from ..domain.faq.models import (FaqDocument, FaqDocumentNotFound, FaqEntry,
-                                 FaqEntryNotFound)
+from ..config.constants import BYTES_PER_MB
+from ..domain.faq.models import (FaqDocumentNotFound, FaqEntry,
+                                 FaqEntryNotFound, document_to_dict)
 from ..services.tts.errors import TtsBusy
 from ..utils.errors import ApiError, NotFoundError
 from .deps import (AuditDep, FaqAudioDep, FaqDocumentsDep, FaqServiceDep,
                    OutlineParserDep, TenantDep)
+from .payload import ok
 
 router = APIRouter(tags=["faq"])
 
-MAX_IMPORT_BYTES = 2 * 1024 * 1024
-MAX_DOCX_BYTES = 20 * 1024 * 1024
+MAX_IMPORT_BYTES = 2 * BYTES_PER_MB
+MAX_DOCX_BYTES = 20 * BYTES_PER_MB
 
 
 class EntryRequest(BaseModel):
@@ -57,17 +59,6 @@ def entry_json(entry: FaqEntry) -> dict[str, Any]:
     }
 
 
-def document_json(document: FaqDocument) -> dict[str, Any]:
-    return {
-        "id": document.id,
-        "name": document.name,
-        "entry_count": document.entry_count,
-        "content_hash": document.content_hash[:12],
-        "created_at": document.created_at,
-        "updated_at": document.updated_at,
-    }
-
-
 @router.get("/faq/entries")
 def list_entries(faq: FaqServiceDep, tenant: TenantDep, q: str | None = None,
                  category: str | None = None, active: bool | None = None,
@@ -75,7 +66,7 @@ def list_entries(faq: FaqServiceDep, tenant: TenantDep, q: str | None = None,
                  limit: int = 50, offset: int = 0) -> dict[str, Any]:
     items = faq.list(tenant, query=q, category=category, active=active,
                      document_id=document_id or None, limit=limit, offset=offset)
-    return {"ok": True, "items": [entry_json(item) for item in items]}
+    return ok(items=[entry_json(item) for item in items])
 
 
 @router.post("/faq/entries")
@@ -84,7 +75,7 @@ def create_entry(request: EntryRequest, faq: FaqServiceDep,
     entry = faq.create(tenant, request.question, request.answer, request.category)
     audit.record(tenant=tenant, action="faq.create", target=entry.id,
                  detail=entry.question[:120])
-    return {"ok": True, "entry": entry_json(entry)}
+    return ok(entry=entry_json(entry))
 
 
 @router.patch("/faq/entries/{entry_id}")
@@ -98,7 +89,7 @@ def update_entry(entry_id: str, request: EntryPatch, faq: FaqServiceDep,
         raise NotFoundError(str(exc)) from exc
     audit.record(tenant=tenant, action="faq.update", target=entry_id,
                  detail=",".join(sorted(patch)))
-    return {"ok": True, "entry": entry_json(entry)}
+    return ok(entry=entry_json(entry))
 
 
 @router.delete("/faq/entries/{entry_id}")
@@ -108,7 +99,7 @@ def delete_entry(entry_id: str, faq: FaqServiceDep, audit: AuditDep,
         raise NotFoundError("không tìm thấy câu hỏi")
     audio.reset(entry_id, tenant)
     audit.record(tenant=tenant, action="faq.delete", target=entry_id)
-    return {"ok": True, "deleted": entry_id}
+    return ok(deleted=entry_id)
 
 
 @router.post("/faq/import")
@@ -125,7 +116,7 @@ async def import_entries(tenant: TenantDep, faq: FaqServiceDep,
     report = faq.import_csv(tenant, content)
     audit.record(tenant=tenant, action="faq.import", target=file.filename or "",
                  detail=f"added={report.get('added')} errors={len(report.get('errors', []))}")
-    return {"ok": True, **report}
+    return ok(**report)
 
 
 @router.post("/faq/import-docx")
@@ -149,13 +140,12 @@ async def import_outline(tenant: TenantDep, docs: FaqDocumentsDep, audit: AuditD
         detail=(f"reason={report.get('reason')} added={report.get('added')} "
                 f"updated={report.get('updated')} stale={report.get('stale')} "
                 f"errors={len(report.get('errors', []))}"))
-    return report
+    return ok(**report)
 
 
 @router.get("/faq/documents")
 def list_documents(docs: FaqDocumentsDep, tenant: TenantDep) -> dict[str, Any]:
-    return {"ok": True,
-            "items": [document_json(item) for item in docs.list(tenant)]}
+    return ok(items=[document_to_dict(item) for item in docs.list(tenant)])
 
 
 @router.patch("/faq/documents/{document_id}")
@@ -167,7 +157,7 @@ def rename_document(document_id: str, request: RenameRequest, docs: FaqDocuments
         raise NotFoundError(str(exc)) from exc
     audit.record(tenant=tenant, action="faq.document.rename", target=document_id,
                  detail=document.name)
-    return {"ok": True, "document": document_json(document)}
+    return ok(document=document_to_dict(document))
 
 
 @router.delete("/faq/documents/{document_id}")
@@ -181,7 +171,7 @@ def delete_document(document_id: str, docs: FaqDocumentsDep, audit: AuditDep,
         audio.reset(str(entry_id), tenant)
     audit.record(tenant=tenant, action="faq.document.delete", target=document_id,
                  detail=f"name={result['name']} entries={result['deleted_entries']}")
-    return {"ok": True, **result}
+    return ok(**result)
 
 
 @router.post("/faq/reindex")
@@ -190,13 +180,13 @@ def reindex(faq: FaqServiceDep, audit: AuditDep,
     result = faq.reindex(tenant)
     audit.record(tenant=tenant, action="faq.reindex",
                  detail=f"indexed={result.get('indexed')}")
-    return {"ok": True, **result}
+    return ok(**result)
 
 
 @router.get("/faq/stats")
 def stats(request: Request, faq: FaqServiceDep, tenant: TenantDep) -> dict[str, Any]:
-    return {"ok": True, **faq.stats(tenant),
-            "embed_note": getattr(request.app.state, "embed_note", "")}
+    return ok(**faq.stats(tenant),
+              embed_note=getattr(request.app.state, "embed_note", ""))
 
 
 @router.post("/faq/entries/{entry_id}/prerender")
@@ -210,7 +200,7 @@ def prerender(entry_id: str, request: PrerenderRequest, audio: FaqAudioDep,
         raise NotFoundError(str(exc)) from exc
     audit.record(tenant=tenant, action="faq.prerender", target=entry_id,
                  detail=job.voice)
-    return {"ok": True, "job": audio.status(job.id)}
+    return ok(job=audio.status(job.id))
 
 
 @router.get("/faq/prerender/{job_id}")
@@ -218,7 +208,7 @@ def prerender_status(job_id: str, audio: FaqAudioDep) -> dict[str, Any]:
     status = audio.status(job_id)
     if status is None:
         raise NotFoundError("không tìm thấy tác vụ tổng hợp")
-    return {"ok": True, **status}
+    return ok(**status)
 
 
 @router.get("/faq/entries/{entry_id}/audio")

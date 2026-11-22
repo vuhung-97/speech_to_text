@@ -25,7 +25,7 @@ from ..config.paths import TTS_DISK_QUOTA_MB, TTS_TEMP_DIR, VIENEU_CUSTOM_VOICES
 from ..config.tts import requested_precision, requested_threads
 from ..domain.audio.pcm import silence_pcm, to_pcm16, to_wav_bytes
 from ..domain.text.limits import MAX_TTS_CHARS, check_stream_text
-from ..domain.text.split import split_speech_units
+from ..domain.text.split import SpeechUnit, split_speech_units
 from .tts.engine_loader import TtsEngineLoader, package_installed
 from .tts.errors import (TtsBusy, TtsCancelled, TtsStorageError,
                          TtsUnavailable)
@@ -128,6 +128,19 @@ class TtsService:
             raise ValueError(f"giọng '{voice}' không có trong danh sách")
         return voice or default or None
 
+    def _require_available(self) -> None:
+        ready, reason = self.available()
+        if not ready:
+            raise TtsUnavailable(reason)
+
+    @staticmethod
+    def _units_for(value: str) -> list[SpeechUnit]:
+        """Split text that already passed its length check."""
+        units = split_speech_units(value)
+        if not units:
+            raise ValueError("chưa có nội dung để đọc")
+        return units
+
     def resolve_voice(self, voice: str | None = None) -> str | None:
         """Public wrapper used by callers that need the cache key (P6)."""
         return self._resolve_voice(voice)
@@ -148,30 +161,22 @@ class TtsService:
         if len(value) > MAX_TTS_CHARS:
             raise ValueError(f"văn bản quá dài (tối đa {MAX_TTS_CHARS} ký tự)")
 
-        ready, reason = self.available()
-        if not ready:
-            raise TtsUnavailable(reason)
-
-        units = split_speech_units(value)
-        if not units:
-            raise ValueError("chưa có nội dung để đọc")
+        self._require_available()
+        units = self._units_for(value)
 
         selected = self._resolve_voice(voice)
         pieces: list[np.ndarray] = []
         with self._infer_lock:
             engine = self._ensure_engine()
             rate = int(getattr(engine, "sample_rate", SAMPLE_RATE))
-            try:
-                for unit in units:
-                    audio = engine.infer(unit.text, voice=selected)
-                    if audio is None or len(audio) == 0:
-                        continue
-                    pieces.append(np.asarray(audio, dtype=np.float32))
-                    if unit.pause_after > 0:
-                        pieces.append(np.zeros(
-                            int(unit.pause_after * rate), dtype=np.float32))
-            except ValueError as exc:
-                raise ValueError(str(exc)) from exc
+            for unit in units:
+                audio = engine.infer(unit.text, voice=selected)
+                if audio is None or len(audio) == 0:
+                    continue
+                pieces.append(np.asarray(audio, dtype=np.float32))
+                if unit.pause_after > 0:
+                    pieces.append(np.zeros(
+                        int(unit.pause_after * rate), dtype=np.float32))
         if not pieces:
             raise ValueError("model không tạo được âm thanh cho văn bản này")
 
@@ -260,12 +265,8 @@ class TtsService:
         is still a normal JSON error instead of a broken audio stream.
         """
         value = check_stream_text(text)
-        units = split_speech_units(value)
-        if not units:
-            raise ValueError("chưa có nội dung để đọc")
-        ready, reason = self.available()
-        if not ready:
-            raise TtsUnavailable(reason)
+        units = self._units_for(value)
+        self._require_available()
         if self._store.busy:
             raise TtsBusy("đang đọc một văn bản khác — dừng lại rồi thử tiếp")
         selected = self._resolve_voice(voice)

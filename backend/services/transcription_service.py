@@ -15,6 +15,7 @@ on a background thread and swap it atomically; capture settings reopen the mic.
 
 from __future__ import annotations
 
+import logging
 import threading
 from collections import deque
 from collections.abc import Callable
@@ -22,7 +23,7 @@ from typing import Any
 
 import numpy as np
 
-from ..config.constants import BLOCK_DUR
+from ..config.constants import BLOCK_DUR, MODE_ACCURATE, MODE_REALTIME
 from ..config.settings import Settings
 from ..models.dto import CaptureStats
 from ..utils import priority
@@ -32,8 +33,7 @@ from .pipeline import EngineReloader
 from .segmentation_service import (FinalAudio, LocalAgreement, UtteranceSegmenter,
                                    build_segmenter)
 
-VAD_KEYS = frozenset({"silence_hang", "threshold", "noise_floor_ratio",
-                      "min_speech", "preroll", "max_utterance"})
+logger = logging.getLogger("stt_binh.pipeline")
 
 
 class _Job:
@@ -163,7 +163,7 @@ class LivePipeline:
         effects = result["effects"]
         self._values = values
 
-        if applied & VAD_KEYS or "mode" in applied:
+        if effects["vad"] or "mode" in applied:
             self._segmenter = build_segmenter(values)
             self._agreement.reset()
             self._drop_in_progress()
@@ -195,8 +195,8 @@ class LivePipeline:
         if mic is not None and hasattr(mic, "stats"):
             try:
                 return CaptureStats.from_stats(mic.stats())
-            except Exception:
-                pass
+            except Exception as exc:  # noqa: BLE001 - stats are best-effort
+                logger.debug("không đọc được stats micro: %s", exc)
         return CaptureStats.from_stats(self._capture)
 
     def pending(self) -> int:
@@ -221,7 +221,7 @@ class LivePipeline:
 
     @property
     def mode(self) -> str:
-        return str(self._values.get("mode", "accurate"))
+        return str(self._values.get("mode", MODE_ACCURATE))
 
     def snapshot(self) -> dict[str, Any]:
         return {"type": "state", "status": self.status_event(),
@@ -266,8 +266,8 @@ class LivePipeline:
         if hasattr(mic, "stats"):
             try:
                 self._capture = dict(mic.stats())
-            except Exception:
-                pass
+            except Exception as exc:  # noqa: BLE001 - stats are best-effort
+                logger.debug("không ghi nhớ được stats micro: %s", exc)
 
     def _on_frame(self, frame: np.ndarray) -> None:
         rms = float(np.sqrt(np.mean(np.square(frame)))) if frame.size else 0.0
@@ -284,7 +284,7 @@ class LivePipeline:
         if final is not None:
             self._queue_final(final)
             return
-        if self._values.get("mode") != "realtime" or not self._segmenter.speaking:
+        if self._values.get("mode") != MODE_REALTIME or not self._segmenter.speaking:
             return
         self._frames_since_decode += 1
         if self._frames_since_decode * BLOCK_DUR >= float(self._values["decode_interval"]):
@@ -301,7 +301,7 @@ class LivePipeline:
 
     def _queue_final(self, final: FinalAudio) -> None:
         self._frames_since_decode = 0
-        size = max(1, int(self._values.get("queue_size", 4)))
+        size = max(1, int(self._values["queue_size"]))
         with self._cv:
             self._partial = None  # the closed utterance supersedes any draft
             overflow = len(self._finals) >= size

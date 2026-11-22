@@ -14,13 +14,13 @@ from typing import Any
 
 import numpy as np
 
-from ..config.constants import BLOCK, SAMPLE_RATE
+from ..config.constants import BLOCK, BYTES_PER_MB, SAMPLE_RATE
 from ..config.settings import Settings
 from ..models.dto import ReplayResult, ReplaySegment
 from .segmentation_service import build_segmenter
 
 AUDIO_EXTENSIONS = frozenset({".wav", ".mp3", ".m4a", ".flac", ".ogg", ".webm", ".aac"})
-MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+MAX_UPLOAD_BYTES = 50 * BYTES_PER_MB
 MAX_REPLAY_SECONDS = 300.0
 
 

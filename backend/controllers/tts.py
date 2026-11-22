@@ -19,6 +19,7 @@ from ..services.tts_service import (MAX_TTS_CHARS, SAMPLE_RATE, TtsBusy,
                                     TtsStorageError, TtsUnavailable)
 from ..utils.errors import ApiError
 from .deps import TtsDep
+from .payload import ok
 
 router = APIRouter(tags=["tts"])
 
@@ -32,16 +33,15 @@ class TtsRequest(BaseModel):
 def list_voices(tts: TtsDep) -> dict[str, Any]:
     voices, default = tts.voices()
     available, reason = tts.available()
-    return {
-        "ok": True,
-        "voices": voices,
-        "default": default,
-        "available": available,
-        "reason": reason,
-        "max_chars": MAX_TTS_CHARS,
-        "max_words": MAX_TTS_WORDS,
-        "status": tts.status(),
-    }
+    return ok(
+        voices=voices,
+        default=default,
+        available=available,
+        reason=reason,
+        max_chars=MAX_TTS_CHARS,
+        max_words=MAX_TTS_WORDS,
+        status=tts.status(),
+    )
 
 
 @router.post("/tts/preload")
@@ -55,25 +55,24 @@ def preload_tts(request: TtsRequest, tts: TtsDep) -> dict[str, Any]:
     except ValueError as exc:
         raise ApiError(str(exc), status_code=400) from exc
     tts.preload_async(synthesize=True, voice=voice)
-    return {"ok": True, "preloading": True, "voice": voice}
+    return ok(preloading=True, voice=voice)
 
 
 @router.get("/tts/status")
 def tts_status(tts: TtsDep) -> dict[str, Any]:
-    return {"ok": True, **tts.status()}
+    return ok(**tts.status())
 
 
 @router.get("/tts/limits")
 def limits(tts: TtsDep) -> dict[str, Any]:
     """Everything the UI needs to validate before submitting, in one call."""
-    return {
-        "ok": True,
-        "sample_rate": SAMPLE_RATE,
-        "max_quick_chars": MAX_TTS_CHARS,
-        "max_words": MAX_TTS_WORDS,
-        "max_stream_chars": MAX_TTS_STREAM_CHARS,
-        "busy": tts.busy,
-    }
+    return ok(
+        sample_rate=SAMPLE_RATE,
+        max_quick_chars=MAX_TTS_CHARS,
+        max_words=MAX_TTS_WORDS,
+        max_stream_chars=MAX_TTS_STREAM_CHARS,
+        busy=tts.busy,
+    )
 
 
 @router.post("/tts")
@@ -137,12 +136,11 @@ def session_status(job_id: str, tts: TtsDep) -> dict[str, Any]:
     status = tts.job_status(job_id)
     if status is None:
         raise ApiError("không tìm thấy phiên đọc", status_code=404)
-    status["ok"] = True
-    return status
+    return ok(**status)
 
 
 @router.delete("/tts/sessions/{job_id}")
 def session_delete(job_id: str, tts: TtsDep) -> dict[str, Any]:
     if not tts.cancel(job_id):
         raise ApiError("không tìm thấy phiên đọc", status_code=404)
-    return {"ok": True, "cancelled": job_id}
+    return ok(cancelled=job_id)

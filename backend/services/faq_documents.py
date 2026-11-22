@@ -13,7 +13,8 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from ..domain.faq.models import (FaqDocument, FaqDocumentNotFound, FaqOutline,
-                                 MAX_DOCUMENT_NAME_CHARS, outline_fingerprint)
+                                 MAX_DOCUMENT_NAME_CHARS, document_to_dict,
+                                 outline_fingerprint)
 from ..ports.faq import FaqDocumentRepository, FaqIndex, FaqRepository
 from .faq_service import FaqService
 
@@ -56,7 +57,7 @@ class FaqDocumentsService:
                       "skipped": len(pairs), "stale": 0, "errors": [],
                       "changed": []}
             self._touch_count(tenant, same_content)
-            return {"ok": True, **report, "document": _document_json(same_content),
+            return {**report, "document": document_to_dict(same_content),
                     "reason": "unchanged"}
 
         document = self._documents.find_by_name(tenant, name)
@@ -70,7 +71,7 @@ class FaqDocumentsService:
 
         report = self._catalogue.import_outline(tenant, pairs, document=document)
         refreshed = self._touch_count(tenant, document)
-        return {"ok": True, **report, "document": _document_json(refreshed),
+        return {**report, "document": document_to_dict(refreshed),
                 "reason": reason}
 
     # ---------------------------------------------------------------- rename
@@ -105,17 +106,6 @@ def _document_name(source_name: str) -> str:
     if not name or name in {".", ".."}:
         name = "bộ đề mới"
     return name[:MAX_DOCUMENT_NAME_CHARS]
-
-
-def _document_json(document: FaqDocument) -> dict[str, object]:
-    return {
-        "id": document.id,
-        "name": document.name,
-        "entry_count": document.entry_count,
-        "content_hash": document.content_hash[:12],
-        "created_at": document.created_at,
-        "updated_at": document.updated_at,
-    }
 
 
 __all__ = ["FaqDocumentsService"]

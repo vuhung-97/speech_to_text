@@ -16,7 +16,7 @@ class Field:
     kind: str  # enum | int | float | bool | text | device
     default: Any
     hint: str = ""
-    effect: str = "live"  # live | engine | capture
+    effect: str = "live"  # live | engine | capture | vad
     minimum: float | None = None
     maximum: float | None = None
     step: float | None = None

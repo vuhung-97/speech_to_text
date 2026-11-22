@@ -8,64 +8,11 @@ import Alert from "../../components/ui/Alert";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import EmptyState from "../../components/ui/EmptyState";
+import LinkButton from "../../components/ui/LinkButton";
+import SearchInput from "../../components/ui/SearchInput";
 import * as api from "../../services/api";
 import { messageFor } from "../../services/errors";
-
-function when(value) {
-  if (!value) return "";
-  try {
-    return new Date(value * 1000).toLocaleTimeString("vi-VN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return "";
-  }
-}
-
-function dayLabel(value) {
-  if (!value) return "Trước đó";
-  const date = new Date(value * 1000);
-  if (Number.isNaN(date.getTime())) return "Trước đó";
-  const today = new Date();
-  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const days = Math.round((start - target) / 86_400_000);
-  if (days === 0) return "Hôm nay";
-  if (days === 1) return "Hôm qua";
-  return "Trước đó";
-}
-
-function groupSessions(items) {
-  const groups = [];
-  for (const item of items) {
-    const label = dayLabel(item.updated_at);
-    let group = groups.find((entry) => entry.label === label);
-    if (!group) {
-      group = { label, items: [] };
-      groups.push(group);
-    }
-    group.items.push(item);
-  }
-  return groups;
-}
-
-function SearchIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      aria-hidden="true"
-      className="h-3.5 w-3.5"
-    >
-      <circle cx="11" cy="11" r="7" />
-      <path d="m20 20-3.4-3.4" />
-    </svg>
-  );
-}
+import { filterSessions, groupSessions, when } from "./sessionList";
 
 function ChatIcon() {
   return (
@@ -141,16 +88,7 @@ export default function SessionListPage() {
     }
   };
 
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) return items;
-    return items.filter((item) =>
-      [item.first_question, item.title, item.id]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(needle)),
-    );
-  }, [items, query]);
-
+  const filtered = useMemo(() => filterSessions(items, query), [items, query]);
   const groups = useMemo(() => groupSessions(filtered), [filtered]);
 
   return (
@@ -180,26 +118,20 @@ export default function SessionListPage() {
               >
                 Làm mới
               </Button>
-              <Link
-                to="/"
-                className="inline-flex min-h-11 items-center rounded-control bg-gradient-to-br from-accent to-accent-2 px-3.5 py-2 text-[11.5px] font-semibold text-on-accent shadow-accent transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
-              >
+              <LinkButton to="/" className="shadow-accent">
                 Hỏi câu mới
-              </Link>
+              </LinkButton>
             </div>
           </div>
 
           <div className="mb-5 flex items-center gap-2">
-            <label className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-control border border-line bg-wash-strong px-3 py-2 focus-within:border-accent/60 sm:min-h-0">
-              <SearchIcon />
-              <span className="sr-only">Tìm phiên</span>
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Tìm theo câu hỏi…"
-                className="w-full min-w-0 border-0 bg-transparent text-[12px] text-content outline-none placeholder:text-faint"
-              />
-            </label>
+            <SearchInput
+              label="Tìm phiên"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Tìm theo câu hỏi…"
+              className="flex-1"
+            />
             <span className="shrink-0 text-[10.5px] text-faint">
               {filtered.length} phiên
             </span>
@@ -228,12 +160,7 @@ export default function SessionListPage() {
               }
               action={
                 !query && (
-                  <Link
-                    to="/"
-                    className="inline-flex min-h-11 items-center rounded-control bg-gradient-to-br from-accent to-accent-2 px-3.5 py-2 text-[13px] font-semibold text-on-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
-                  >
-                    Hỏi câu đầu tiên
-                  </Link>
+                  <LinkButton to="/">Hỏi câu đầu tiên</LinkButton>
                 )
               }
             />
@@ -260,7 +187,7 @@ export default function SessionListPage() {
                     </span>
                     <Link
                       to={`/sessions/${session.id}`}
-                      className="min-w-0 flex-1 rounded-md text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                      className="min-w-0 flex-1 rounded-md text-left focus-ring"
                     >
                       <span className="block truncate text-[12.5px] font-medium text-content">
                         {session.first_question || session.title || "Phiên không tên"}
@@ -280,7 +207,7 @@ export default function SessionListPage() {
                         session.first_question || session.title || session.id
                       }`}
                       title="Xoá phiên"
-                      className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-faint transition hover:bg-err/10 hover:text-err focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-40 sm:h-9 sm:w-9"
+                      className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-faint transition hover:bg-err/10 hover:text-err focus-ring disabled:opacity-40 sm:h-9 sm:w-9"
                     >
                       <TrashIcon />
                     </button>

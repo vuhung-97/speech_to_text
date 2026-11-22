@@ -123,7 +123,7 @@ export default function VoiceSettings({ embedded = false }) {
       )}
 
       <details className="group border-t border-line pt-2">
-        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 py-1 text-[10.5px] text-dim focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-8">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 py-1 text-[10.5px] text-dim focus-ring sm:min-h-8">
           Thử giọng
           <Chevron />
         </summary>

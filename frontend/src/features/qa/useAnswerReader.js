@@ -167,8 +167,13 @@ export function useAnswerReader({ onBeforeRead } = {}) {
       }
 
       if (!aliveRef.current || !isCurrentPlayback(key)) return;
-      setMediaMode("stream");
+      // speech.start() claims the playback channel synchronously. That claim
+      // stops this reader's own claim (silence), which clears readingId and
+      // mediaMode. Re-assert them *after* the handoff, otherwise the audio
+      // plays while the card falls back to the plain "Đọc" button.
       speech.start(answer.text, voice, speed);
+      setMediaMode("stream");
+      setReadingId(answer.id);
     },
     [silence, speech, stop],
   );

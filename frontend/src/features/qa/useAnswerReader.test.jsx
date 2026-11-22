@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, waitFor } from "@testing-library/react
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as api from "../../services/api";
+import { beginPlayback } from "../../shared/playback/playbackChannel";
 import { useAnswerReader } from "./useAnswerReader";
 
 const speechMock = {
@@ -25,6 +26,7 @@ function Harness() {
   const reader = useAnswerReader();
   return (
     <div>
+      <p data-testid="reading-id">{reader.readingId}</p>
       <button type="button" onClick={() => reader.read({ id: "a1", text: "đáp án một" })}>
         đọc A
       </button>
@@ -59,6 +61,27 @@ afterEach(() => {
 });
 
 describe("useAnswerReader", () => {
+  it("keeps reading state after the stream player claims the channel", async () => {
+    // The real speech player claims the channel inside start(); that claim
+    // invokes the reader's silence() and used to clear readingId immediately.
+    speechMock.start.mockImplementation(() => {
+      beginPlayback(() => {});
+    });
+    api.getAnswerSpeech.mockResolvedValueOnce({ mode: "stream" });
+    const view = render(<Harness />);
+
+    fireEvent.click(view.getByText("đọc A"));
+
+    await waitFor(() =>
+      expect(speechMock.start).toHaveBeenCalledWith(
+        "đáp án một",
+        "giọng",
+        1.2,
+      ),
+    );
+    expect(view.getByTestId("reading-id")).toHaveTextContent("a1");
+  });
+
   it("stops a playing cached WAV before starting a stream", async () => {
     api.getAnswerSpeech.mockResolvedValueOnce({ mode: "cached", url: "/wav/1" });
     const view = render(<Harness />);

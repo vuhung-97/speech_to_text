@@ -52,8 +52,6 @@ sau khi cài. Lõi là **zipformer 30M int8 (sherpa-onnx)**, backend **FastAPI**
   gần đây, hysteresis khi đang nói, giữ trạng thái qua pause/resume.
 - **Cài đặt dạng drawer** — mở bằng bánh răng hoặc `Ctrl+,`: engine, VAD, preset và
   cảnh báo cấu hình. Chế độ nhận dạng và giọng đọc nằm ở sidebar Hỏi đáp.
-- **Replay file audio** — kéo–thả `wav/mp3/m4a/…` rồi decode bằng đúng cấu hình đang dùng
-  để A/B thông số trên cùng một file.
 - **Đọc câu trả lời (TTS)** — nút **Đọc** trên mỗi đáp án dùng VieNeu-TTS v3 Turbo:
   25 giọng preset, gộp cả giọng clone của app VieNeu, tải WAV 48 kHz; chạy offline
   trên CPU (ONNX), model nạp lần đầu khi dùng. Văn bản được cắt sẵn theo

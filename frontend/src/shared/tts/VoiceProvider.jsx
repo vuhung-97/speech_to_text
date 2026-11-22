@@ -108,7 +108,16 @@ export function VoiceProvider({ children }) {
         }));
       }
     } catch {
-      // keep polling; the status endpoint may be briefly unavailable
+      // The status endpoint may be briefly unavailable while the server
+      // restarts; keep polling, but stop after the same budget.
+      if (++pollAttempts.current > PRELOAD_MAX_ATTEMPTS) {
+        stopPolling();
+        setState((previous) => ({
+          ...previous,
+          preloading: false,
+          preloadError: "Không đọc được trạng thái nạp giọng.",
+        }));
+      }
     }
   }, [stopPolling]);
 

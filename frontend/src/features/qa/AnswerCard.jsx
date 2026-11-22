@@ -69,8 +69,18 @@ export default function AnswerCard({
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {playing ? (
-          <Button variant="danger" size="sm" onClick={onStop}>
-            Dừng đọc
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={onStop}
+            aria-pressed="true"
+            title="Bấm để dừng"
+          >
+            <span
+              className="h-2 w-2 animate-pulse rounded-full bg-current motion-reduce:animate-none"
+              aria-hidden="true"
+            />
+            Đang đọc
           </Button>
         ) : (
           <Button variant="secondary" size="sm" onClick={onRead} disabled={!answer.text}>

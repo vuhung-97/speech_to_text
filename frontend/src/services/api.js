@@ -23,19 +23,11 @@ export const getState = () => http.get("/api/state");
 export const getSettings = () => http.get("/api/settings");
 export const postSettings = (change) => http.post("/api/settings", change ?? {});
 export const resetSettings = () => http.post("/api/settings/reset");
-export const getSamples = () => http.get("/api/samples");
-export const replaySample = (name, segment) => http.post("/api/replay", { name, segment });
 
 export const getTtsVoices = () => http.get("/api/tts/voices");
 export const getTtsStatus = () => http.get(v1("/tts/status"));
 export const preloadTts = (voice) =>
   http.post(v1("/tts/preload"), { voice: voice || null });
-
-export const uploadSample = (file) => {
-  const form = new FormData();
-  form.append("file", file);
-  return http.requestForm("/api/samples", { form });
-};
 
 // ---------------------------------------------------------------- Q&A (v1)
 export const askQuestion = (

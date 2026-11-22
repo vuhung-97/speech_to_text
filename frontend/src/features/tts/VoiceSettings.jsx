@@ -1,7 +1,7 @@
 // Voice selection + a sample reader shown in the settings drawer. Choosing a
 // voice persists it and warms that voice in the server RAM in the background.
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import Alert from "../../components/ui/Alert";
 import Button from "../../components/ui/Button";
@@ -12,15 +12,10 @@ import VoicePicker from "./VoicePicker";
 
 const SAMPLE_TEXT = "Xin chào, đây là giọng đọc thử nghiệm.";
 
-export default function VoiceSettings({ active = true }) {
+export default function VoiceSettings() {
   const voice = useVoice();
   const speech = useSpeechPlayer();
   const [sample, setSample] = useState(SAMPLE_TEXT);
-  const stopSpeech = speech.stop;
-
-  useEffect(() => {
-    if (!active) stopSpeech();
-  }, [active, stopSpeech]);
 
   const loading = voice.loading && !voice.loaded;
   const testing = speech.busy;
@@ -44,10 +39,10 @@ export default function VoiceSettings({ active = true }) {
   };
 
   return (
-    <section>
-      <h3 className="mb-2 text-[12px] font-semibold tracking-[0.09em] text-faint uppercase">
+    <section className="rounded-xl border border-line bg-white/[0.02] p-3">
+      <h2 className="m-0 mb-2 text-[12px] font-semibold tracking-[0.08em] text-faint uppercase">
         Giọng đọc
-      </h3>
+      </h2>
 
       {!voice.available ? (
         <div className="space-y-2">

@@ -50,16 +50,16 @@ sau khi cài. Lõi là **zipformer 30M int8 (sherpa-onnx)**, backend **FastAPI**
   `fr/s`, `coverage`, `dropped` để kiểm chứng (đo được 99–100%, trước đây chỉ 67%).
 - **VAD chống khoá** — noise-floor chỉ học từ frame yên tĩnh, ngưỡng bị chặn bởi 30% đỉnh
   gần đây, hysteresis khi đang nói, giữ trạng thái qua pause/resume.
-- **Cài đặt dạng drawer** — mở bằng bánh răng hoặc `Ctrl+,`: engine, VAD, giọng đọc,
-  preset và cảnh báo cấu hình.
+- **Cài đặt dạng drawer** — mở bằng bánh răng hoặc `Ctrl+,`: engine, VAD, preset và
+  cảnh báo cấu hình. Chế độ nhận dạng và giọng đọc nằm ở sidebar Hỏi đáp.
 - **Replay file audio** — kéo–thả `wav/mp3/m4a/…` rồi decode bằng đúng cấu hình đang dùng
   để A/B thông số trên cùng một file.
 - **Đọc câu trả lời (TTS)** — nút **Đọc** trên mỗi đáp án dùng VieNeu-TTS v3 Turbo:
   25 giọng preset, gộp cả giọng clone của app VieNeu, tải WAV 48 kHz; chạy offline
   trên CPU (ONNX), model nạp lần đầu khi dùng. Văn bản được cắt sẵn theo
   `. ! ? … ; : ()` và đoạn văn để chèn khoảng nghỉ đúng chỗ; dấu phẩy giữ trong câu
-  cho model đọc tự nhiên. Chọn giọng trong **Cài đặt → Giọng đọc**: có ô nội dung
-  thử + nút **Test giọng**; đổi giọng tự nạp giọng vào RAM ở nền.
+  cho model đọc tự nhiên. Chọn giọng ở **sidebar Hỏi đáp → Giọng đọc**: có ô nội
+  dung thử + nút **Test giọng**; đổi giọng tự nạp giọng vào RAM ở nền.
 - **Hỏi đáp theo đề cương — không dùng LLM** — câu hỏi (nói hoặc gõ) được embed bằng
   `multilingual-e5-small` (ONNX, 384 chiều), so cosine với câu hỏi trong kho rồi
   rerank bằng BM25; câu trả lời là **nguyên văn đáp án** của câu hỏi khớp nhất.
@@ -193,8 +193,8 @@ python tools/eval_matcher.py    # top-1 / top-3 / MRR + khoảng điểm trong/n
 | ![Giao diện chính](docs/ui.png) | ![Bảng cài đặt](docs/settings.png) |
 
 Cài đặt được sinh từ schema của engine đang chọn: model zipformer hiện thêm
-`Max active paths` và `Blank penalty` bên cạnh các thông số chung; mục **Giọng đọc**
-nằm ngay đầu drawer và tự nạp giọng khi đổi.
+`Max active paths` và `Blank penalty` bên cạnh các thông số chung. Sidebar Hỏi đáp
+có các card **Bộ đề**, **Chế độ**, **Giọng đọc** (kèm ô/nút test) và **Mic**.
 
 ## Kiến trúc
 

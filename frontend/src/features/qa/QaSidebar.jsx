@@ -3,6 +3,8 @@
 // attached to each other.
 
 import Alert from "../../components/ui/Alert";
+import { ModeControl } from "../settings";
+import { VoiceSettings } from "../tts";
 import DocumentPicker from "./DocumentPicker";
 import MicControls from "./MicControls";
 
@@ -35,6 +37,9 @@ export default function QaSidebar({
           disabled={busy}
         />
       </section>
+
+      <ModeControl />
+      <VoiceSettings />
 
       <section className="rounded-xl border border-line bg-white/[0.02] p-3">
         <h2 className="m-0 mb-2 text-[12px] font-semibold tracking-[0.08em] text-faint uppercase">

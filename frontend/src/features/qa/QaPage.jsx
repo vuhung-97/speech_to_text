@@ -11,6 +11,7 @@ import { useFaqDocuments } from "../faq";
 import { useMicStatus } from "./useMicStatus";
 import Composer from "./Composer";
 import QaSidebar from "./QaSidebar";
+import ReadingNow from "./ReadingNow";
 import Thread from "./Thread";
 import { useAnswerReader } from "./useAnswerReader";
 import { useAsk } from "./useAsk";
@@ -85,6 +86,8 @@ export default function QaPage() {
   }, [listen, micDevices, reader]);
 
   const mic = useMicStatus({ listen, reader });
+  const readingTurn =
+    turns.find((turn) => turn.answer?.id === reader.readingId) || null;
 
   return (
     <AppShell
@@ -104,19 +107,24 @@ export default function QaPage() {
       }
     >
       {/* Mobile/tablet fallback: the right sidebar is hidden below lg. */}
-      <div className="shrink-0 border-b border-line bg-surface/40 p-4 lg:hidden">
-        <QaSidebar
-          documents={documents.documents}
-          documentId={documentId}
-          onSelectDocument={documents.select}
-          busy={busy}
-          mic={mic}
-          listen={listen}
-          devices={micDevices.devices}
-          device={micDevices.device}
-          onChooseMic={micDevices.choose}
-        />
-      </div>
+      <details className="shrink-0 border-b border-line bg-surface/40 lg:hidden">
+        <summary className="cursor-pointer px-5 py-3 text-[13px] text-dim focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+          Bộ đề · Chế độ · Giọng đọc · Mic
+        </summary>
+        <div className="p-4 pt-0">
+          <QaSidebar
+            documents={documents.documents}
+            documentId={documentId}
+            onSelectDocument={documents.select}
+            busy={busy}
+            mic={mic}
+            listen={listen}
+            devices={micDevices.devices}
+            device={micDevices.device}
+            onChooseMic={micDevices.choose}
+          />
+        </div>
+      </details>
 
       <Thread
         turns={turns}
@@ -124,10 +132,9 @@ export default function QaPage() {
         onExample={(example) => handleAsk(example, "typed")}
         renderAnswerProps={(turn) => {
           const isReading = reader.readingId === turn.answer?.id;
-          const playing = isReading && (reader.speech.busy || reader.audioPlaying);
           return {
-            active: playing,
-            playing,
+            active: isReading,
+            playing: isReading,
             progress: reader.speech.progress,
             seconds: reader.speech.seconds,
             estimated: reader.speech.estimated,
@@ -137,6 +144,13 @@ export default function QaPage() {
             onPick: (question) => handleAsk(question, "typed"),
           };
         }}
+      />
+
+      <ReadingNow
+        turn={readingTurn}
+        speech={reader.speech}
+        audioPlaying={reader.audioPlaying}
+        onStop={reader.stop}
       />
 
       {error && <Alert className="mx-5 mb-2">{error}</Alert>}

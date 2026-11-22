@@ -8,7 +8,7 @@ Mục nào lỗi thì ghi lại màn hình + bước tái hiện.
 - [ ] Rail trái hiển thị 3 mục: Hỏi đáp, Phiên, Kho hỏi.
 - [ ] Mục đang mở có nền accent và icon sáng; hover các mục còn lại đổi màu.
 - [ ] Topbar hiện tiêu đề từng màn hình + `StatusPill` + nút Ctrl+K + bánh răng.
-- [ ] Nút "bảng phụ" chỉ hiện ở trang Hỏi đáp và ở màn ≥ 1280px; sidebar phải có card Bộ đề và card Mic tách nhau.
+- [ ] Nút "bảng phụ" chỉ hiện ở trang Hỏi đáp và ở màn ≥ 1024px; sidebar phải có 4 card: Bộ đề, Chế độ, Giọng đọc, Mic — tách nhau, không dính.
 - [ ] `Ctrl+K` mở palette; gõ để lọc; `↑`/`↓` đổi lựa chọn; `Enter` điều hướng;
       `Esc` đóng. Bấm ra ngoài cũng đóng.
 - [ ] `Ctrl+,` mở/đóng drawer Cài đặt ở mọi màn hình.
@@ -44,14 +44,17 @@ Mục nào lỗi thì ghi lại màn hình + bước tái hiện.
 - [ ] Sau câu đầu tiên, URL thành `/?session=…`; `F5` vẫn còn hội thoại.
 - [ ] Câu trả lời chưa khớp hiện badge "Chưa có đáp án", text fallback, và ghi
       vào "Kho câu hỏi → chưa trả lời".
-- [ ] Nút `Đọc` phát audio sau ~2–3 giây; progress chạy; `Dừng đọc` cắt ngay.
+- [ ] Nút `Đọc` phát audio; khi đang đọc nút chuyển **“Đang đọc”**; bấm lần nữa
+      dừng ngay và nút trở lại **“Đọc”**.
+- [ ] Thanh **“Đang đọc”** phía trên composer hiện nội dung đáp án đang đọc,
+      progress và nút `Dừng`; biến mất khi đọc xong/dừng.
 - [ ] `Tải WAV` xuất hiện sau khi audio bắt đầu và tải được file mở bằng
       Windows Media Player.
-- [ ] Sidebar phải chỉ có 2 card: **Bộ đề** (select) và **Mic** (trạng thái, level,
-      thiết bị), cách nhau khoảng 16px; không dính nhau.
+- [ ] Sidebar phải có 4 card: **Bộ đề**, **Chế độ**, **Giọng đọc**, **Mic** — mỗi card
+      cách nhau khoảng 16px, không dính nhau.
 - [ ] Câu hỏi của user chỉ hiện nội dung + giờ, **không** hiện nhãn “gõ tay”/“giọng nói”.
-- [ ] Badge khớp/percent và tiến độ đọc nằm trong AnswerCard; không có panel
-      “Câu hỏi khớp”/“Đang đọc” trùng lặp.
+- [ ] Badge khớp/percent và tiến độ đọc nằm trong AnswerCard; thanh “Đang đọc”
+      là nơi duy nhất nhận diện nội dung đang phát.
 
 ## 3. Phiên (`/sessions`)
 
@@ -81,12 +84,16 @@ Mục nào lỗi thì ghi lại màn hình + bước tái hiện.
 
 - [ ] Không còn route `/settings`; bánh răng mở drawer ở mọi màn hình.
 - [ ] Drawer đóng được bằng `Esc`, nút đóng, hoặc bấm ra ngoài; focus trả về nút mở.
+- [ ] Drawer chỉ còn engine/VAD/stream/preset; **không** còn chế độ, giọng đọc,
+      hay “Thử nghiệm trên file”.
 - [ ] Thay đổi một trường "live" áp dụng ngay; trường engine/capture có nút `Áp dụng`.
 - [ ] Không còn đoạn hướng dẫn dài về micro.
 
-## 6. Giọng đọc & preload
+## 6. Chế độ & Giọng đọc (sidebar Hỏi đáp)
 
-- [ ] Mục **Giọng đọc** nằm đầu drawer; select liệt kê preset + giọng clone.
+- [ ] Card **Chế độ** có 2 nút `Chính xác` / `Realtime`; bấm đổi ngay, trạng thái
+      `aria-pressed` đúng.
+- [ ] Card **Giọng đọc** liệt kê preset + giọng clone.
 - [ ] Đổi giọng → hiện “Đang nạp giọng vào RAM…”, sau đó biến mất; không chặn thao tác.
 - [ ] Đổi giọng khi đang đọc đáp án → audio cũ dừng, giọng mới được nạp.
 - [ ] Ô **Nội dung thử** + nút **Test giọng** đọc bằng đúng giọng đang chọn;

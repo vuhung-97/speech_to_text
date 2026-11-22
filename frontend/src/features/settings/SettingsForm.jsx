@@ -2,10 +2,8 @@
 // One responsibility: render the schema-driven form and its side panels.
 
 import { useLive } from "../../shared/live/LiveProvider";
-import { VoiceSettings } from "../tts";
 import FieldRow from "./FieldRow";
 import PresetPanel from "./PresetPanel";
-import ReplayPanel from "./ReplayPanel";
 import { useSettings } from "./SettingsProvider";
 
 const GROUP_TITLES = {
@@ -39,7 +37,7 @@ function EngineBadge({ engine }) {
   );
 }
 
-export default function SettingsForm({ active = true }) {
+export default function SettingsForm() {
   const { settings } = useSettings();
   const { pending, engine } = useLive();
 
@@ -55,8 +53,6 @@ export default function SettingsForm({ active = true }) {
 
   return (
     <div className="space-y-5">
-      <VoiceSettings active={active} />
-
       {settings.warnings?.length > 0 && (
         <ul className="space-y-1.5">
           {settings.warnings.map((warning) => (
@@ -75,6 +71,7 @@ export default function SettingsForm({ active = true }) {
           (field) =>
             field.group === group &&
             field.key !== "device" &&
+            field.key !== "mode" &&
             (!field.mode_only || field.mode_only === settings.values.mode),
         );
         if (!fields.length) return null;
@@ -98,7 +95,6 @@ export default function SettingsForm({ active = true }) {
         );
       })}
 
-      <ReplayPanel />
       <PresetPanel />
     </div>
   );

@@ -132,7 +132,7 @@ export function useAnswerReader({ onBeforeRead } = {}) {
   );
 
   useEffect(() => {
-    if (speech.status === "idle") setReadingId("");
+    if (["idle", "done", "error"].includes(speech.status)) setReadingId("");
   }, [speech.status]);
 
   return { speech, readingId, audioPlaying, read, stop };

@@ -101,6 +101,10 @@ def main() -> int:
         "threshold": args.threshold,
         "decode_interval": args.decode_interval,
     })
+    settings.apply_cli({
+        "tts_precision": os.environ.get("VIENEU_PRECISION"),
+        "tts_threads": os.environ.get("VIENEU_THREADS"),
+    })
     values = settings.values()
     print(f"Mode: {values['mode']} | model: {values['model']} | "
           f"threads: {values['cpu_threads']}")
@@ -111,7 +115,7 @@ def main() -> int:
     pipeline = LivePipeline(engine, bus, settings)
     replay = ReplayService(pipeline.decode, settings, SAMPLES_DIR)
 
-    tts = TtsService()
+    tts = TtsService(settings=settings)
     if not args.no_tts_preload:
         print("Preloading TTS model (VieNeu)...")
         tts.preload_async(synthesize=os.environ.get("TTS_PRELOAD_INFER") == "1")

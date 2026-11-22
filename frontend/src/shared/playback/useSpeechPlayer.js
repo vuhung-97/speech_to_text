@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { cancelTtsSession } from "../../services/api";
 import { messageFor } from "../../services/errors";
+import { readLookahead, readPrebuffer } from "../tts/constants";
 import { PcmPlayer } from "./pcmPlayer";
 import { streamSpeech, ttsWavUrl } from "./pcmStream";
 import { beginPlayback, endPlayback, isCurrentPlayback } from "./playbackChannel";
@@ -74,6 +75,8 @@ export function useSpeechPlayer() {
       let key = 0;
       const player = new PcmPlayer({
         speed: rate,
+        prebuffer: readPrebuffer(),
+        lookahead: readLookahead(),
         // The claim is released only when the buffer actually finished
         // playing, not when the last byte arrived: the tail must still be
         // stopped by the next owner.

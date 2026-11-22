@@ -93,6 +93,18 @@ describe("PcmPlayer scheduling", () => {
     player.stop();
   });
 
+  it("schedules only within the configured lookahead", () => {
+    const player = new PcmPlayer({ prebuffer: 0.2, lookahead: 2 });
+    player.setSampleRate(1000);
+
+    for (let index = 0; index < 60; index += 1) player.push(block());
+
+    const first = sources[0].startAt;
+    const last = sources[sources.length - 1].startAt;
+    expect(last - first).toBeLessThan(2.1);
+    player.stop();
+  });
+
   it("pauses the producer above high water and resumes after draining", async () => {
     const player = new PcmPlayer({ prebuffer: 0 });
     player.setSampleRate(1000);

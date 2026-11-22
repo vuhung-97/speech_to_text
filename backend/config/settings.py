@@ -16,6 +16,7 @@ from typing import Any
 from .constants import MODE_ACCURATE, MODE_REALTIME, MODES
 from .fields import EngineSpec, Field
 from .paths import SETTINGS_PATH
+from .tts import TTS_FIELDS
 
 SETTINGS_VERSION = 1
 CATALOG = Callable[[], dict[str, EngineSpec]]
@@ -99,13 +100,13 @@ class Settings:
         return self._catalog()
 
     def fields(self) -> tuple[Field, ...]:
-        """Base fields + the model selector + the active engine's own fields."""
+        """Base fields + TTS knobs + the model selector + the active engine's fields."""
         with self._lock:
             specs = self._catalog()
             active = self._values.get(MODEL_KEY)
             spec = specs.get(active) if isinstance(active, str) else None
             engine_fields = spec.fields if spec else ()
-            return (model_field(specs), *BASE_FIELDS, *engine_fields)
+            return (model_field(specs), *BASE_FIELDS, *TTS_FIELDS, *engine_fields)
 
     def schema(self) -> list[dict[str, Any]]:
         return [field.to_dict() for field in self.fields()]
@@ -187,7 +188,7 @@ class Settings:
     # -- internals ---------------------------------------------------------
     def _defaults(self) -> dict[str, Any]:
         specs = self._catalog()
-        values = {field.key: field.default for field in BASE_FIELDS}
+        values = {field.key: field.default for field in (*BASE_FIELDS, *TTS_FIELDS)}
         values[MODEL_KEY] = model_field(specs).default
         spec = specs.get(values[MODEL_KEY])
         if spec:
@@ -196,7 +197,7 @@ class Settings:
 
     def _known_fields(self) -> dict[str, Field]:
         specs = self._catalog()
-        known = {field.key: field for field in BASE_FIELDS}
+        known = {field.key: field for field in (*BASE_FIELDS, *TTS_FIELDS)}
         known[MODEL_KEY] = model_field(specs)
         for spec in specs.values():  # fields of every engine stay valid (presets, switching)
             for field in spec.fields:
@@ -250,6 +251,7 @@ def _effects(known: dict[str, Field],
         "engine": [key for key in keys if known[key].effect == "engine"],
         "capture": [key for key in keys if known[key].effect == "capture"],
         "vad": [key for key in keys if known[key].effect == "vad"],
+        "tts": [key for key in keys if known[key].effect == "tts"],
     }
 
 

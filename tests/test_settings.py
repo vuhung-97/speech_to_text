@@ -131,6 +131,19 @@ def test_warnings() -> None:
     print("[6] Warnings OK - risky values and unavailable engines are surfaced")
 
 
+def test_tts_fields_and_effects() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        settings = new_settings(Path(tmp))
+        assert settings.values()["tts_precision"] == "fp32"
+        assert settings.values()["tts_threads"] == 0
+
+        result = settings.update({"tts_precision": "int8", "tts_threads": 99})
+        assert result["values"]["tts_threads"] == 8, "threads clamp to the schema max"
+        assert set(result["effects"]["tts"]) == {"tts_precision", "tts_threads"}
+        assert result["effects"]["engine"] == [], "TTS knobs must not reload the ASR engine"
+    print("[7] TTS knobs OK - validated, clamped and classified")
+
+
 if __name__ == "__main__":
     test_defaults()
     test_validation()
@@ -138,4 +151,5 @@ if __name__ == "__main__":
     test_persistence()
     test_cli_is_session_only()
     test_warnings()
+    test_tts_fields_and_effects()
     print("TEST_SETTINGS_DONE")

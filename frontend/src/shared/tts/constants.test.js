@@ -1,12 +1,23 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  DEFAULT_LOOKAHEAD,
+  DEFAULT_PREBUFFER,
   DEFAULT_SPEED,
+  LOOKAHEAD_STORAGE_KEY,
+  MAX_LOOKAHEAD,
+  MAX_PREBUFFER,
+  MIN_LOOKAHEAD,
+  PREBUFFER_STORAGE_KEY,
   SPEED_STORAGE_KEY,
   VOICE_STORAGE_KEY,
   clampSpeed,
+  readLookahead,
+  readPrebuffer,
   readSpeed,
   readVoice,
+  saveLookahead,
+  savePrebuffer,
   saveSpeed,
   saveVoice,
 } from "./constants";
@@ -44,5 +55,17 @@ describe("tts constants", () => {
     saveSpeed(1.4);
     expect(window.localStorage.getItem(SPEED_STORAGE_KEY)).toBe("1.4");
     expect(readSpeed()).toBe(1.4);
+  });
+
+  it("round-trips the playback buffer preferences and clamps them", () => {
+    expect(readPrebuffer()).toBe(DEFAULT_PREBUFFER);
+    expect(savePrebuffer(99)).toBe(MAX_PREBUFFER);
+    expect(window.localStorage.getItem(PREBUFFER_STORAGE_KEY)).toBe("8");
+    expect(readPrebuffer()).toBe(MAX_PREBUFFER);
+
+    expect(readLookahead()).toBe(DEFAULT_LOOKAHEAD);
+    expect(saveLookahead(0)).toBe(MIN_LOOKAHEAD);
+    expect(window.localStorage.getItem(LOOKAHEAD_STORAGE_KEY)).toBe("2");
+    expect(readLookahead()).toBe(MIN_LOOKAHEAD);
   });
 });

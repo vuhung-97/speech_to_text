@@ -9,9 +9,19 @@ import Button from "../../components/ui/Button";
 import { FIELD_CLASS } from "../../components/ui/fieldStyles";
 import { useSpeechPlayer } from "../../shared/playback/useSpeechPlayer";
 import {
+  MAX_LOOKAHEAD,
+  MAX_PREBUFFER,
   MAX_SPEED,
+  MIN_LOOKAHEAD,
+  MIN_PREBUFFER,
   MIN_SPEED,
+  LOOKAHEAD_STEP,
+  PREBUFFER_STEP,
   SPEED_STEP,
+  readLookahead,
+  readPrebuffer,
+  saveLookahead,
+  savePrebuffer,
 } from "../../shared/tts/constants";
 import { useVoice } from "../../shared/tts/VoiceProvider";
 import VoicePicker from "./VoicePicker";
@@ -35,10 +45,36 @@ function Chevron() {
   );
 }
 
+function PrefSlider({ label, value, min, max, step, unit, onChange }) {
+  return (
+    <div className="pt-1">
+      <div className="mb-0.5 flex items-center justify-between text-[10.5px] text-faint">
+        <span>{label}</span>
+        <span className="font-mono text-dim">
+          {value}
+          {unit}
+        </span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+        aria-label={label}
+        className="h-11 w-full accent-accent sm:h-6"
+      />
+    </div>
+  );
+}
+
 export default function VoiceSettings({ embedded = false }) {
   const voice = useVoice();
   const speech = useSpeechPlayer();
   const [sample, setSample] = useState(SAMPLE_TEXT);
+  const [prebuffer, setPrebuffer] = useState(readPrebuffer);
+  const [lookahead, setLookahead] = useState(readLookahead);
 
   const loading = voice.loading && !voice.loaded;
   const testing = speech.busy;
@@ -51,6 +87,9 @@ export default function VoiceSettings({ embedded = false }) {
     speech.stop();
     voice.chooseVoice(value);
   };
+
+  const changePrebuffer = (value) => setPrebuffer(savePrebuffer(value));
+  const changeLookahead = (value) => setLookahead(saveLookahead(value));
 
   const toggleTest = () => {
     if (testing) {
@@ -95,6 +134,36 @@ export default function VoiceSettings({ embedded = false }) {
           className="h-11 w-full accent-accent sm:h-6"
         />
       </div>
+
+      <details className="group border-t border-line pt-2">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 py-1 text-[10.5px] text-dim focus-ring sm:min-h-8">
+          Chất lượng phát
+          <Chevron />
+        </summary>
+        <div className="mt-2 space-y-1">
+          <PrefSlider
+            label="Đệm trước khi đọc"
+            value={prebuffer}
+            min={MIN_PREBUFFER}
+            max={MAX_PREBUFFER}
+            step={PREBUFFER_STEP}
+            unit="s"
+            onChange={changePrebuffer}
+          />
+          <PrefSlider
+            label="Xem trước khi phát"
+            value={lookahead}
+            min={MIN_LOOKAHEAD}
+            max={MAX_LOOKAHEAD}
+            step={LOOKAHEAD_STEP}
+            unit="s"
+            onChange={changeLookahead}
+          />
+          <p className="m-0 text-[10px] leading-relaxed text-faint">
+            Tăng nếu giọng bị vấp trên máy chậm; áp dụng ở lần đọc kế tiếp.
+          </p>
+        </div>
+      </details>
 
       {voice.preloading && (
         <p

@@ -102,7 +102,11 @@ def create_app(settings: Settings, pipeline: LivePipeline, replay: ReplayService
     app.state.pipeline = pipeline
     app.state.replay = replay
     app.state.bus = bus
-    app.state.tts = tts or TtsService()
+    speech = tts or TtsService(settings=settings)
+    bind = getattr(speech, "bind_settings", None)
+    if callable(bind):
+        bind(settings)
+    app.state.tts = speech
 
     database = Database(db_path or DB_PATH)
     sessions_repo = SqliteSessionRepository(database)

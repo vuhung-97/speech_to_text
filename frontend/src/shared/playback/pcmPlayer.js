@@ -13,14 +13,23 @@
 // `stop()` releases the AudioContext and any producer waiting for room.
 
 const MIN_LEAD_SEC = 0.12; // schedule at least this far in the future
-const SCHEDULE_AHEAD_SEC = 4; // never schedule audio further ahead than this
+const DEFAULT_LOOKAHEAD_SEC = 4; // never schedule audio further ahead than this
 const HIGH_WATER_SEC = 6; // pause the producer above this buffered duration
 const LOW_WATER_SEC = 3; // resume it once playback drained below this
 
 export class PcmPlayer {
-  constructor({ volume = 1, prebuffer = 2.5, onDrained = null, speed = 1 } = {}) {
+  constructor({
+    volume = 1,
+    prebuffer = 2.5,
+    lookahead = DEFAULT_LOOKAHEAD_SEC,
+    onDrained = null,
+    speed = 1,
+  } = {}) {
     this.volume = volume;
     this.prebuffer = Math.max(0, prebuffer);
+    this.lookahead = Math.max(1, Number(lookahead) || DEFAULT_LOOKAHEAD_SEC);
+    this.highWater = Math.max(HIGH_WATER_SEC, this.lookahead + 1);
+    this.lowWater = Math.min(LOW_WATER_SEC, this.highWater / 2);
     this.speed = Math.min(3, Math.max(0.5, Number(speed) || 1));
     this._onDrained = onDrained;
 
@@ -89,7 +98,7 @@ export class PcmPlayer {
     this._pendingSeconds += duration;
     this._pump();
 
-    if (this.bufferedSeconds <= HIGH_WATER_SEC) return Promise.resolve();
+    if (this.bufferedSeconds <= this.highWater) return Promise.resolve();
     return new Promise((resolve) => this._waiters.push(resolve));
   }
 
@@ -111,7 +120,7 @@ export class PcmPlayer {
     }
 
     const now = this._context ? this._context.currentTime : 0;
-    while (this._pending.length && this._nextTime - now < SCHEDULE_AHEAD_SEC) {
+    while (this._pending.length && this._nextTime - now < this.lookahead) {
       const block = this._pending.shift();
       this._pendingSeconds = Math.max(
         0,
@@ -136,7 +145,7 @@ export class PcmPlayer {
     if (this._nextTime < now + MIN_LEAD_SEC) {
       this._nextTime = now + MIN_LEAD_SEC; // start or recover from underrun
     }
-    // No "backlog reset": _pump only schedules within SCHEDULE_AHEAD_SEC, so
+    // No "backlog reset": _pump only schedules within `lookahead`, so
     // two blocks can never occupy the same moment.
     const clockDuration = buffer.duration / this.speed;
     source.start(this._nextTime);
@@ -153,7 +162,7 @@ export class PcmPlayer {
   }
 
   _releaseWaiters() {
-    if (this.bufferedSeconds > LOW_WATER_SEC) return;
+    if (this.bufferedSeconds > this.lowWater) return;
     const waiters = this._waiters;
     this._waiters = [];
     for (const resolve of waiters) resolve();

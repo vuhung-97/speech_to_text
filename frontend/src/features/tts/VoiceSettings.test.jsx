@@ -134,4 +134,22 @@ describe("VoiceSettings", () => {
     expect(await screen.findByText("chưa cài package 'vieneu'")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Thử lại" })).toBeInTheDocument();
   });
+
+  it("persists the playback buffer sliders", async () => {
+    renderSettings();
+    await screen.findByLabelText("Giọng đọc");
+
+    const details = screen.getByText("Chất lượng phát").closest("details");
+    details.open = true;
+
+    fireEvent.change(screen.getByLabelText("Đệm trước khi đọc"), {
+      target: { value: "4" },
+    });
+    expect(window.localStorage.getItem("tts.prebuffer")).toBe("4");
+
+    fireEvent.change(screen.getByLabelText("Xem trước khi phát"), {
+      target: { value: "8" },
+    });
+    expect(window.localStorage.getItem("tts.lookahead")).toBe("8");
+  });
 });

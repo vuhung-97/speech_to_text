@@ -22,7 +22,9 @@ import numpy as np
 
 from ..config.constants import TTS_SAMPLE_RATE
 from ..config.paths import TTS_DISK_QUOTA_MB, TTS_TEMP_DIR, VIENEU_CUSTOM_VOICES, VIENEU_HF_CACHE
-from ..config.tts import requested_precision, requested_threads
+from ..config.settings import Settings
+from ..config.tts import (PRECISION_BY_SUBFOLDER, clamp_threads,
+                          requested_precision, requested_threads)
 from ..domain.audio.pcm import silence_pcm, to_pcm16, to_wav_bytes
 from ..domain.text.limits import MAX_TTS_CHARS, check_stream_text
 from ..domain.text.split import SpeechUnit, split_speech_units
@@ -48,26 +50,27 @@ class TtsService:
         threads: int | None = None,
         temp_root: Path | str | None = None,
         quota_mb: int = TTS_DISK_QUOTA_MB,
+        settings: Settings | None = None,
     ) -> None:
         self._cache_dir = Path(cache_dir) if cache_dir else VIENEU_HF_CACHE
         self._custom_voices = Path(custom_voices) if custom_voices else VIENEU_CUSTOM_VOICES
-        self._precision = requested_precision(precision)
-        self._threads = requested_threads(threads)
+        self._explicit_precision = precision
+        self._explicit_threads = threads
+        self._settings = settings
 
         self._catalog = VoiceCatalog(self._custom_voices)
-        self._loader = TtsEngineLoader(
-            self._cache_dir, self._precision, self._threads,
-            self._catalog.read_custom_voices,
-        )
         self._engine: Any = None
         self._load_seconds = 0.0
         self._load_lock = threading.Lock()
-        self._infer_lock = threading.Lock()
+        # Re-entrant: the hot paths already hold it when they call _ensure_engine.
+        self._infer_lock = threading.RLock()
         self._preload_lock = threading.Lock()
         self._preload_token = 0
         self._preloading = False
         self._preload_error = ""
         self._warmed_voice = ""
+        self._requested: tuple[str, int] | None = None  # settings the user wants
+        self._runtime: tuple[str, int] | None = None    # what the engine runs
         self._store = TtsJobStore(temp_root or TTS_TEMP_DIR, quota_mb)
 
     # -- availability / catalog -------------------------------------------
@@ -80,12 +83,43 @@ class TtsService:
             return False, "chưa cài package 'vieneu' — chạy: pip install vieneu"
         return True, ""
 
+    def bind_settings(self, settings: Settings) -> None:
+        """Attach the settings store after construction (composition root)."""
+        self._settings = settings
+
+    # -- runtime config ----------------------------------------------------
+    def _requested_precision(self) -> str:
+        if self._explicit_precision:
+            return requested_precision(self._explicit_precision)
+        stored = self._settings.get("tts_precision") if self._settings else None
+        return requested_precision(stored if isinstance(stored, str) else None)
+
+    def _requested_threads(self) -> int:
+        if self._explicit_threads is not None:
+            return clamp_threads(self._explicit_threads)
+        stored = self._settings.get("tts_threads") if self._settings else None
+        return requested_threads(stored)
+
+    def _new_loader(self, precision: str, threads: int) -> TtsEngineLoader:
+        return TtsEngineLoader(self._cache_dir, precision, threads,
+                               self._catalog.read_custom_voices)
+
     def _local_model(self) -> tuple[Path | None, Path | None, bool]:
-        return self._loader.local_model()
+        return self._new_loader(
+            self._requested_precision(), self._requested_threads()).local_model()
+
+    def _effective_precision(self, requested: str) -> str:
+        """The requested precision when its files exist, else the local fallback."""
+        _root, onnx_dir, _offline = self._new_loader(requested, 0).local_model()
+        if onnx_dir is None:
+            return requested
+        return PRECISION_BY_SUBFOLDER.get(onnx_dir.name, requested)
 
     def status(self) -> dict[str, Any]:
         ready, reason = self.available()
         _root, onnx_dir, offline = self._local_model() if ready else (None, None, False)
+        precision = self._requested_precision()
+        built = self._runtime
         return {
             "available": ready,
             "reason": reason,
@@ -95,7 +129,9 @@ class TtsService:
             "load_seconds": round(self._load_seconds, 2),
             "sample_rate": SAMPLE_RATE,
             "max_chars": MAX_TTS_CHARS,
-            "precision": self._precision,
+            "precision": precision,
+            "precision_effective": built[0] if built else precision,
+            "threads": self._requested_threads(),
             "preloading": self._preloading,
             "preload_error": self._preload_error,
             "warmed_voice": self._warmed_voice,
@@ -109,18 +145,29 @@ class TtsService:
 
     # -- synthesis ---------------------------------------------------------
     def _ensure_engine(self) -> Any:
-        if self._engine is not None:
-            return self._engine
-        ready, reason = self.available()
-        if not ready:
-            raise TtsUnavailable(reason)
-        with self._load_lock:
-            if self._engine is not None:
+        # The infer lock keeps a settings change from swapping the graph while a
+        # read is running; it is re-entrant because hot paths already hold it.
+        with self._infer_lock:
+            requested = (self._requested_precision(), self._requested_threads())
+            if self._engine is not None and self._requested == requested:
                 return self._engine
-            engine, seconds = self._loader.create()
-            self._engine = engine
-            self._load_seconds = seconds
-            return engine
+            with self._load_lock:
+                if self._engine is not None and self._requested == requested:
+                    return self._engine
+                if self._engine is not None:
+                    # Settings changed: drop the graph; the next read rebuilds it.
+                    self._engine = None
+                    self._warmed_voice = ""
+                ready, reason = self.available()
+                if not ready:
+                    raise TtsUnavailable(reason)
+                precision = self._effective_precision(requested[0])
+                engine, seconds = self._new_loader(precision, requested[1]).create()
+                self._engine = engine
+                self._requested = requested
+                self._runtime = (precision, requested[1])
+                self._load_seconds = seconds
+                return engine
 
     def _resolve_voice(self, voice: str | None) -> str | None:
         presets, default = self.voices()
@@ -215,8 +262,7 @@ class TtsService:
         if synthesize:
             try:
                 self.synthesize("Xin chào.", selected)
-                with self._load_lock:
-                    self._warmed_voice = selected or ""
+                self._warmed_voice = selected or ""
                 logger.info("TTS đã nạp giọng '%s' — sẵn sàng đọc ngay", selected)
             except Exception as exc:  # noqa: BLE001 - warmup must never block startup
                 logger.warning("chạy thử TTS thất bại: %s", exc)

@@ -12,9 +12,10 @@ const GROUP_TITLES = {
   engine: "Model & tài nguyên",
   vad: "Câu & im lặng",
   stream: "Luồng (realtime)",
+  tts: "Giọng đọc (TTS)",
 };
 
-const GROUPS = ["mode", "engine", "vad", "stream"];
+const GROUPS = ["mode", "engine", "vad", "stream", "tts"];
 
 function EngineBadge({ engine }) {
   if (engine.state === "loading") {

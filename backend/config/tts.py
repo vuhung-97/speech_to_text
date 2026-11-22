@@ -9,12 +9,17 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from .fields import Field
+
 BACKBONE_REPO = "pnnbao-ump/VieNeu-TTS-v3-Turbo"
 CODEC_REPO = "OpenMOSS-Team/MOSS-Audio-Tokenizer-Nano-ONNX"
 
 DEFAULT_PRECISION = "fp32"
 PRECISION_SUBFOLDERS = {"fp32": "onnx_update", "int8": "onnx_int8"}
 PRECISION_FALLBACK = ("fp32", "int8")
+PRECISIONS = tuple(PRECISION_SUBFOLDERS)
+PRECISION_BY_SUBFOLDER = {folder: name for name, folder in PRECISION_SUBFOLDERS.items()}
+MAX_THREADS = 8
 
 GRAPH_FILES = (
     "vieneu_prefill.onnx",
@@ -35,6 +40,27 @@ CODEC_FILES = (
     "moss_audio_tokenizer_encode.data",
 )
 
+# Runtime knobs exposed in the settings drawer (group "tts").
+TTS_FIELDS: tuple[Field, ...] = (
+    Field("tts_precision", "tts", "Độ chính xác TTS", "enum", DEFAULT_PRECISION,
+          hint=("fp32: chất lượng cao nhất. int8: nhanh hơn trên CPU, chất lượng "
+                "giảm nhẹ. Áp dụng ở lần đọc kế tiếp."),
+          options=PRECISIONS, effect="tts"),
+    Field("tts_threads", "tts", "Luồng CPU cho TTS", "int", 0,
+          hint=("0 = tự động. Tăng để tổng hợp nhanh hơn nhưng tranh CPU với "
+                "nhận dạng. Áp dụng ở lần đọc kế tiếp."),
+          minimum=0, maximum=MAX_THREADS, step=1, effect="tts"),
+)
+
+
+def clamp_threads(value: object) -> int:
+    """0 = SDK decides; anything else is clamped to 1..MAX_THREADS."""
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return 0
+    return max(0, min(MAX_THREADS, number))
+
 
 def requested_precision(explicit: str | None = None) -> str:
     """``VIENEU_PRECISION`` (or the argument) clamped to a known folder."""
@@ -45,8 +71,8 @@ def requested_precision(explicit: str | None = None) -> str:
 def requested_threads(explicit: int | None = None) -> int:
     """``VIENEU_THREADS``/argument; ``0`` means "let the SDK decide"."""
     if explicit is not None:
-        return int(explicit)
-    return int(os.environ.get("VIENEU_THREADS") or 0)
+        return clamp_threads(explicit)
+    return clamp_threads(os.environ.get("VIENEU_THREADS") or 0)
 
 
 def configure_hub_environment(cache_dir: Path, offline: bool) -> None:
@@ -64,8 +90,13 @@ __all__ = [
     "CODEC_REPO",
     "DEFAULT_PRECISION",
     "GRAPH_FILES",
+    "MAX_THREADS",
+    "PRECISION_BY_SUBFOLDER",
     "PRECISION_FALLBACK",
     "PRECISION_SUBFOLDERS",
+    "PRECISIONS",
+    "TTS_FIELDS",
+    "clamp_threads",
     "configure_hub_environment",
     "requested_precision",
     "requested_threads",

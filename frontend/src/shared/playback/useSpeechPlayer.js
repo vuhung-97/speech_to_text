@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { cancelTtsSession } from "../../services/api";
 import { messageFor } from "../../services/errors";
 import { PcmPlayer } from "./pcmPlayer";
 import { streamSpeech, ttsWavUrl } from "./pcmStream";
@@ -25,18 +26,30 @@ export function useSpeechPlayer() {
   const playerRef = useRef(null);
   const abortRef = useRef(null);
   const keyRef = useRef(0);
+  const sessionRef = useRef("");
   const aliveRef = useRef(true);
+
+  const cancelSession = useCallback((sessionId) => {
+    if (!sessionId) return;
+    cancelTtsSession(sessionId).catch(() => {
+      /* the job may already be finished/removed */
+    });
+  }, []);
 
   const teardown = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
     playerRef.current?.stop();
     playerRef.current = null;
+    // Aborting the HTTP body is not enough: the server may still be busy for
+    // a few seconds. Delete the job so a new read can start immediately.
+    cancelSession(sessionRef.current);
+    sessionRef.current = "";
     if (keyRef.current) {
       endPlayback(keyRef.current);
       keyRef.current = 0;
     }
-  }, []);
+  }, [cancelSession]);
 
   useEffect(() => {
     aliveRef.current = true;
@@ -67,6 +80,8 @@ export function useSpeechPlayer() {
         onDrained: () => {
           if (!isCurrentPlayback(key)) return;
           player.stop();
+          // The WAV is finished and still downloadable; do not delete it.
+          sessionRef.current = "";
           if (aliveRef.current) {
             setState({ ...IDLE, status: "done", sessionId });
           }
@@ -76,11 +91,18 @@ export function useSpeechPlayer() {
       key = beginPlayback(() => {
         controller.abort();
         player.stop();
+        cancelSession(sessionId);
+        if (aliveRef.current) {
+          setState((previous) =>
+            previous.status === "idle" ? previous : { ...previous, status: "idle" },
+          );
+        }
       });
       // Adopt synchronously so a stop during resume() aborts the right stream.
       playerRef.current = player;
       abortRef.current = controller;
       keyRef.current = key;
+      sessionRef.current = "";
 
       try {
         await player.resume(); // inside the click handler → autoplay allowed
@@ -102,6 +124,7 @@ export function useSpeechPlayer() {
           onStart: ({ sampleRate, estimated, sessionId: started }) => {
             if (!isCurrentPlayback(key)) return;
             sessionId = started;
+            sessionRef.current = started;
             player.setSampleRate(sampleRate);
             if (aliveRef.current) {
               setState({
@@ -142,7 +165,7 @@ export function useSpeechPlayer() {
         if (abortRef.current === controller) abortRef.current = null;
       }
     },
-    [],
+    [cancelSession],
   );
 
   const progress =

@@ -11,6 +11,7 @@ import { readSpeed, readVoice } from "../../shared/tts/constants";
 // would already be detached.
 export function useAnswerReader({ onBeforeRead } = {}) {
   const [readingId, setReadingId] = useState("");
+  const [readError, setReadError] = useState("");
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [mediaMode, setMediaMode] = useState("");
   const [audioTiming, setAudioTiming] = useState({ seconds: 0, duration: 0 });
@@ -101,6 +102,7 @@ export function useAnswerReader({ onBeforeRead } = {}) {
     }
     setAudioPlaying(false);
     setReadingId("");
+    setReadError("");
     setMediaMode("");
     setAudioTiming({ seconds: 0, duration: 0 });
   }, [speech]);
@@ -122,6 +124,7 @@ export function useAnswerReader({ onBeforeRead } = {}) {
   const read = useCallback(
     async (answer) => {
       if (!answer?.text) return;
+      setReadError("");
       // Claiming stops the previous source (stream or cached WAV) right now,
       // before any await, so two reads never overlap.
       const key = beginPlayback(silence);
@@ -161,7 +164,10 @@ export function useAnswerReader({ onBeforeRead } = {}) {
         } catch {
           // Autoplay rejected (or superseded): only stop if this claim is
           // still the current one, never the source that replaced it.
-          if (isCurrentPlayback(key)) stop();
+          if (isCurrentPlayback(key)) {
+            stop();
+            setReadError("Không phát được audio. Bấm Đọc để thử lại.");
+          }
         }
         return;
       }
@@ -182,8 +188,12 @@ export function useAnswerReader({ onBeforeRead } = {}) {
     // `idle` is deliberately not included: cached WAV playback never changes
     // the speech status, and a stream→idle transition during a new cached
     // read must not clear the newly selected answer.
-    if (["done", "error"].includes(speech.status)) setReadingId("");
-  }, [speech.status]);
+    if (speech.status === "done") setReadingId("");
+    if (speech.status === "error") {
+      setReadError(speech.error || "Không đọc được câu trả lời.");
+      setReadingId("");
+    }
+  }, [speech.status, speech.error]);
 
   const audioProgress =
     audioTiming.duration > 0
@@ -193,6 +203,7 @@ export function useAnswerReader({ onBeforeRead } = {}) {
   return {
     speech,
     readingId,
+    readError,
     audioPlaying,
     mediaMode,
     audioTiming,

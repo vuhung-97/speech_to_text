@@ -1,10 +1,15 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import * as api from "../../services/api";
 import { useSpeechPlayer } from "./useSpeechPlayer";
 
 const players = [];
 const playback = vi.hoisted(() => ({ resumeImpl: () => Promise.resolve(undefined) }));
+
+vi.mock("../../services/api", () => ({
+  cancelTtsSession: vi.fn(() => Promise.resolve()),
+}));
 
 vi.mock("./pcmPlayer", () => ({
   PcmPlayer: vi.fn(function PcmPlayer(options = {}) {
@@ -138,6 +143,23 @@ describe("useSpeechPlayer", () => {
     expect(result.current.estimated).toBe(10);
     expect(result.current.seconds).toBe(2);
     expect(result.current.status).toBe("playing");
+  });
+
+  it("cancels the server job when stopped before it finishes", async () => {
+    vi.mocked(streamSpeech).mockImplementationOnce((text, voice, handlers) => {
+      handlers.onStart({ sampleRate: 48000, estimated: 20, sessionId: "s1" });
+      return Promise.resolve({ sessionId: "s1" });
+    });
+    const { result } = renderHook(() => useSpeechPlayer());
+
+    await act(async () => {
+      await result.current.start("câu dài", "Mai");
+    });
+    await act(async () => {
+      result.current.stop();
+    });
+
+    expect(api.cancelTtsSession).toHaveBeenCalledWith("s1");
   });
 
   it("reports done when the buffer actually drains", async () => {

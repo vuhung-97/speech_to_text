@@ -8,6 +8,8 @@
 import Button from "../../components/ui/Button";
 import { FIELD_CLASS, FIELD_TEXT } from "../../components/ui/fieldStyles";
 
+const CONTROL_HEIGHT = "h-11";
+
 function MicIcon() {
   return (
     <svg
@@ -56,11 +58,11 @@ export default function Composer({
       }}
       className="shrink-0 border-t border-line bg-surface/70 px-4 py-3 sm:px-6 lg:px-8"
     >
-      <div className="mx-auto flex w-full max-w-[780px] items-center gap-2">
+      <div className="mx-auto flex w-full max-w-[780px] items-stretch gap-2">
         <Button
           variant={listening ? "danger" : "secondary"}
           size="md"
-          className="h-11 shrink-0 px-3.5"
+          className={`${CONTROL_HEIGHT} shrink-0 px-3.5`}
           aria-pressed={listening}
           onClick={onToggleListen}
           title={listening ? "Dừng nghe" : "Nghe câu hỏi"}
@@ -69,7 +71,10 @@ export default function Composer({
           {listening ? "Dừng" : "Nghe"}
         </Button>
 
-        <label className="min-w-0 flex-1">
+        {/* The label must be a flex box with an explicit height. As an inline
+            line-box it adds descender space, which made the textarea bottom sit
+            a few pixels above the two buttons. */}
+        <label className={`flex ${CONTROL_HEIGHT} min-w-0 flex-1 items-center`}>
           <span className="sr-only">Câu hỏi</span>
           <textarea
             value={shown}
@@ -86,7 +91,7 @@ export default function Composer({
             placeholder={
               listening ? "Đang nghe…" : "Hỏi hoặc bấm micro…"
             }
-            className={`${FIELD_CLASS} h-11 min-h-11 w-full resize-none rounded-control px-3 py-2 leading-normal ${FIELD_TEXT}`}
+            className={`${FIELD_CLASS} block h-full min-h-0 w-full resize-none rounded-control px-3 py-2 leading-normal ${FIELD_TEXT}`}
           />
         </label>
 
@@ -94,7 +99,7 @@ export default function Composer({
           type="submit"
           variant="primary"
           size="md"
-          className="h-11 shrink-0 px-4"
+          className={`${CONTROL_HEIGHT} shrink-0 px-4`}
           disabled={!canSubmit}
         >
           {busy ? "Đang tìm…" : "Hỏi"}

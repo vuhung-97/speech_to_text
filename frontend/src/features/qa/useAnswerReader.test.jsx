@@ -33,6 +33,9 @@ function Harness() {
       <button type="button" onClick={() => reader.read({ id: "a2", text: "đáp án hai" })}>
         đọc B
       </button>
+      <button type="button" onClick={reader.stop}>
+        dừng
+      </button>
     </div>
   );
 }
@@ -79,6 +82,22 @@ describe("useAnswerReader", () => {
         1.2,
       ),
     );
+    expect(view.getByTestId("reading-id")).toHaveTextContent("a1");
+  });
+
+  it("can read the same cached answer again after stopping", async () => {
+    api.getAnswerSpeech.mockResolvedValue({ mode: "cached", url: "/wav/1" });
+    const view = render(<Harness />);
+
+    fireEvent.click(view.getByText("đọc A"));
+    await waitFor(() => expect(playSpy).toHaveBeenCalledTimes(1));
+    expect(view.getByTestId("reading-id")).toHaveTextContent("a1");
+
+    fireEvent.click(view.getByText("dừng"));
+    await waitFor(() => expect(view.getByTestId("reading-id")).toHaveTextContent(""));
+
+    fireEvent.click(view.getByText("đọc A"));
+    await waitFor(() => expect(playSpy).toHaveBeenCalledTimes(2));
     expect(view.getByTestId("reading-id")).toHaveTextContent("a1");
   });
 

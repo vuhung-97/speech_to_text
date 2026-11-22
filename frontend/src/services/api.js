@@ -28,6 +28,8 @@ export const getTtsVoices = () => http.get("/api/tts/voices");
 export const getTtsStatus = () => http.get(v1("/tts/status"));
 export const preloadTts = (voice) =>
   http.post(v1("/tts/preload"), { voice: voice || null });
+export const cancelTtsSession = (sessionId) =>
+  http.del(v1(`/tts/sessions/${encodeURIComponent(sessionId)}`));
 
 // ---------------------------------------------------------------- Q&A (v1)
 export const askQuestion = (

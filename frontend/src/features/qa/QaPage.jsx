@@ -150,6 +150,11 @@ export default function QaPage() {
         onStop={reader.stop}
       />
 
+      {reader.readError && (
+        <Alert className="mx-4 mb-2 lg:mx-auto lg:w-full lg:max-w-[780px]">
+          {reader.readError}
+        </Alert>
+      )}
       {error && <Alert className="mx-5 mb-2">{error}</Alert>}
 
       <Composer

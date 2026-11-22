@@ -13,7 +13,7 @@ function timeLabel(value) {
 
 export default function FaqDocumentsPanel({ documents, busy, onRename, onRemove }) {
   return (
-    <section className="mb-4 rounded-xl border border-line bg-white/[0.02] p-3">
+    <section className="mb-4 rounded-xl border border-line bg-wash p-3">
       <h2 className="m-0 mb-2 text-[12px] font-semibold tracking-[0.08em] text-faint uppercase">
         Bộ đề
       </h2>
@@ -26,10 +26,10 @@ export default function FaqDocumentsPanel({ documents, busy, onRename, onRemove 
           {documents.map((document) => (
             <li
               key={document.id}
-              className="flex items-center justify-between gap-2 rounded-lg border border-line bg-white/[0.03] px-2.5 py-2"
+              className="flex items-center justify-between gap-2 rounded-lg border border-line bg-wash-strong px-2.5 py-2"
             >
               <div className="min-w-0">
-                <p className="m-0 truncate text-[12.5px] text-white">{document.name}</p>
+                <p className="m-0 truncate text-[12.5px] text-content">{document.name}</p>
                 <p className="m-0 text-[12px] text-faint">
                   {document.entry_count} câu · {timeLabel(document.updated_at)}
                 </p>

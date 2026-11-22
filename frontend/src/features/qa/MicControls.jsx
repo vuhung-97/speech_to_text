@@ -21,7 +21,7 @@ export default function MicControls({
           {label}
         </span>
         {listen.active && (
-          <span className="h-1.5 w-20 shrink-0 overflow-hidden rounded-full bg-white/10">
+          <span className="h-1.5 w-20 shrink-0 overflow-hidden rounded-full bg-track">
             <span
               className="block h-full rounded-full bg-gradient-to-r from-accent-2 to-accent"
               style={{ width: `${levelPercent}%` }}

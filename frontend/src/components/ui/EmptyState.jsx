@@ -2,7 +2,7 @@
 
 export default function EmptyState({ icon = null, title, hint, action = null }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-card border border-line bg-surface px-6 py-12 text-center">
+    <div className="flex flex-col items-center justify-center gap-2 rounded-card border border-line bg-surface-2/50 px-6 py-12 text-center">
       {icon && (
         <span className="mb-1 grid h-12 w-12 place-items-center rounded-full border border-accent/30 bg-accent/10 text-accent">
           {icon}

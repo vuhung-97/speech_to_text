@@ -14,10 +14,10 @@ export default function IconButton({
       aria-label={label}
       title={label}
       aria-pressed={active || undefined}
-      className={`grid h-11 w-11 place-items-center rounded-control border transition active:bg-white/[0.06] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:h-9 sm:w-9 ${
+      className={`grid h-11 w-11 place-items-center rounded-control border transition active:bg-wash-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:h-9 sm:w-9 ${
         active
           ? "border-accent/40 bg-accent/15 text-accent"
-          : "border-line bg-white/[0.03] text-dim hover:bg-white/[0.075] hover:text-white"
+          : "border-line bg-wash-strong text-dim hover:bg-wash-hover hover:text-content"
       } ${className}`}
       {...rest}
     >

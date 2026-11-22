@@ -8,10 +8,10 @@ const BASE =
 
 const VARIANTS = {
   primary:
-    "bg-gradient-to-br from-accent to-accent-2 text-[#201505] hover:brightness-110",
+    "bg-gradient-to-br from-accent to-accent-2 text-on-accent hover:brightness-110",
   secondary:
-    "border border-line bg-white/[0.04] text-dim hover:bg-white/[0.08] hover:text-white",
-  ghost: "text-dim hover:bg-white/[0.06] hover:text-white",
+    "border border-line bg-wash-strong text-dim hover:bg-wash-hover hover:text-content",
+  ghost: "text-dim hover:bg-wash-hover hover:text-content",
   danger:
     "border border-err/35 bg-err/10 text-err hover:bg-err/15",
 };

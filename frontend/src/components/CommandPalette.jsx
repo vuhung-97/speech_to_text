@@ -54,7 +54,7 @@ export default function CommandPalette({ open, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-start justify-center bg-black/60 px-4 pt-[12vh] backdrop-blur-[2px]"
+      className="fixed inset-0 z-[60] flex items-start justify-center bg-overlay px-4 pt-[12vh] backdrop-blur-[2px]"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -65,7 +65,7 @@ export default function CommandPalette({ open, onClose }) {
         aria-modal="true"
         aria-label="Điều hướng nhanh"
         tabIndex={-1}
-        className="w-[min(520px,100%)] overflow-hidden rounded-card border border-line bg-surface-2 shadow-[0_40px_120px_-40px_#000] outline-none"
+        className="w-[min(520px,100%)] overflow-hidden rounded-card border border-line bg-surface-2 shadow-card outline-none"
       >
         <input
           ref={inputRef}
@@ -76,7 +76,7 @@ export default function CommandPalette({ open, onClose }) {
           }}
           placeholder="Đi tới…"
           aria-label="Tìm màn hình"
-          className="w-full border-b border-line bg-transparent px-4 py-3 text-[14px] text-white outline-none placeholder:text-faint focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent sm:text-[13.5px]"
+          className="w-full border-b border-line bg-transparent px-4 py-3 text-[14px] text-content outline-none placeholder:text-faint focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent sm:text-[13.5px]"
         />
         <ul role="listbox" aria-label="Màn hình" className="m-0 max-h-[320px] list-none overflow-y-auto p-1.5">
           {items.map((item, position) => (
@@ -90,8 +90,8 @@ export default function CommandPalette({ open, onClose }) {
                 }}
                 className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0 ${
                   position === index
-                    ? "bg-accent/15 text-white"
-                    : "text-dim hover:bg-white/[0.05]"
+                    ? "bg-accent/15 text-content"
+                    : "text-dim hover:bg-wash-hover"
                 }`}
               >
                 <span className="text-[13px]">{item.label}</span>

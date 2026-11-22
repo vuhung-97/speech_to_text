@@ -54,13 +54,13 @@ export default function Composer({
         event.preventDefault();
         submit();
       }}
-      className="shrink-0 border-t border-line bg-surface/70 px-5 py-3"
+      className="shrink-0 border-t border-line bg-surface/70 px-4 py-3 sm:px-6 lg:px-8"
     >
-      <div className="mx-auto flex max-w-[760px] items-center gap-2">
+      <div className="mx-auto flex w-full max-w-[780px] items-center gap-2">
         <Button
           variant={listening ? "danger" : "secondary"}
           size="md"
-          className="h-11 shrink-0 px-4"
+          className="h-11 shrink-0 px-3.5"
           aria-pressed={listening}
           onClick={onToggleListen}
           title={listening ? "Dừng nghe" : "Nghe câu hỏi"}
@@ -83,7 +83,9 @@ export default function Composer({
             readOnly={listening}
             autoFocus
             rows={1}
-            placeholder={listening ? "Đang nghe…" : "Nhập câu hỏi…"}
+            placeholder={
+              listening ? "Đang nghe…" : "Hỏi hoặc bấm micro…"
+            }
             className={`${FIELD_CLASS} h-11 min-h-11 w-full resize-none rounded-control px-3 py-2 leading-normal ${FIELD_TEXT}`}
           />
         </label>
@@ -98,6 +100,20 @@ export default function Composer({
           {busy ? "Đang tìm…" : "Hỏi"}
         </Button>
       </div>
+      <p className="mx-auto mt-1.5 hidden w-full max-w-[780px] pl-[62px] text-[10px] text-faint sm:block">
+        <kbd className="rounded border border-line bg-wash-strong px-1 py-0.5 font-mono text-[9.5px]">
+          Enter
+        </kbd>{" "}
+        để gửi ·{" "}
+        <kbd className="rounded border border-line bg-wash-strong px-1 py-0.5 font-mono text-[9.5px]">
+          Shift
+        </kbd>{" "}
+        +{" "}
+        <kbd className="rounded border border-line bg-wash-strong px-1 py-0.5 font-mono text-[9.5px]">
+          Enter
+        </kbd>{" "}
+        xuống dòng
+      </p>
     </form>
   );
 }

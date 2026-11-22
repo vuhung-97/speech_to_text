@@ -106,6 +106,7 @@ export default function QaPage() {
   return (
     <AppShell
       title="Hỏi đáp"
+      rightTitle="Công cụ"
       right={
         <QaSidebar
           documents={documents.documents}
@@ -120,26 +121,6 @@ export default function QaPage() {
         />
       }
     >
-      {/* Mobile/tablet fallback: the right sidebar is hidden below lg. */}
-      <details className="shrink-0 border-b border-line bg-surface/40 lg:hidden">
-        <summary className="cursor-pointer px-5 py-3 text-[13px] text-dim focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
-          Bộ đề · Chế độ · Giọng đọc · Mic
-        </summary>
-        <div className="p-4 pt-0">
-          <QaSidebar
-            documents={documents.documents}
-            documentId={documentId}
-            onSelectDocument={documents.select}
-            busy={busy}
-            mic={mic}
-            listen={listen}
-            devices={micDevices.devices}
-            device={micDevices.device}
-            onChooseMic={micDevices.choose}
-          />
-        </div>
-      </details>
-
       <Thread
         turns={turns}
         loading={loading}

@@ -9,7 +9,7 @@ export default function VoicePicker({
 }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[13px] text-white">{label}</span>
+      <span className="mb-1 block text-[13px] text-content">{label}</span>
       <select
         value={voice}
         onChange={(event) => onChange(event.target.value)}

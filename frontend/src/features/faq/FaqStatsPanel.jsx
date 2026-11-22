@@ -3,19 +3,19 @@ import Button from "../../components/ui/Button";
 export default function FaqStatsPanel({ stats, unanswered, audit, onReindex, busy }) {
   return (
     <>
-      <section className="mb-4 rounded-xl border border-line bg-white/[0.02] p-3">
+      <section className="mb-4 rounded-xl border border-line bg-wash p-3">
         <h2 className="m-0 mb-2 text-[12px] font-semibold tracking-[0.08em] text-faint uppercase">
           Kho câu hỏi
         </h2>
         <dl className="m-0 grid grid-cols-2 gap-y-1.5 text-[12px]">
           <dt className="text-faint">Câu hỏi</dt>
-          <dd className="m-0 text-right text-white">{stats.entries ?? 0}</dd>
+          <dd className="m-0 text-right text-content">{stats.entries ?? 0}</dd>
           <dt className="text-faint">Đang bật</dt>
-          <dd className="m-0 text-right text-white">{stats.active ?? 0}</dd>
+          <dd className="m-0 text-right text-content">{stats.active ?? 0}</dd>
           <dt className="text-faint">Đã embedding</dt>
-          <dd className="m-0 text-right text-white">{stats.embedded ?? 0}</dd>
+          <dd className="m-0 text-right text-content">{stats.embedded ?? 0}</dd>
           <dt className="text-faint">Ngưỡng khớp</dt>
-          <dd className="m-0 text-right text-white">
+          <dd className="m-0 text-right text-content">
             {stats.threshold != null ? `${Math.round(stats.threshold * 100)}%` : "—"}
           </dd>
           <dt className="text-faint">Model</dt>
@@ -39,7 +39,7 @@ export default function FaqStatsPanel({ stats, unanswered, audit, onReindex, bus
         </Button>
       </section>
 
-      <section className="mb-4 rounded-xl border border-line bg-white/[0.02] p-3">
+      <section className="mb-4 rounded-xl border border-line bg-wash p-3">
         <h2 className="m-0 mb-2 text-[12px] font-semibold tracking-[0.08em] text-faint uppercase">
           Chưa có đáp án
         </h2>
@@ -49,7 +49,7 @@ export default function FaqStatsPanel({ stats, unanswered, audit, onReindex, bus
           <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
             {unanswered.slice(0, 6).map((item) => (
               <li key={item.question_norm} className="text-[12px] text-dim">
-                <span className="text-white">{item.sample || item.question_norm}</span>
+                <span className="text-content">{item.sample || item.question_norm}</span>
                 <span className="ml-1 font-mono text-[12px] text-faint">
                   ×{item.asks}
                 </span>
@@ -59,7 +59,7 @@ export default function FaqStatsPanel({ stats, unanswered, audit, onReindex, bus
         )}
       </section>
 
-      <section className="rounded-xl border border-line bg-white/[0.02] p-3">
+      <section className="rounded-xl border border-line bg-wash p-3">
         <h2 className="m-0 mb-2 text-[12px] font-semibold tracking-[0.08em] text-faint uppercase">
           Hoạt động gần đây
         </h2>

@@ -65,7 +65,7 @@ export default function PresetPanel() {
         <button
           type="button"
           onClick={save}
-          className="inline-flex min-h-11 flex-none items-center rounded-lg border border-line bg-white/[0.045] px-3 py-1.5 text-[12.5px] text-white hover:bg-white/[0.085] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
+          className="inline-flex min-h-11 flex-none items-center rounded-lg border border-line bg-wash-strong px-3 py-1.5 text-[12.5px] text-content hover:bg-wash-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
         >
           Lưu
         </button>
@@ -87,14 +87,14 @@ export default function PresetPanel() {
         <button
           type="button"
           onClick={load}
-          className="inline-flex min-h-11 flex-none items-center rounded-lg border border-line bg-white/[0.045] px-3 py-1.5 text-[12.5px] text-white hover:bg-white/[0.085] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
+          className="inline-flex min-h-11 flex-none items-center rounded-lg border border-line bg-wash-strong px-3 py-1.5 text-[12.5px] text-content hover:bg-wash-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
         >
           Nạp
         </button>
         <button
           type="button"
           onClick={remove}
-          className="inline-flex min-h-11 flex-none items-center rounded-lg px-2 py-1.5 text-[12.5px] text-dim hover:bg-white/5 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
+          className="inline-flex min-h-11 flex-none items-center rounded-lg px-2 py-1.5 text-[12.5px] text-dim hover:bg-wash-hover hover:text-content focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
         >
           Xoá
         </button>

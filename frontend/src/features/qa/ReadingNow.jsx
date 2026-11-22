@@ -11,9 +11,9 @@ export default function ReadingNow({ turn, playback, active = false, onStop }) {
     <div
       role="status"
       aria-live="polite"
-      className="shrink-0 border-t border-line bg-accent/[0.05] px-5 py-2.5"
+      className="shrink-0 border-t border-line bg-accent/[0.05] px-4 py-2.5 sm:px-6 lg:px-8"
     >
-      <div className="mx-auto flex max-w-[760px] items-center gap-3">
+      <div className="mx-auto flex w-full max-w-[780px] items-center gap-3">
         <span
           className={`h-2.5 w-2.5 shrink-0 rounded-full ${
             active ? "animate-pulse bg-accent motion-reduce:animate-none" : "bg-faint"
@@ -26,12 +26,12 @@ export default function ReadingNow({ turn, playback, active = false, onStop }) {
             Đang đọc
           </p>
           <p
-            className="m-0 truncate text-[13px] text-white"
+            className="m-0 truncate text-[13px] text-content"
             title={turn.answer?.text || ""}
           >
             {turn.answer?.text}
           </p>
-          <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/10">
+          <div className="mt-1 h-1 overflow-hidden rounded-full bg-track">
             {playback.estimated > 0 ? (
               <div
                 className="h-full rounded-full bg-gradient-to-r from-accent to-accent-2"

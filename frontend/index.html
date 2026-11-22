@@ -1,11 +1,26 @@
 <!doctype html>
-<html lang="vi">
+<html lang="vi" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#08090b" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>STT Trực Tiếp</title>
+    <script>
+      // Apply the saved theme before React/CSS paint to avoid a flash.
+      (() => {
+        try {
+          const saved = window.localStorage.getItem("stt.theme");
+          const theme = saved === "light" ? "light" : "dark";
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.style.colorScheme = theme;
+          const meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute("content", theme === "light" ? "#f3f0e8" : "#08090b");
+        } catch {
+          /* storage unavailable */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

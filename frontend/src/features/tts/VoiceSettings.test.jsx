@@ -55,7 +55,7 @@ describe("VoiceSettings", () => {
   it("shows the catalog and preloads a newly chosen voice", async () => {
     renderSettings();
 
-    const select = await screen.findByLabelText("Chọn giọng");
+    const select = await screen.findByLabelText("Giọng đọc");
     await waitFor(() =>
       expect(screen.getByRole("option", { name: "Giọng B" })).toBeInTheDocument(),
     );
@@ -72,10 +72,12 @@ describe("VoiceSettings", () => {
   it("reads the sample text with the selected voice", async () => {
     renderSettings();
 
-    const sample = await screen.findByLabelText("Nội dung thử");
     await waitFor(() =>
       expect(screen.getByRole("option", { name: "Giọng A" })).toBeInTheDocument(),
     );
+    const details = screen.getByText("Thử giọng").closest("details");
+    details.open = true;
+    const sample = screen.getByLabelText("Nội dung thử");
     fireEvent.change(sample, { target: { value: "Đọc thử tiếng Việt." } });
     fireEvent.click(screen.getByRole("button", { name: "Test giọng" }));
 
@@ -88,7 +90,7 @@ describe("VoiceSettings", () => {
     );
     renderSettings();
 
-    const select = await screen.findByLabelText("Chọn giọng");
+    const select = await screen.findByLabelText("Giọng đọc");
     await waitFor(() =>
       expect(screen.getByRole("option", { name: "Giọng B" })).toBeInTheDocument(),
     );
@@ -106,6 +108,8 @@ describe("VoiceSettings", () => {
     await waitFor(() =>
       expect(screen.getByRole("option", { name: "Giọng A" })).toBeInTheDocument(),
     );
+    const details = screen.getByText("Thử giọng").closest("details");
+    details.open = true;
     const slider = screen.getByLabelText("Tốc độ đọc");
     fireEvent.change(slider, { target: { value: "1.4" } });
     fireEvent.click(screen.getByRole("button", { name: "Test giọng" }));

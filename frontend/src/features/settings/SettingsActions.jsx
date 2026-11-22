@@ -10,14 +10,14 @@ export default function SettingsActions() {
         type="button"
         onClick={applyDirty}
         disabled={dirtyCount === 0}
-        className="min-h-11 rounded-xl bg-gradient-to-br from-accent to-accent-2 px-4 py-2 text-[13.5px] font-semibold text-[#201505] transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-default disabled:opacity-45 sm:min-h-0"
+        className="min-h-11 rounded-xl bg-gradient-to-br from-accent to-accent-2 px-4 py-2 text-[13.5px] font-semibold text-on-accent transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-default disabled:opacity-45 sm:min-h-0"
       >
         Áp dụng
       </button>
       <button
         type="button"
         onClick={resetSettings}
-        className="min-h-11 rounded-xl px-3 py-2 text-[13.5px] text-dim hover:bg-white/5 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
+        className="min-h-11 rounded-xl px-3 py-2 text-[13.5px] text-dim hover:bg-wash-hover hover:text-content focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
       >
         Mặc định
       </button>

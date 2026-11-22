@@ -2,8 +2,8 @@ const TONES = {
   accent: "border-accent/35 bg-accent/12 text-accent",
   ok: "border-ok/35 bg-ok/10 text-ok",
   err: "border-err/35 bg-err/10 text-err",
-  dim: "border-line bg-white/[0.04] text-dim",
-  neutral: "border-line bg-white/[0.02] text-faint",
+  dim: "border-line bg-wash-strong text-dim",
+  neutral: "border-line bg-wash text-faint",
 };
 
 export default function Badge({ tone = "dim", className = "", title, children }) {

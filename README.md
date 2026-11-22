@@ -14,7 +14,7 @@ sau khi cài. Lõi là **zipformer 30M int8 (sherpa-onnx)**, backend **FastAPI**
 (TTS)** dùng **VieNeu-TTS v3 Turbo** chạy offline, xuất WAV 48 kHz.
 
 <p align="center">
-  <img src="docs/ui.png" alt="Giao diện nhận dạng trực tiếp" width="820">
+  <img src="docs/ui.png" alt="Giao diện hỏi đáp STT Trực Tiếp" width="820">
 </p>
 
 <p align="center">
@@ -50,8 +50,11 @@ sau khi cài. Lõi là **zipformer 30M int8 (sherpa-onnx)**, backend **FastAPI**
   `fr/s`, `coverage`, `dropped` để kiểm chứng (đo được 99–100%, trước đây chỉ 67%).
 - **VAD chống khoá** — noise-floor chỉ học từ frame yên tĩnh, ngưỡng bị chặn bởi 30% đỉnh
   gần đây, hysteresis khi đang nói, giữ trạng thái qua pause/resume.
-- **Cài đặt dạng drawer** — mở bằng bánh răng hoặc `Ctrl+,`: engine, VAD, preset và
-  cảnh báo cấu hình. Chế độ nhận dạng và giọng đọc nằm ở sidebar Hỏi đáp.
+- **Giao diện sáng/tối** — đổi ngay trên topbar hoặc trong **Cài đặt → Giao diện**;
+  lựa chọn lưu trên trình duyệt, không nháy theme khi reload. Nền tối dùng than + amber,
+  nền sáng dùng ivory ấm; mọi card/input/select/scrollbar đổi theo theme.
+- **Cài đặt dạng drawer** — mở bằng bánh răng hoặc `Ctrl+,`: giao diện, engine, VAD,
+  preset và cảnh báo cấu hình. Chế độ nhận dạng và giọng đọc nằm ở sidebar Hỏi đáp.
 - **Đọc câu trả lời (TTS)** — nút **Đọc** trên mỗi đáp án dùng VieNeu-TTS v3 Turbo:
   25 giọng preset, gộp cả giọng clone của app VieNeu, tải WAV 48 kHz; chạy offline
   trên CPU (ONNX), model nạp lần đầu khi dùng. Văn bản được cắt sẵn theo
@@ -187,13 +190,18 @@ python tools/eval_matcher.py    # top-1 / top-3 / MRR + khoảng điểm trong/n
 
 ## Giao diện
 
-| Hỏi đáp | Cài đặt (drawer) |
+| Hỏi đáp — tối | Hỏi đáp — sáng |
 | --- | --- |
-| ![Giao diện chính](docs/ui.png) | ![Bảng cài đặt](docs/settings.png) |
+| ![Giao diện tối](docs/ui.png) | ![Giao diện sáng](docs/ui-light.png) |
+
+| Cài đặt (drawer) | Hỏi đáp trên mobile |
+| --- | --- |
+| ![Bảng cài đặt](docs/settings.png) | ![Giao diện mobile](docs/ui-mobile.png) |
 
 Cài đặt được sinh từ schema của engine đang chọn: model zipformer hiện thêm
 `Max active paths` và `Blank penalty` bên cạnh các thông số chung. Sidebar Hỏi đáp
-có các card **Bộ đề**, **Chế độ**, **Giọng đọc** (kèm ô/nút test) và **Mic**.
+có 3 khối **Bộ đề**, **Đọc đáp án** (chế độ, giọng, tốc độ, thử giọng) và **Mic**.
+Dưới 1024px, rail đổi thành bottom navigation và các khối này mở trong bottom sheet.
 
 ## Kiến trúc
 

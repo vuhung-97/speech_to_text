@@ -17,7 +17,7 @@ export default function Toast() {
     <div
       role="status"
       aria-live="polite"
-      className={`pointer-events-none fixed bottom-7 left-1/2 z-[60] -translate-x-1/2 rounded-full border border-line bg-surface-2 px-4 py-2 text-sm shadow-lg transition-opacity duration-200 ${
+      className={`pointer-events-none fixed bottom-7 left-1/2 z-[60] -translate-x-1/2 rounded-full border border-line bg-surface-2 px-4 py-2 text-sm text-content shadow-pop transition-opacity duration-200 ${
         visible ? "opacity-100" : "opacity-0"
       }`}
     >

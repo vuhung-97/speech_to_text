@@ -43,7 +43,7 @@ export default function Drawer({
     <>
       <div
         onClick={onClose}
-        className={`fixed inset-0 z-40 bg-black/55 backdrop-blur-[2px] transition-opacity motion-reduce:transition-none ${
+        className={`fixed inset-0 z-40 bg-overlay backdrop-blur-[2px] transition-opacity motion-reduce:transition-none ${
           open ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
         aria-hidden="true"
@@ -57,7 +57,7 @@ export default function Drawer({
         aria-hidden={!open}
         inert={!open}
         tabIndex={-1}
-        className={`fixed top-0 right-0 z-50 flex h-dvh ${width} flex-col border-l border-line bg-gradient-to-b from-surface-2 to-[#0d1014] shadow-[-40px_0_90px_-40px_#000] outline-none transition-transform duration-200 motion-reduce:transition-none ${
+        className={`fixed top-0 right-0 z-50 flex h-dvh ${width} flex-col border-l border-line bg-gradient-to-b from-surface-2 to-surface shadow-card outline-none transition-transform duration-200 motion-reduce:transition-none ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
       >

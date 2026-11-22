@@ -33,7 +33,7 @@ export default function FieldRow({ field, devices = [] }) {
         : field.options.map((option) => ({ value: option, label: option }));
     return (
       <div className="mb-3">
-        <label className="mb-1 block text-[13px] text-white">{field.label}</label>
+        <label className="mb-1 block text-[13px] text-content">{field.label}</label>
         <select
           value={value}
           onChange={(event) => setField(field, event.target.value)}
@@ -54,7 +54,7 @@ export default function FieldRow({ field, devices = [] }) {
     return (
       <div className="mb-3">
         <div className="flex items-center justify-between gap-3">
-          <span className="text-[13px] text-white">{field.label}</span>
+          <span className="text-[13px] text-content">{field.label}</span>
           <button
             type="button"
             role="switch"
@@ -65,7 +65,7 @@ export default function FieldRow({ field, devices = [] }) {
           >
             <span
               className={`relative h-[21px] w-[38px] rounded-full border transition ${
-                value ? "border-accent/50 bg-accent/15" : "border-line bg-white/5"
+                value ? "border-accent/50 bg-accent/15" : "border-line bg-wash-hover"
               }`}
             >
               <span
@@ -85,7 +85,7 @@ export default function FieldRow({ field, devices = [] }) {
     return (
       <div className="mb-3">
         <div className="flex items-center justify-between gap-2">
-          <label className="text-[13px] text-white">{field.label}</label>
+          <label className="text-[13px] text-content">{field.label}</label>
           <span className="font-mono text-[12px] tabular-nums text-dim">
             {formatValue(field, Number(draft))}
           </span>
@@ -109,7 +109,7 @@ export default function FieldRow({ field, devices = [] }) {
 
   return (
     <div className="mb-3">
-      <label className="mb-1 block text-[13px] text-white">{field.label}</label>
+      <label className="mb-1 block text-[13px] text-content">{field.label}</label>
       <textarea
         value={text}
         onChange={(event) => setText(event.target.value)}

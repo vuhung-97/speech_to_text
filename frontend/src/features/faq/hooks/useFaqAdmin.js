@@ -76,8 +76,10 @@ export function useFaqAdmin() {
         }
         resetForm();
         await load();
+        return true;
       } catch (saveError) {
         setError(messageFor(saveError));
+        return false;
       } finally {
         setBusy(false);
       }

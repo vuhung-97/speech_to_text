@@ -1,12 +1,25 @@
-// Right sidebar: question set and microphone in separate cards.
-// The cards and the vertical gap are what keep the two controls from looking
-// attached to each other.
+// Right tools panel: source, reading settings and microphone. The pieces are
+// separated into compact cards so the panel never reads as one long form.
 
 import Alert from "../../components/ui/Alert";
 import { ModeControl } from "../settings";
 import { VoiceSettings } from "../tts";
 import DocumentPicker from "./DocumentPicker";
 import MicControls from "./MicControls";
+
+function ToolCard({ title, meta, children }) {
+  return (
+    <section className="rounded-2xl border border-line bg-wash p-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h2 className="m-0 text-[11px] font-semibold tracking-[0.04em] text-dim">
+          {title}
+        </h2>
+        {meta && <span className="text-[10px] text-faint">{meta}</span>}
+      </div>
+      {children}
+    </section>
+  );
+}
 
 export default function QaSidebar({
   documents,
@@ -19,6 +32,10 @@ export default function QaSidebar({
   device,
   onChooseMic,
 }) {
+  const total = (documents || []).reduce(
+    (sum, document) => sum + (document.entry_count || 0),
+    0,
+  );
   const warning =
     listen.error ||
     (mic.silentMic
@@ -28,23 +45,26 @@ export default function QaSidebar({
     listen.notice;
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-xl border border-line bg-white/[0.02] p-3">
+    <div className="space-y-3">
+      <ToolCard title="Bộ đề" meta={`${total} câu`}>
         <DocumentPicker
           documents={documents}
           value={documentId}
           onChange={onSelectDocument}
           disabled={busy}
+          label="Nguồn trả lời"
         />
-      </section>
+        <p className="mt-1.5 mb-0 text-[10px] leading-relaxed text-faint">
+          Chỉ tìm trong bộ đề đang chọn.
+        </p>
+      </ToolCard>
 
-      <ModeControl />
-      <VoiceSettings />
+      <ToolCard title="Đọc đáp án">
+        <ModeControl bare />
+        <VoiceSettings embedded />
+      </ToolCard>
 
-      <section className="rounded-xl border border-line bg-white/[0.02] p-3">
-        <h2 className="m-0 mb-2 text-[12px] font-semibold tracking-[0.08em] text-faint uppercase">
-          Mic
-        </h2>
+      <ToolCard title="Mic">
         <MicControls
           label={mic.micLabel}
           listen={listen}
@@ -62,7 +82,11 @@ export default function QaSidebar({
             {warning}
           </Alert>
         )}
-      </section>
+      </ToolCard>
+
+      <p className="m-0 px-1 text-center text-[10px] leading-relaxed text-faint">
+        Mọi xử lý diễn ra trên máy này. Không gửi dữ liệu ra ngoài.
+      </p>
     </div>
   );
 }

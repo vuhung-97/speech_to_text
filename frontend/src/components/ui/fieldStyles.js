@@ -3,7 +3,7 @@
 // border, background, focus ring or disabled state.
 
 export const FIELD_CLASS =
-  "min-h-11 border border-line bg-white/[0.04] text-white outline-none transition sm:min-h-0 " +
+  "min-h-11 border border-line bg-wash-strong text-content outline-none transition sm:min-h-0 " +
   "placeholder:text-faint focus:border-accent/60 " +
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent " +
   "disabled:opacity-50";

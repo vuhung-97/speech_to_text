@@ -2,6 +2,7 @@
 // One responsibility: render the schema-driven form and its side panels.
 
 import { useLive } from "../../shared/live/LiveProvider";
+import AppearanceSettings from "./AppearanceSettings";
 import FieldRow from "./FieldRow";
 import PresetPanel from "./PresetPanel";
 import { useSettings } from "./SettingsProvider";
@@ -53,12 +54,14 @@ export default function SettingsForm() {
 
   return (
     <div className="space-y-5">
+      <AppearanceSettings />
+
       {settings.warnings?.length > 0 && (
         <ul className="space-y-1.5">
           {settings.warnings.map((warning) => (
             <li
               key={warning}
-              className="rounded-lg border border-accent/20 bg-accent/[0.08] px-2.5 py-1.5 text-[12px] leading-relaxed text-[#ffcf87]"
+              className="rounded-lg border border-accent/20 bg-accent/[0.08] px-2.5 py-1.5 text-[12px] leading-relaxed text-highlight"
             >
               {warning}
             </li>
@@ -76,7 +79,7 @@ export default function SettingsForm() {
         );
         if (!fields.length) return null;
         return (
-          <section key={group} className="border-b border-white/5 pb-2 last:border-0">
+          <section key={group} className="border-b border-line pb-2 last:border-0">
             <h3 className="mb-2 flex items-center gap-2 text-[12px] font-semibold tracking-[0.09em] text-faint uppercase">
               {GROUP_TITLES[group] || group}
               {group === "engine" && <EngineBadge engine={engine} />}

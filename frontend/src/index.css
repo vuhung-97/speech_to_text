@@ -16,7 +16,7 @@ body,
 body {
   margin: 0;
   background-color: var(--color-ink);
-  color: #eef2f7;
+  color: var(--color-content);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
@@ -24,7 +24,7 @@ body {
 
 select option {
   background-color: var(--color-surface-2);
-  color: #eef2f7;
+  color: var(--color-content);
 }
 
 /* reading text: a touch larger than the utility default */
@@ -64,13 +64,13 @@ select option {
 /* thin scrollbars, matching the dark surface */
 .scroll-thin {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+  scrollbar-color: var(--color-line-strong) transparent;
 }
 .scroll-thin::-webkit-scrollbar {
   width: 10px;
 }
 .scroll-thin::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--color-line-strong);
   border-radius: 999px;
   border: 3px solid transparent;
   background-clip: content-box;

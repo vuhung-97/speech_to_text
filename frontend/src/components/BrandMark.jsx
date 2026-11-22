@@ -8,7 +8,7 @@ export default function BrandMark({
 }) {
   return (
     <span
-      className={`grid place-items-center rounded-xl bg-gradient-to-br from-accent to-accent-2 text-[#1a1206] ${className}`}
+      className={`grid place-items-center rounded-xl bg-gradient-to-br from-accent to-accent-2 text-on-accent ${className}`}
       aria-hidden="true"
     >
       <svg

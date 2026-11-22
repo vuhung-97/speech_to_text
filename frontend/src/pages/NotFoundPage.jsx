@@ -14,7 +14,7 @@ export default function NotFoundPage() {
             action={
               <Link
                 to="/"
-                className="inline-flex min-h-11 items-center rounded-control bg-gradient-to-br from-accent to-accent-2 px-4 py-2 text-[12.5px] font-semibold text-[#201505] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
+                className="inline-flex min-h-11 items-center rounded-control bg-gradient-to-br from-accent to-accent-2 px-4 py-2 text-[12.5px] font-semibold text-on-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:min-h-0"
               >
                 Về trang hỏi đáp
               </Link>

@@ -17,12 +17,12 @@ export default function StatusPill({ state: overrideState, label }) {
     <div
       role="status"
       aria-live="polite"
-      className={`inline-flex items-center gap-2.5 rounded-full border border-line bg-white/[0.03] px-3.5 py-1.5 text-[13px] whitespace-nowrap ${
+      className={`inline-flex items-center gap-2.5 rounded-full border border-line bg-wash-strong px-3.5 py-1.5 text-[13px] whitespace-nowrap ${
         state === "error" ? "border-err/40 text-err" : "text-dim"
       }`}
     >
       <span className={`h-[7px] w-[7px] rounded-full ${DOT[state] || "bg-faint"}`} />
-      <span className={state === "listening" ? "text-white" : ""}>
+      <span className={state === "listening" ? "text-content" : ""}>
         {text}
       </span>
     </div>

@@ -1,6 +1,6 @@
 /* Design tokens: the single source of truth for colour, type and shape.
    Components never hardcode hex values; they use Tailwind classes backed by
-   these tokens (bg-surface, text-dim, rounded-card, …). */
+   these tokens (bg-surface, text-content, rounded-card, …). */
 
 @theme {
   /* surfaces */
@@ -12,14 +12,25 @@
   --color-line-strong: rgba(255, 255, 255, 0.16);
 
   /* text */
+  --color-content: #eef2f7;
   --color-dim: #93a0b1;
   /* ≥5.3:1 on surface, surface-2 and surface-3 (WCAG AA normal text). */
   --color-faint: #8b97a8;
+
+  /* soft washes that flip with the theme */
+  --color-wash: rgba(255, 255, 255, 0.02);
+  --color-wash-strong: rgba(255, 255, 255, 0.04);
+  --color-wash-hover: rgba(255, 255, 255, 0.075);
+  --color-track: rgba(255, 255, 255, 0.1);
+  --color-overlay: rgba(0, 0, 0, 0.55);
 
   /* brand + feedback */
   --color-accent: #ffb454;
   --color-accent-2: #ff8a3d;
   --color-accent-soft: rgba(255, 180, 84, 0.14);
+  --color-on-accent: #201505;
+  --color-highlight: #ffd79b;
+  --color-user-text: #fff3df;
   --color-ok: #57d9a3;
   --color-err: #ff6b6b;
 
@@ -32,5 +43,45 @@
   --radius-card: 1.25rem;
   --radius-control: 0.75rem;
   --shadow-card: 0 40px 90px -50px #000;
+  --shadow-pop: 0 40px 120px -40px #000;
   --shadow-accent: 0 10px 24px -12px rgba(255, 138, 61, 0.9);
+}
+
+:root {
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  /* warm paper, not a hard white */
+  --color-ink: #f3f0e8;
+  --color-surface: #faf8f2;
+  --color-surface-2: #fffdf8;
+  --color-surface-3: #eee9df;
+  --color-line: rgba(27, 31, 38, 0.12);
+  --color-line-strong: rgba(27, 31, 38, 0.22);
+
+  --color-content: #1b1f26;
+  --color-dim: #4f5965;
+  --color-faint: #626c78;
+
+  --color-wash: rgba(27, 31, 38, 0.02);
+  --color-wash-strong: rgba(27, 31, 38, 0.04);
+  --color-wash-hover: rgba(27, 31, 38, 0.075);
+  --color-track: rgba(27, 31, 38, 0.1);
+  --color-overlay: rgba(27, 31, 38, 0.42);
+
+  --color-accent: #9c4f00;
+  --color-accent-2: #b65d00;
+  --color-accent-soft: rgba(156, 79, 0, 0.1);
+  --color-on-accent: #fffaf0;
+  --color-highlight: #8f4a00;
+  --color-user-text: #2b1b05;
+  --color-ok: #146b49;
+  --color-err: #b02f36;
+
+  --shadow-card: 0 30px 80px -50px rgba(64, 47, 24, 0.28);
+  --shadow-pop: 0 30px 90px -30px rgba(64, 47, 24, 0.3);
+  --shadow-accent: 0 10px 24px -14px rgba(156, 79, 0, 0.45);
 }

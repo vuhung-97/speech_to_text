@@ -6,9 +6,11 @@ Mục nào lỗi thì ghi lại màn hình + bước tái hiện.
 ## 1. Khung ứng dụng
 
 - [ ] Rail trái hiển thị 3 mục: Hỏi đáp, Phiên, Kho hỏi.
-- [ ] Mục đang mở có nền accent và icon sáng; hover các mục còn lại đổi màu.
-- [ ] Topbar hiện tiêu đề từng màn hình + `StatusPill` + nút Ctrl+K + bánh răng.
-- [ ] Nút "bảng phụ" chỉ hiện ở trang Hỏi đáp và ở màn ≥ 1024px; sidebar phải có 4 card: Bộ đề, Chế độ, Giọng đọc, Mic — tách nhau, không dính.
+- [ ] Mục đang mở có nền accent, icon sáng và vạch accent bên trái; hover mục còn lại đổi màu.
+- [ ] Topbar hiện tiêu đề từng màn hình + `StatusPill` + nút đổi sáng/tối + Ctrl+K + bánh răng.
+- [ ] Nút "bảng phụ" chỉ hiện ở trang Hỏi đáp/Kho hỏi và ở màn ≥ 1024px; sidebar phải có 3 khối: Bộ đề, Đọc đáp án (chế độ + giọng + tốc độ + thử giọng), Mic.
+- [ ] Dưới 1024px: rail đổi thành bottom navigation 4 mục; mục **Công cụ** mở bottom sheet chứa đúng 3 khối trên.
+- [ ] Bottom sheet đóng bằng `Esc`, nút X hoặc bấm nền; focus quay về nút Công cụ.
 - [ ] `Ctrl+K` mở palette; gõ để lọc; `↑`/`↓` đổi lựa chọn; `Enter` điều hướng;
       `Esc` đóng. Bấm ra ngoài cũng đóng.
 - [ ] `Ctrl+,` mở/đóng drawer Cài đặt ở mọi màn hình.
@@ -23,6 +25,7 @@ Mục nào lỗi thì ghi lại màn hình + bước tái hiện.
 - [ ] Card Mic trong sidebar phải có select thiết bị **của trình duyệt**, tách khỏi
       card Bộ đề; chọn mic khác và bấm `Nghe` → trình duyệt hỏi quyền (lần đầu) →
       đèn mic đúng thiết bị sáng.
+- [ ] Nút **Sao chép** copy nguyên văn đáp án; nút **Tải WAV** chỉ hiện khi có audio stream.
 - [ ] Bấm `Nghe` → mic mở, nói một câu → im 2 giây → mic tự đóng và câu vừa nói
       xuất hiện trong ô, **không tự gửi**.
 - [ ] Trong 2 giây sau khi chốt câu, nói tiếp → mic vẫn mở, chữ nối thêm; hết
@@ -51,24 +54,26 @@ Mục nào lỗi thì ghi lại màn hình + bước tái hiện.
       progress, thời gian `4s/21s` và nút `Dừng`; biến mất khi đọc xong/dừng.
 - [ ] `Tải WAV` xuất hiện sau khi audio bắt đầu và tải được file mở bằng
       Windows Media Player.
-- [ ] Sidebar phải có 4 card: **Bộ đề**, **Chế độ**, **Giọng đọc**, **Mic** — mỗi card
-      cách nhau khoảng 16px, không dính nhau.
+- [ ] Sidebar phải có 3 khối: **Bộ đề**, **Đọc đáp án**, **Mic** — mỗi khối cách nhau
+      khoảng 12px, không dính nhau; phần **Thử giọng** nằm trong disclosure, mặc định đóng.
 - [ ] Câu hỏi của user chỉ hiện nội dung + giờ, **không** hiện nhãn “gõ tay”/“giọng nói”.
 - [ ] Badge khớp/percent và tiến độ đọc nằm trong AnswerCard; thanh “Đang đọc”
       là nơi duy nhất nhận diện nội dung đang phát.
 
 ## 3. Phiên (`/sessions`)
 
-- [ ] Danh sách sắp xếp mới nhất trước, hiện câu hỏi đầu, thời gian, số lượt.
+- [ ] Danh sách sắp xếp mới nhất trước, nhóm theo **Hôm nay / Hôm qua / Trước đó**.
+- [ ] Ô tìm lọc theo câu hỏi/ID; số phiên cập nhật theo bộ lọc.
 - [ ] Bấm một phiên → mở `/sessions/:id`, hội thoại tải lại đầy đủ.
-- [ ] `Xoá` hỏi xác nhận; sau khi xoá dòng biến mất, mở lại URL cũ báo lỗi.
+- [ ] Nút xoá hỏi xác nhận; sau khi xoá dòng biến mất, mở lại URL cũ báo lỗi.
 - [ ] `F5` trên `/sessions/abc` trả trang (không 404 server).
-- [ ] Empty state có nút "Hỏi câu đầu tiên".
+- [ ] Empty state có nút "Hỏi câu đầu tiên"; khi tìm không thấy có thông báo riêng.
 
 ## 4. Kho câu hỏi (`/faq`)
 
-- [ ] Thêm câu hỏi (question + answer + category) → xuất hiện ngay trong danh sách.
-- [ ] Sửa câu trả lời → hỏi lại đúng câu đó, giọng đọc trả về nội dung mới.
+- [ ] **Thêm câu hỏi** mở drawer, không chiếm chỗ danh sách; lưu xong drawer đóng và câu mới xuất hiện.
+- [ ] Sửa câu trả lời mở lại drawer với dữ liệu cũ; lưu → danh sách cập nhật.
+- [ ] Bộ lọc **Tất cả / Đang bật / Đang tắt** lọc đúng danh sách.
 - [ ] Tắt/Bật một câu: câu tắt không còn được khớp.
 - [ ] Xoá hỏi xác nhận; xoá xong hỏi lại → fallback.
 - [ ] Tìm theo từ khoá trong câu hỏi/câu trả lời.
@@ -85,16 +90,17 @@ Mục nào lỗi thì ghi lại màn hình + bước tái hiện.
 
 - [ ] Không còn route `/settings`; bánh răng mở drawer ở mọi màn hình.
 - [ ] Drawer đóng được bằng `Esc`, nút đóng, hoặc bấm ra ngoài; focus trả về nút mở.
+- [ ] Drawer có mục **Giao diện** (Sáng/Tối) ở đầu; chọn đồng bộ ngay với nút topbar.
 - [ ] Drawer chỉ còn engine/VAD/stream/preset; **không** còn chế độ, giọng đọc,
       hay “Thử nghiệm trên file”.
 - [ ] Thay đổi một trường "live" áp dụng ngay; trường engine/capture có nút `Áp dụng`.
 - [ ] Không còn đoạn hướng dẫn dài về micro.
 
-## 6. Chế độ & Giọng đọc (sidebar Hỏi đáp)
+## 6. Chế độ, Giọng đọc & Giao diện
 
-- [ ] Card **Chế độ** có 2 nút `Chính xác` / `Realtime`; bấm đổi ngay, trạng thái
+- [ ] Khối **Đọc đáp án** có segmented `Chính xác` / `Realtime`; bấm đổi ngay, trạng thái
       `aria-pressed` đúng.
-- [ ] Card **Giọng đọc** liệt kê preset + giọng clone.
+- [ ] Select **Giọng đọc** liệt kê preset + giọng clone.
 - [ ] Thanh **Tốc độ đọc** chạy 0.8–2.0×, bước 0.2; đổi tốc độ không làm thay
       đổi audio đang phát, chỉ áp dụng ở lần bấm đọc/test kế tiếp.
 - [ ] Đổi giọng → hiện “Đang nạp giọng vào RAM…”, sau đó biến mất; không chặn thao tác.
@@ -104,6 +110,9 @@ Mục nào lỗi thì ghi lại màn hình + bước tái hiện.
 - [ ] Lỗi nạp giọng hiện message + nút `Thử lại`.
 - [ ] Mở DevTools → Network: đổi giọng có `POST /tts/preload`, sau đó poll
       `GET /tts/status` đến khi `preloading=false`.
+- [ ] Nút topbar đổi Sáng ↔ Tối ngay; reload vẫn giữ theme; không nháy sai theme.
+- [ ] Native select/option, scrollbar và focus ring đúng màu ở cả hai theme.
+- [ ] Chữ/UI đạt tương phản AA ở cả hai theme; nền sáng dùng ivory, không phải trắng tinh.
 
 ## 7. Accessibility
 
@@ -115,8 +124,9 @@ Mục nào lỗi thì ghi lại màn hình + bước tái hiện.
 
 ## 8. Responsive & hiệu năng
 
-- [ ] 1440px: 3 vùng đầy đủ. 1024px: ẩn panel phải. 768px: rail + nội dung.
-- [ ] 390px: không tràn ngang; composer dùng được; bảng phiên cuộn dọc.
+- [ ] 1440px: đủ rail + nội dung + panel phải. 1024px: panel phải vẫn hiện; dưới 1024px ẩn panel.
+- [ ] 768px: bottom navigation + nội dung; mở Công cụ bằng bottom sheet.
+- [ ] 390px: không tràn ngang; composer và bottom nav dùng được; sheet cuộn dọc.
 - [ ] Đọc một câu trả lời dài ~15 phút: RAM tab ổn định, không tăng dần.
 - [ ] Đóng tab/route khi đang đọc: AudioContext dừng, server xoá file tạm
       (`%TEMP%\stt_binh\tts` trống sau khi job kết thúc).

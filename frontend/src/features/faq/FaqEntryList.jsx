@@ -26,17 +26,17 @@ function PrerenderButton({ job, disabled, onClick }) {
 
 function ListSkeleton() {
   return (
-    <ul className="m-0 flex list-none flex-col gap-2 p-0" aria-busy="true">
+    <div className="space-y-2" aria-busy="true">
       {[0, 1, 2].map((item) => (
-        <li
+        <div
           key={item}
-          className="animate-pulse rounded-card border border-line bg-surface-2/60 px-4 py-3 motion-reduce:animate-none"
+          className="animate-pulse rounded-xl border border-line bg-wash p-4 motion-reduce:animate-none"
         >
-          <div className="h-4 w-2/3 rounded bg-white/[0.06]" />
-          <div className="mt-2 h-3 w-full rounded bg-white/[0.04]" />
-        </li>
+          <div className="h-4 w-2/3 rounded bg-wash-hover" />
+          <div className="mt-2 h-3 w-full rounded bg-wash-strong" />
+        </div>
       ))}
-    </ul>
+    </div>
   );
 }
 
@@ -49,35 +49,32 @@ export default function FaqEntryList({
   onToggle,
   onPrerender,
   onRemove,
+  emptyTitle = "Kho đang trống",
+  emptyHint = "Thêm câu hỏi ở trên hoặc nhập tệp .docx/CSV.",
 }) {
   if (loading && !entries.length) return <ListSkeleton />;
 
   if (!loading && !entries.length) {
-    return (
-      <EmptyState
-        title="Kho đang trống"
-        hint="Thêm câu hỏi ở trên hoặc nhập tệp .docx/CSV."
-      />
-    );
+    return <EmptyState title={emptyTitle} hint={emptyHint} />;
   }
 
   return (
-    <ul className="m-0 flex list-none flex-col gap-2 p-0">
+    <div className="space-y-2">
       {entries.map((entry) => (
-        <li
+        <article
           key={entry.id}
-          className="rounded-card border border-line bg-surface-2/60 px-4 py-3"
+          className="rounded-xl border border-line bg-wash p-3.5 transition hover:bg-wash-strong"
         >
-          <div className="flex items-start gap-3">
+          <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <p className="m-0 text-[13.5px] font-medium text-white">
+              <p className="m-0 text-[12.5px] font-medium leading-relaxed text-content">
                 {entry.question}
               </p>
-              <p className="mt-1 mb-0 line-clamp-2 text-[12px] leading-relaxed text-faint">
+              <p className="mt-1 mb-0 line-clamp-2 text-[10.8px] leading-relaxed text-faint">
                 {entry.answer}
               </p>
             </div>
-            <div className="flex max-w-[45%] shrink-0 flex-wrap items-center justify-end gap-1.5">
+            <div className="flex max-w-[42%] shrink-0 flex-wrap items-center justify-end gap-1">
               {entry.source_ref && (
                 <Badge tone="neutral" title={entry.source_file || ""}>
                   {entry.source_ref}
@@ -85,15 +82,21 @@ export default function FaqEntryList({
               )}
               {entry.category && <Badge tone="dim">{entry.category}</Badge>}
               <Badge tone={entry.active ? "ok" : "neutral"}>
-                {entry.active ? "bật" : "tắt"}
+                {entry.active ? "Bật" : "Tắt"}
               </Badge>
             </div>
           </div>
-          <div className="mt-2 flex items-center gap-1.5">
+
+          <div className="mt-2 flex flex-wrap items-center gap-0.5">
             <Button variant="ghost" size="sm" onClick={() => onEdit(entry)}>
               Sửa
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => onToggle(entry)} disabled={busy}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onToggle(entry)}
+              disabled={busy}
+            >
               {entry.active ? "Tắt" : "Bật"}
             </Button>
             <PrerenderButton
@@ -101,12 +104,18 @@ export default function FaqEntryList({
               disabled={busy}
               onClick={() => onPrerender(entry)}
             />
-            <Button variant="danger" size="sm" onClick={() => onRemove(entry)} disabled={busy}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-err hover:bg-err/10 hover:text-err"
+              onClick={() => onRemove(entry)}
+              disabled={busy}
+            >
               Xoá
             </Button>
           </div>
-        </li>
+        </article>
       ))}
-    </ul>
+    </div>
   );
 }
